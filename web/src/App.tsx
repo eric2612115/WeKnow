@@ -1,122 +1,107 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+// Temporary working shell until the design pass lands: proves the pipeline end to end.
 
-function App() {
-  const [count, setCount] = useState(0)
+import { useEffect, useState } from 'react';
+import { ensureUser } from './firebase';
+import type { Pack } from './core/packs';
+import { guideByRef, proPrice } from './core/packs';
+import { deviceModelStatus, readPhoto, type Reading } from './reader';
+import { quoteVerdicts, billVerdict, type LineVerdict } from './core/verdict';
+import { maskText } from './core/pii';
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function lineText(v: LineVerdict): string {
+  if (v.kind === 'unknown') return `${v.label}: not in my price book yet`;
+  if (v.kind === 'high') return `${v.item.name}: ${money(v.amount)} is ${money(v.over)} above the usual top of ${money(v.item.high)}`;
+  if (v.kind === 'low') return `${v.item.name}: ${money(v.amount)} is below the usual ${money(v.item.low)}`;
+  return `${v.item.name}: ${money(v.amount)} is a fair price (${money(v.item.low)}–${money(v.item.high)})`;
 }
 
-export default App
+export default function App() {
+  const [pack, setPack] = useState<Pack>();
+  const [device, setDevice] = useState('checking');
+  const [file, setFile] = useState<File>();
+  const [question, setQuestion] = useState('Is this fair?');
+  const [reading, setReading] = useState<Reading>();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [cloudOk, setCloudOk] = useState(false);
+
+  useEffect(() => {
+    fetch('/packs/us-home.json').then((r) => r.json()).then(setPack);
+    deviceModelStatus().then(setDevice);
+    ensureUser().catch((e) => setError(String(e)));
+  }, []);
+
+  async function run() {
+    if (!pack || !file) return;
+    const where = device === 'available' ? 'device' : 'cloud';
+    if (where === 'cloud' && !cloudOk) {
+      setError('This computer has no on-device model. Tick the box to let the cloud read this photo.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      setReading(await readPhoto(pack, file, question, where));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const u = reading?.understanding;
+  return (
+    <main style={{ maxWidth: 640, margin: '0 auto', padding: 16, fontFamily: 'system-ui', fontSize: 18 }}>
+      <h1>WeKnow</h1>
+      <p>On-device model: {device}. Pack: {pack ? `${pack.prices.length} prices, ${pack.guides.length} guides` : 'loading'}</p>
+      <input type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0])} />
+      <p>
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} style={{ width: '100%', fontSize: 18 }} />
+      </p>
+      {device !== 'available' && (
+        <label>
+          <input type="checkbox" checked={cloudOk} onChange={(e) => setCloudOk(e.target.checked)} /> Let the cloud read this photo
+        </label>
+      )}
+      <p>
+        <button onClick={run} disabled={!file || busy} style={{ fontSize: 20, padding: '12px 24px' }}>
+          {busy ? 'Reading…' : 'Ask'}
+        </button>
+      </p>
+      {error && <p style={{ color: '#b00' }}>{error}</p>}
+      {reading && u && pack && (
+        <section>
+          <p>
+            Read {reading.where === 'device' ? 'on this device' : 'in the cloud'} in {reading.ms} ms. Kind: {u.kind}
+          </p>
+          {u.kind === 'quote' && (
+            <ul>
+              {quoteVerdicts(u, pack).map((v, i) => (
+                <li key={i}>{lineText(v)}</li>
+              ))}
+            </ul>
+          )}
+          {u.kind === 'bill' && <p>{JSON.stringify(billVerdict(u, maskText(u.lines.map((l) => l.label).join(' ')), []))}</p>}
+          {u.kind === 'problem' && u.problemRef && (() => {
+            const g = guideByRef(pack, u.problemRef);
+            if (!g) return null;
+            const pro = proPrice(pack, g);
+            return (
+              <div>
+                <h2>{g.name}</h2>
+                <ol>{g.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
+                {pro && <p>A pro usually charges {money(pro.low)}–{money(pro.high)}.</p>}
+              </div>
+            );
+          })()}
+          <details>
+            <summary>Raw form</summary>
+            <pre>{JSON.stringify(u, null, 1)}</pre>
+          </details>
+        </section>
+      )}
+    </main>
+  );
+}

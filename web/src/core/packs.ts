@@ -10,6 +10,7 @@ export interface Source {
 
 export interface PriceItem {
   ref: string;
+  category?: string;
   name: string;
   aliases: string[];
   unit: string;
@@ -22,11 +23,15 @@ export interface PriceItem {
 
 export interface Guide {
   ref: string;
+  category?: string;
   name: string;
   aliases: string[];
   minutes: [number, number];
+  difficulty?: number;
   steps: string[];
-  proPrice?: { low: number; high: number };
+  safety?: string[];
+  stopIf?: string[];
+  proRefs?: string[];
   sources: Source[];
 }
 
@@ -50,8 +55,8 @@ export function guideByRef(pack: Pack, ref: string): Guide | undefined {
 /** The menu offered to the model: refs and names only, never prices. */
 export function menu(pack: Pack): Array<{ ref: string; name: string; aliases: string[] }> {
   return [
-    ...pack.prices.map(({ ref, name, aliases }) => ({ ref, name, aliases })),
     ...pack.guides.map(({ ref, name, aliases }) => ({ ref, name, aliases })),
+    ...pack.prices.map(({ ref, name, aliases }) => ({ ref, name, aliases })),
   ];
 }
 
@@ -62,4 +67,11 @@ export function learn(pack: Pack, item: PriceItem): Pack {
   }
   if (priceByRef(pack, item.ref)) return pack;
   return { ...pack, prices: [...pack.prices, item] };
+}
+
+/** A pro price for a guide, from the price items it points to. */
+export function proPrice(pack: Pack, guide: Guide): { low: number; high: number } | undefined {
+  const items = (guide.proRefs ?? []).map((r) => priceByRef(pack, r)).filter((p): p is PriceItem => !!p);
+  if (!items.length) return undefined;
+  return { low: Math.min(...items.map((i) => i.low)), high: Math.max(...items.map((i) => i.high)) };
 }
