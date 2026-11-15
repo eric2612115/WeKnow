@@ -5,13 +5,10 @@ import './styles.css';
 import App from './app/App';
 import { watchLook } from './store/prefs';
 import { loadData } from './store/data';
-import { refreshModel } from './engine/device';
 
 watchLook();
 void loadData();
-// What this device can do by itself; loaded after the first paint so starting never waits for it.
-const later = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 300));
-later(() => void refreshModel());
+// Firebase, App Check and the reader load only once Ask is on screen (pages/Home.tsx), never on Welcome.
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -68,6 +68,8 @@ export interface AskView {
   chip: 'live' | 'dark' | 'light' | null;
   sheet: SheetRequest | null;
   level: number;
+  /** Links that stay under an answer (for example "Find a pro nearby"); they do not end the conversation. */
+  links: Choice[];
 }
 
 const INITIAL: AskView = {
@@ -91,6 +93,7 @@ const INITIAL: AskView = {
   chip: null,
   sheet: null,
   level: 0,
+  links: [],
 };
 
 export const askStore = createStore<AskView>(INITIAL);
@@ -137,6 +140,8 @@ export function hush() {
   ear?.stop();
   ear = null;
   resolveChoice = resolveSheet = resolvePress = resolveTyped = null;
+  narrGen++;
+  narrating = false;
   for (const cancel of [...waits]) cancel(new Cancel());
   waits.clear();
   patch({ sheet: null, choices: null, typing: false, reading: false, now: null, done: true, level: 0 });
@@ -167,7 +172,7 @@ export async function run(fn: (t: number) => Promise<void>) {
 // ---------- the words ----------
 
 export function clearWords() {
-  patch({ asked: null, head: null, lines: [], now: null, items: null, choices: null, steps: null, receipt: null, kept: null, typing: false });
+  patch({ asked: null, head: null, lines: [], now: null, items: null, choices: null, steps: null, receipt: null, kept: null, typing: false, links: [] });
 }
 
 export function setHead(tone: Tone | null, text = '', icon?: IconKey) {
@@ -189,12 +194,73 @@ export function tagLastAsNote() {
   askStore.set((s) => ({ ...s, lines: s.lines.map((l, i) => (i === s.lines.length - 1 ? { ...l, noteTag: true } : l)) }));
 }
 
-/** Show a sentence and say it. */
+/** Show a sentence and say it (any narration still going is cut first, so two voices never overlap). */
 export async function say(t: number, text: string, kind?: Line['kind'], noteTag = false) {
   alive(t);
+  if (narrating) cutNarration();
   addLine(text, kind, noteTag);
   await sayAloud(text);
   alive(t);
+}
+
+// ---------- narration: the answer is on screen first, then it is read out ----------
+
+let narrGen = 0;
+let narrating = false;
+let narration: Promise<void> = Promise.resolve();
+export type Said = string | { text: string; kind?: Line['kind']; noteTag?: boolean };
+
+/**
+ * Put every sentence on screen at once, then say them one after another in the background. Nothing waits for it:
+ * buttons work at once, and a press, Stop, a new question or the next sentence that has to be said cuts it.
+ * The returned promise ends when the narration ends (or is cut).
+ */
+export function narrate(t: number, texts: Said[]): Promise<void> {
+  alive(t);
+  if (narrating) cutNarration();
+  const items = texts.map((x) => (typeof x === 'string' ? { text: x } : x)).map((x) => ({ ...x, id: ++seq }));
+  askStore.set((s) => ({
+    ...s,
+    lines: [...s.lines, ...items.map(({ id, text, kind, noteTag }) => ({ id, text, kind, noteTag }))],
+    now: items[0]?.id ?? null,
+    done: false,
+  }));
+  const gen = ++narrGen;
+  narrating = true;
+  narration = (async () => {
+    try {
+      for (const it of items) {
+        if (gen !== narrGen || t !== token) return;
+        patch({ now: it.id, done: false });
+        await sayAloud(it.text);
+      }
+    } finally {
+      if (gen === narrGen) {
+        narrating = false;
+        if (t === token) patch({ now: null, done: true });
+      }
+    }
+  })();
+  return narration;
+}
+
+/** Stop reading out; the words stay on screen. */
+export function cutNarration() {
+  narrGen++;
+  narrating = false;
+  quiet();
+  patch({ now: null, done: true });
+}
+
+/** Put sentences on screen without saying them (for example the verdict's own words, restored). */
+export function showLines(texts: Said[]) {
+  const items = texts.map((x) => (typeof x === 'string' ? { text: x } : x)).map((x) => ({ ...x, id: ++seq }));
+  askStore.set((s) => ({ ...s, lines: [...s.lines, ...items.map(({ id, text, kind, noteTag }) => ({ id, text, kind, noteTag }))] }));
+}
+
+/** Wait until the narration has been said (or cut). */
+export function narrated(): Promise<void> {
+  return narration;
 }
 
 export async function sayAll(t: number, texts: string[]) {
@@ -214,11 +280,12 @@ export function settle() {
 /** Offer buttons (also answerable out loud). The first is the likely one. */
 export function choice(t: number, options: Choice[], o: { stack?: boolean; listen?: boolean } = {}): Promise<string> {
   alive(t);
-  patch({ phase: 'waiting', done: true, now: null, choices: { options, stack: o.stack ?? options.length > 2 } });
+  patch({ phase: 'waiting', choices: { options, stack: o.stack ?? options.length > 2 } });
   const picked = waitFor<string>((resolve) => {
     resolveChoice = resolve;
   });
-  if (o.listen !== false) void listenFor(t, options, () => !!resolveChoice, pick);
+  // The microphone opens only after WeKnow has finished talking, so it never hears itself.
+  if (o.listen !== false) void narration.then(() => listenFor(t, options, () => !!resolveChoice, pick));
   return picked.then((v) => {
     alive(t);
     stopEar?.();
@@ -229,7 +296,7 @@ export function choice(t: number, options: Choice[], o: { stack?: boolean; liste
 }
 
 export function pick(value: string) {
-  quiet();
+  cutNarration();
   const r = resolveChoice;
   resolveChoice = null;
   r?.(value);
@@ -261,6 +328,7 @@ async function listenFor(t: number, options: Choice[], waiting: () => boolean, a
 /** The asking sheet, the remember sheet and the offer to get ready. Resolves true for yes. */
 export async function ask(t: number, sheet: SheetRequest, spoken: string[]): Promise<boolean> {
   alive(t);
+  if (narrating) cutNarration();
   patch({ phase: 'waiting', sheet });
   const answer = waitFor<boolean>((resolve) => {
     resolveSheet = resolve;
@@ -283,6 +351,7 @@ export async function ask(t: number, sheet: SheetRequest, spoken: string[]): Pro
 }
 
 export function answerSheet(yes: boolean) {
+  cutNarration();
   const r = resolveSheet;
   resolveSheet = null;
   stopEar?.();
@@ -302,7 +371,7 @@ export function press(t: number): Promise<'next' | 'again' | 'stop'> {
 }
 
 export function pressGuide(v: 'next' | 'again' | 'stop') {
-  quiet();
+  cutNarration();
   resolvePress?.(v);
 }
 

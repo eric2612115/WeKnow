@@ -19,10 +19,10 @@ import { CameraWindow } from '../home/Window';
 import { Words } from '../home/Words';
 import { AskSheet } from '../home/AskSheet';
 import { ChoosePhoto, SampleButtons } from '../app/Sheets';
-import { Lanes, WhereTag } from '../ui/Receipt';
+import { HybridNote, Lanes, WhereTag } from '../ui/Receipt';
 import { I, StopFace } from '../ui/icons';
 import { openSheet, uiStore } from '../ui/uiStore';
-import { chooseSample, type Sample } from '../samples';
+import { askSample, chosenSampleQuestion, type Sample } from '../samples';
 import { t } from '../strings';
 
 function bigPress() {
@@ -38,7 +38,8 @@ function bigPress() {
     if (waitingForPress()) pressGuide('next');
     return;
   }
-  startAsk();
+  // A sample picture in the window asks its own question; otherwise WeKnow listens.
+  startAsk(chosenSampleQuestion());
 }
 
 function BigButton() {
@@ -113,6 +114,7 @@ function ReceiptCard() {
     >
       <WhereTag r={v.receipt} device={device} className="mb-1" />
       <Lanes r={v.receipt} device={device} picture={v.still} />
+      {v.receipt.w === 'cloud' && <HybridNote device={device} />}
       <button
         type="button"
         className="min-h-11 text-small font-semibold text-ink underline underline-offset-[0.2em]"
@@ -160,6 +162,12 @@ export default function Home() {
     });
   }, [nav]);
 
+  // The reader (Firebase, App Check) is warmed up once Ask has painted, so the first read does not wait for it.
+  useEffect(() => {
+    const later = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 600));
+    later(() => void import('../reader').catch(() => undefined));
+  }, []);
+
   // The camera runs only while Ask is open; it is never asked for here without a press.
   useEffect(() => {
     let live = true;
@@ -181,7 +189,7 @@ export default function Home() {
   useEffect(() => {
     const s = params.get('sample') as Sample['id'] | null;
     if (s) {
-      void chooseSample(s);
+      void askSample(s);
       params.delete('sample');
       setParams(params, { replace: true });
     }
@@ -208,7 +216,9 @@ export default function Home() {
   }, []);
 
   const phase = v.phase;
-  const winH = phase === 'guide' ? '40dvh' : phase === 'ready' || phase === 'listening' ? '50dvh' : '20dvh';
+  // Phone: the camera takes half the height while listening; when nothing has been asked yet it leaves a little
+  // more room, so the greeting and the three sample pictures fit under it without the menu.
+  const winH = phase === 'guide' ? '40dvh' : phase === 'ready' && !v.head ? '36dvh' : phase === 'ready' || phase === 'listening' ? '50dvh' : '20dvh';
   const showSamples = !(phase === 'listening' || phase === 'looking' || phase === 'guide');
   const nothingAsked = !v.head && !v.receipt;
 
@@ -229,12 +239,12 @@ export default function Home() {
           <Words />
         </div>
       </div>
-      <aside className="hidden min-h-0 flex-col gap-4 overflow-auto px-[0.2rem] pt-[0.1rem] pb-2 lg:flex" aria-label={t('where.title')}>
+      <div className="hidden min-h-0 flex-col gap-4 overflow-auto px-[0.2rem] pt-[0.1rem] pb-2 lg:flex">
         {showSamples && nothingAsked && <SamplesCard />}
         <Words desktop />
         <ReceiptCard />
         {showSamples && !nothingAsked && <SamplesCard />}
-      </aside>
+      </div>
       <AskSheet />
     </main>
   );

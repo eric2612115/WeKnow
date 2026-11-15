@@ -1,5 +1,5 @@
 // Maps links with no API key and no account. Only the kind of pro goes into the search ("plumber near me"), never a
-// name, an address or anything from the paper. Apple devices get Apple Maps; everyone else gets Google Maps.
+// name, an address or anything from the paper.
 
 const PRO: Record<string, string> = {
   plumbing: 'plumber',
@@ -16,7 +16,8 @@ export function proKind(category: string | undefined): string {
   return PRO[category ?? ''] ?? 'handyman';
 }
 
-const apple = () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+// Apple Maps on iPhone and iPad (where it is the maps app); every desktop browser gets Google Maps.
+const apple = () => typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
 export function mapsSearchUrl(query: string, isApple = apple()): string {
   const q = encodeURIComponent(query.slice(0, 80));

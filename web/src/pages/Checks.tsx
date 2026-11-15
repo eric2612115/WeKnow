@@ -68,7 +68,7 @@ export default function Checks() {
 
   const nav = (
     <aside
-      className={`grid gap-[0.8rem] lg:sticky lg:top-0 lg:gap-[0.2rem] lg:rounded-card lg:border lg:border-hair lg:bg-card lg:p-[0.6rem] lg:shadow-d1 ${
+      className={`grid grid-cols-[minmax(0,1fr)] gap-[0.8rem] lg:sticky lg:top-0 lg:gap-[0.2rem] lg:rounded-card lg:border lg:border-hair lg:bg-card lg:p-[0.6rem] lg:shadow-d1 ${
         !desktop && current ? 'hidden' : ''
       }`}
       aria-label={t('checks.title')}
@@ -159,7 +159,7 @@ export default function Checks() {
         )}
       </div>
       {list.length ? (
-        <div className="grid gap-[0.8rem] lg:grid-cols-[repeat(auto-fill,minmax(15.5rem,1fr))] lg:gap-[1.1rem]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-[0.8rem] lg:grid-cols-[repeat(auto-fill,minmax(15.5rem,1fr))] lg:gap-[1.1rem]">
           {list.map((c) => (
             <CheckItem key={c.id} c={c} showProject={current === 'all'} />
           ))}

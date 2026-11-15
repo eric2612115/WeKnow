@@ -38,7 +38,7 @@ export function Sheet({ open, onClose, onEscape, title, titleIcon, description, 
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
           <div className="mb-4 flex items-start justify-between gap-4">
-            <Dialog.Title className="text-sheet font-bold tracking-[-0.03em] text-balance">
+            <Dialog.Title className="min-w-0 text-sheet font-bold tracking-[-0.03em] text-balance">
               {titleIcon && (
                 <span
                   className={`mr-2 inline-block size-[1.9rem] align-[-0.35rem] [&_svg]:size-full ${

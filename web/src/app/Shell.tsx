@@ -10,7 +10,7 @@ import { setDrawer, useUi } from '../ui/uiStore';
 import { t } from '../strings';
 import { setPrefs, usePrefs, type Theme } from '../store/prefs';
 import { notesOf, useData } from '../store/data';
-import { deviceWord, useDevice } from '../engine/device';
+import { deviceWord, refreshModel, useDevice } from '../engine/device';
 import { firstName, useAccount, watchAccountLater } from '../engine/accountState';
 import { Sheets } from './Sheets';
 import Welcome from '../pages/Welcome';
@@ -89,9 +89,9 @@ function Drawer() {
       <Dialog.Portal>
         <Dialog.Overlay className="scrim" />
         <Dialog.Content className="drawer" aria-describedby={undefined}>
-          <div className="mt-1 mr-1 mb-[0.9rem] ml-2 flex items-center justify-between">
+          <div className="mt-1 mr-1 mb-[0.9rem] ml-2 flex flex-wrap items-center justify-between gap-2">
             <Dialog.Title asChild>
-              <span className="text-[1.3rem]">
+              <span className="min-w-0 text-[min(1.3rem,6.2vw)]">
                 <Wordmark />
               </span>
             </Dialog.Title>
@@ -137,7 +137,12 @@ export default function Shell() {
   const p = usePrefs();
   const loc = useLocation();
   useEffect(() => {
-    if (p.started) watchAccountLater();
+    if (!p.started) return;
+    const later = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 300));
+    later(() => {
+      void refreshModel();
+      watchAccountLater();
+    });
   }, [p.started]);
   useEffect(() => {
     if (loc.hash) {

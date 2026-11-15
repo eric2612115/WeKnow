@@ -153,9 +153,9 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
             {stage.text}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <span className="wtag text-small" data-where={stage.where === 'device' ? 'local' : 'mixed'}>
+            <span className="wtag text-small" data-where={stage.where === 'device' ? 'local' : 'cloud'}>
               {stage.where === 'device' ? <DeviceIcon device={device} /> : <I.net />}
-              {stage.where === 'device' ? t('tag.local', { device }) : t('tag.mixed', { n: 1 })}
+              {stage.where === 'device' ? t('tag.local', { device }) : t('tag.cloud')}
             </span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-[0.7rem]">

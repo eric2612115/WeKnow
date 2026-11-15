@@ -24,4 +24,20 @@ function evalFixtures(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), evalFixtures()],
+  build: {
+    rolldownOptions: {
+      output: {
+        // Firestore loads only after Start, with two self-contained helpers (its network transport and a regular
+        // expression engine). Shipping those as their own chunks keeps every chunk under 500 kB. Only those two
+        // packages are grouped; everything else is chunked as Vite decides.
+        codeSplitting: {
+          includeDependenciesRecursively: false,
+          groups: [
+            { name: 'firestore-transport', test: /node_modules[\\/]@firebase[\\/]webchannel-wrapper[\\/]/ },
+            { name: 'firestore-regex', test: /node_modules[\\/]re2js[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
 });

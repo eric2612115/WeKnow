@@ -143,11 +143,19 @@ export function fileProject(family: Family): string {
   const same = s.checks.find((c) => c.family === family && exists(c.projectId));
   if (same) return same.projectId;
   const last = getPrefs().lastProject;
-  if (exists(last)) return last!;
-  return s.projects[0]?.id ?? 'home';
+  // "The car" holds car papers only: a bill or a drain after a car quote goes to the household project instead.
+  const carOnly = (id: string) => s.projects.find((p) => p.id === id)?.name === t('project.car');
+  if (exists(last) && !carOnly(last!)) return last!;
+  return s.projects.find((p) => !carOnly(p.id))?.id ?? s.projects[0]?.id ?? 'home';
 }
 
-export async function addCheck(c: Omit<Check, 'id' | 'projectId' | 'date' | 'pictureId'>, picture?: Blob): Promise<Check> {
+/** The project with this name, made on first use (for example "The car" for the first car quote). */
+export async function projectNamed(name: string): Promise<string> {
+  const found = dataStore.get().projects.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  return found ? found.id : (await createProject(name)).id;
+}
+
+export async function addCheck(c: Omit<Check, 'id' | 'projectId' | 'date' | 'pictureId'>, picture?: Blob, project?: string): Promise<Check> {
   const id = newId('c');
   let pictureId: string | undefined;
   if (picture) {
@@ -155,7 +163,8 @@ export async function addCheck(c: Omit<Check, 'id' | 'projectId' | 'date' | 'pic
     pictures.set(pictureId, picture);
     if (persist) await idbPut<Picture>('pictures', { id: pictureId, blob: picture }).catch(() => undefined);
   }
-  const check: Check = { ...c, id, projectId: fileProject(c.family), date: new Date().toISOString(), pictureId };
+  const projectId = project ? await projectNamed(project) : fileProject(c.family);
+  const check: Check = { ...c, id, projectId, date: new Date().toISOString(), pictureId };
   dataStore.set((s) => ({ ...s, checks: [check, ...s.checks] }));
   setPrefs({ lastProject: check.projectId });
   await write('checks', check);

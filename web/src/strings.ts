@@ -74,6 +74,7 @@ export const EN = {
   'fix.no': 'Not now',
   'guide.before': 'Before you start',
   'guide.caution': 'One caution. {text}',
+  'guide.caution.more': 'Also: {text}', // added: a second caution
   'guide.stopif': 'Stop and call a pro if: {text}', // added: the guide's "stop if" signs, spoken before step 1
   'guide.step': 'Step {n} of {total}',
   'guide.ok': 'Good.',
@@ -106,8 +107,8 @@ export const EN = {
   'quote.looking': 'I am looking that up on the internet.',
   'quote.looking.n': 'I am looking those up on the internet.', // added: several lines
   'quote.found': 'Found it. That line is fair. I will keep it for next time.',
-  'quote.requested': 'I do not have a price I can trust for that yet. I asked for it to be added.', // added
-  'quote.requested.n': 'I do not have prices I can trust for those yet. I asked for them to be added.', // added
+  'quote.requested': 'I asked for that price to be added.', // added
+  'quote.requested.n': 'I asked for those prices to be added.', // added
   'quote.skip': 'All right. I will skip that line.',
   'quote.skip.n': 'All right. I will skip those lines.', // added
   'quote.wait': 'There is no internet, so that line has to wait.',
@@ -116,7 +117,7 @@ export const EN = {
   'quote.high.title': 'One line is high',
   'quote.highs.title': '{n} lines are high', // added
   'quote.fair.title': 'This looks fair',
-  'quote.high.1': 'Line {n}, {label}, is {over} high.',
+  'quote.high.1': 'Line {n}, {label}: {amount} is {over} above the usual top price of {top}.', // spec: "Line 3, brake labor, is $180 high." with the reference stated
   'quote.high.2': 'Most shops charge about {typical}. The other lines look fair.',
   'quote.typical': 'Most shops charge about {typical}.', // "Shops near you" needs a local price book; ours is national
   'quote.fair.1': 'One line looks fair.',
@@ -150,6 +151,7 @@ export const EN = {
   'letter.check.title': 'Check this first',
   'letter.fine.title': 'This looks normal',
   'letter.sign.account': 'It wants the money sent to a new account.',
+  'letter.sign.notice': 'It asks you to pay a new account.', // added: the letter itself announces a new bank or account
   'letter.sign.newpayee': 'I have no note of paying {payee} before.', // added: new-payee flag
   'letter.sign.nopayee': 'I cannot tell who is asking for the money.', // added: new-payee flag, no name read
   'letter.sign.changed': 'It wants the money sent to a different account than last time.', // added: changed account, no digits read
@@ -255,6 +257,7 @@ export const EN = {
   'check.delete.ask': 'Delete this check?',
   'check.delete.body': 'It is removed from this {device}. This cannot be undone.',
   'project.default': 'My home',
+  'project.car': 'The car', // added: car quotes are filed here (created on the first one)
   'project.count': '{n} checks', // added: screen reader text for the count
 
   // The internet
@@ -301,6 +304,12 @@ export const EN = {
   'where.declined': 'You said no, so this was not checked: {names}.',
   'where.requested': 'Asked to be added to the price book: {names}.', // added
   'where.facts': 'Where the facts come from',
+  'hybrid.title': 'On a device that reads by itself', // added: the hybrid, said plainly in every cloud receipt
+  'hybrid.line': 'On a phone or computer that can read by itself, this same check runs right there, and the picture never leaves it. Only a missing price is looked up, after a yes.', // added
+  'hybrid.here.cloud': 'This {device} cannot read pictures by itself, so it used the internet.', // added
+  'hybrid.here.can': 'This {device} can get ready to read by itself. It takes a while, once, best on home Wi-Fi.', // added
+  'hybrid.here.getting': 'This {device} is getting ready to read by itself: {n}%.', // added
+  'hybrid.here.ready': 'This {device} now reads by itself.', // added
   'where.more': 'Sources and details',
   'where.tech': 'Technical details',
   'where.picture': 'The picture',
@@ -452,6 +461,7 @@ export const EN = {
   'help.how.title': 'How it works',
   'help.how': 'Point the camera at it. Press Ask. Say what’s wrong. WeKnow looks, and tells you what to do.',
   'help.hear': 'Hear how WeKnow works',
+  'help.hybrid': 'On a phone or computer that can read by itself, WeKnow reads the picture right there and your details never leave it. Where it cannot, it asks before using the internet, and says so on every answer.', // added
   'help.hear.say': 'Point me at something. Press Ask, and say what’s wrong. I will look, and tell you what to do.',
   'help.words.title': 'Words WeKnow always understands',
   'help.setup.title': 'Setting it up for someone else?',

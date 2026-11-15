@@ -37,11 +37,13 @@ describe('quote answers', () => {
   it('every number in the summary comes from the pack item or the paper', () => {
     const s = quoteSummary(items);
     expect(s.verdict).toEqual({ tone: 'warn', text: 'One line is high' });
+    // The numbers add up for a reader: $540 is $146 over the usual top of $394; most shops charge about $271.
     expect(s.sentences).toEqual([
-      'Line 1, rear brake pads replacement (parts + labor), is $146 high.',
+      'Line 1, rear brake pads replacement: $540 is $146 above the usual top price of $394.',
       'Most shops charge about $271. One line looks fair. Three are not checked.',
     ]);
-    expect(sayToShop(s.worst!)).toBe('“Could you go over the rear brake pads replacement (parts + labor) with me? Other shops charge about $271.”');
+    expect(540 - 146).toBe(394);
+    expect(sayToShop(s.worst!)).toBe('“Could you go over the rear brake pads replacement with me? Other shops charge about $271.”');
   });
 
   it('nothing high is fair; nothing known cannot be judged; nothing read asks to come closer', () => {
@@ -84,6 +86,18 @@ describe('bill answers', () => {
       'One. It has hidden words that try to tell a reader it is safe.',
       'Two. I have no note of paying Riverbend Electric Co-op before.',
     ]);
+  });
+
+  it('a letter announcing a new bank or account says so first, plainly, and is a stop', () => {
+    const known = [{ name: 'Riverbend Electric Co-op', payTo: '4821' }];
+    const a = billAnswer(billVerdict(u({ accountChange: true }), '', known), 'Riverbend Electric Co-op', known);
+    expect(a.verdict).toEqual({ tone: 'stop', text: 'Don’t pay this yet' });
+    expect(a.reasons[0].text).toBe('One. It asks you to pay a new account.');
+    expect(a.reasons[1]).toEqual({ text: 'Two. The account is new. You paid them at one ending 4821 before.', fromNote: true });
+    expect(a.doLine).toBe('Call the company first. Use the number on an older bill.');
+    // Without a note, the notice is said once, not twice.
+    const b = billAnswer(billVerdict(u({ accountChange: true }), '', []), 'Riverbend Electric Co-op', []);
+    expect(b.reasons.map((r) => r.text)).toEqual(['One. It asks you to pay a new account.', 'Two. I have no note of paying Riverbend Electric Co-op before.']);
   });
 
   it('a new payee alone is "check this first"; a known payee and account is normal', () => {

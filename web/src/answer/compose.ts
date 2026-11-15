@@ -13,7 +13,7 @@ export function lineItems(verdicts: LineVerdict[], labels: string[]): LineItem[]
   return verdicts.map((v, i) => {
     const n = i + 1;
     if (v.kind === 'unknown') return { n, label: v.label, amount: v.amount, state: 'pending' as const };
-    const base = { n, label: labels[i] ?? v.item.name, amount: v.amount, typical: v.item.typical, name: v.item.name };
+    const base = { n, label: labels[i] ?? v.item.name, amount: v.amount, typical: v.item.typical, top: v.item.high, name: v.item.name };
     if (v.kind === 'high') return { ...base, state: 'high' as const, over: v.over };
     if (v.kind === 'low') return { ...base, state: 'low' as const };
     return { ...base, state: 'fair' as const };
@@ -21,6 +21,8 @@ export function lineItems(verdicts: LineVerdict[], labels: string[]): LineItem[]
 }
 
 const lower = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+/** A label as it is said: printed asides such as "(parts + labor)" are left out of the sentence, not the screen. */
+export const spoken = (s: string) => lower(s.replace(/\s*\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim() || s);
 export function listNames(names: string[]): string {
   const ns = names.map(lower);
   if (ns.length <= 1) return ns[0] ?? '';
@@ -57,11 +59,13 @@ export function quoteSummary(items: LineItem[]): QuoteSummary {
 
   const fairSentence = fair === 1 ? t('quote.fair.1') : t('quote.fair.n', { n: words(fair, true) });
   const pendingSentence = pending === 1 ? t('quote.pending.1') : t('quote.pending.n', { n: words(pending, true) });
-  const lows = items.filter((i) => i.state === 'low').slice(0, 1).map((l) => t('quote.low', { n: l.n, label: lower(l.label) }));
+  const lows = items.filter((i) => i.state === 'low').slice(0, 1).map((l) => t('quote.low', { n: l.n, label: spoken(l.label) }));
 
   if (highs.length) {
     const worst = highs[0];
-    const sentences = highs.slice(0, 2).map((h) => t('quote.high.1', { n: h.n, label: lower(h.label), over: money(h.over ?? 0) }));
+    const sentences = highs
+      .slice(0, 2)
+      .map((h) => t('quote.high.1', { n: h.n, label: spoken(h.label), amount: money(h.amount ?? 0), over: money(h.over ?? 0), top: money(h.top ?? 0) }));
     const typical = t('quote.typical', { typical: money(worst.typical ?? 0) });
     if (!pending && fair === items.length - highs.length && fair > 0) sentences.push(t('quote.high.2', { typical: money(worst.typical ?? 0) }));
     else sentences.push([typical, fair ? fairSentence : '', pending ? pendingSentence : ''].filter(Boolean).join(' '));
@@ -76,7 +80,7 @@ export function quoteSummary(items: LineItem[]): QuoteSummary {
 }
 
 export function sayToShop(worst: LineItem): string {
-  return t('quote.say.line', { label: lower(worst.label), typical: money(worst.typical ?? 0) });
+  return t('quote.say.line', { label: spoken(worst.label), typical: money(worst.typical ?? 0) });
 }
 
 export function quoteTitle(items: LineItem[], shop: string | null): string {
@@ -94,19 +98,26 @@ export interface BillAnswer {
   doLine?: string;
 }
 
-const ORDER: BillFlag[] = ['changed-account', 'instruction-to-ai', 'new-payee', 'urgency'];
+// A letter announcing a new bank or account is said first and plainly; then anything else that is wrong.
+const ORDER: BillFlag[] = ['account-change-notice', 'changed-account', 'instruction-to-ai', 'new-payee', 'urgency'];
+const STOP: BillFlag[] = ['account-change-notice', 'changed-account', 'instruction-to-ai'];
 
 export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPayee[]): BillAnswer {
   const match = known.find((k) => payee && k.name.toLowerCase() === payee.toLowerCase());
+  const has = (f: BillFlag) => v.flags.includes(f);
   const raw: Array<{ text: string; fromNote?: boolean }> = [];
-  for (const f of ORDER.filter((x) => v.flags.includes(x))) {
-    if (f === 'changed-account') raw.push(match ? { text: t('note.payee', { old: match.payTo }), fromNote: true } : { text: t('letter.sign.changed') });
+  for (const f of ORDER.filter(has)) {
+    if (f === 'account-change-notice') raw.push({ text: t('letter.sign.notice') });
+    if (f === 'changed-account') {
+      if (match) raw.push({ text: t('note.payee', { old: match.payTo }), fromNote: true });
+      else if (!has('account-change-notice')) raw.push({ text: t('letter.sign.account') });
+    }
     if (f === 'instruction-to-ai') raw.push({ text: t('letter.sign.ai') });
     if (f === 'new-payee') raw.push({ text: payee ? t('letter.sign.newpayee', { payee }) : t('letter.sign.nopayee') });
     if (f === 'urgency') raw.push({ text: t('letter.sign.rush') });
   }
   if (v.safe) return { verdict: { tone: 'ok', text: t('letter.fine.title') }, reasons: [{ text: t('letter.fine') }] };
-  const stop = v.flags.includes('changed-account') || v.flags.includes('instruction-to-ai');
+  const stop = STOP.some(has);
   const reasons = raw.map((r, i) => ({ ...r, text: `${words(i + 1, true)}. ${r.text}` }));
   return {
     verdict: { tone: stop ? 'stop' : 'warn', text: stop ? t('letter.stop.title') : t('letter.check.title') },

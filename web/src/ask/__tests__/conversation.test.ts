@@ -74,4 +74,23 @@ describe('the conversation on the Ask page', () => {
     await Promise.all([first, second]);
     expect(order).toEqual(['second']);
   });
+
+  it('an answer is on screen at once and its buttons work before it has been read out', async () => {
+    let picked = '';
+    const done = C.run(async (t) => {
+      C.setHead('warn', 'One line is high');
+      void C.narrate(t, ['Line 1, rear brake pads: $540 is $146 above the usual top price of $394.', 'Most shops charge about $271.']);
+      picked = await C.choice(t, [
+        { value: 'yes', label: 'Yes, tell me' },
+        { value: 'no', label: 'No thanks' },
+      ]);
+    });
+    // Both sentences and both buttons are there straight away.
+    expect(C.view().lines.map((l) => l.text)).toHaveLength(2);
+    await vi.waitFor(() => expect(C.view().choices?.options).toHaveLength(2));
+    C.pick('no');
+    await done;
+    expect(picked).toBe('no');
+    expect(C.view().head?.text).toBe('One line is high');
+  });
 });

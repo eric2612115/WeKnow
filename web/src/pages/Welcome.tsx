@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Wordmark } from '../ui/controls';
 import { t } from '../strings';
-import { SAMPLES } from '../samples';
+import { askSample, SAMPLES, type Sample } from '../samples';
 import { setPrefs } from '../store/prefs';
 import { permission, requestCameraAndMic } from '../engine/camera';
 import { deviceWord } from '../engine/device';
@@ -15,18 +15,20 @@ export default function Welcome() {
   const [allow, setAllow] = useState(false);
   const device = deviceWord();
 
-  const start = async () => {
+  // Start, or one of the three pictures: the same press, and a picture then asks its own question at once.
+  const start = async (sample?: Sample['id']) => {
     unlockSound();
     const [cam, mic] = await Promise.all([permission('camera'), permission('microphone')]);
-    if (cam === 'granted' && mic === 'granted') return done(await requestCameraAndMic());
+    if (cam === 'granted' && mic === 'granted') return done(await requestCameraAndMic(), sample);
     setAllow(true);
     void sayAloud(t('allow.say'));
-    done(await requestCameraAndMic());
+    done(await requestCameraAndMic(), sample);
   };
-  const done = (state: string) => {
+  const done = (state: string, sample?: Sample['id']) => {
     quiet();
     setPrefs({ started: true });
-    if (state === 'live') greet();
+    if (sample) void askSample(sample);
+    else if (state === 'live') greet();
   };
 
   if (allow)
@@ -74,11 +76,17 @@ export default function Welcome() {
       </div>
       <ul className="grid w-full max-w-[46rem] grid-cols-3 gap-[0.7rem] lg:max-w-[44rem] lg:gap-[1.4rem]">
         {SAMPLES.map((s) => (
-          <li key={s.id} className="flex flex-col items-center gap-2">
-            <span className="thumb">
-              <img src={s.url} alt="" />
-            </span>
-            <q className="text-small leading-tight font-semibold lg:text-[1.2rem]">{t(s.q)}</q>
+          <li key={s.id}>
+            <button
+              type="button"
+              className="flex w-full flex-col items-center gap-2 transition-transform duration-150 hover:-translate-y-0.5"
+              onClick={() => void start(s.id)}
+            >
+              <span className="thumb">
+                <img src={s.url} alt="" />
+              </span>
+              <q className="text-small leading-tight font-semibold lg:text-[1.2rem]">{t(s.q)}</q>
+            </button>
           </li>
         ))}
       </ul>

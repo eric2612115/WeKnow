@@ -16,6 +16,7 @@ export interface LineItem {
   state: LineState;
   over?: number; // how far above the usual top, when high
   typical?: number;
+  top?: number; // the usual top price, the reference for "high"
   name?: string; // the pack item it matched
 }
 

@@ -5,6 +5,7 @@ import quoteUrl from '../fixtures/quote-brakes.png';
 import billUrl from '../fixtures/bill-changed-account.png';
 import drainUrl from './assets/samples/drain.jpg';
 import { patch, view } from './ask/conversation';
+import { startAsk } from './ask/flows';
 import { t, type StringId } from './strings';
 
 export interface Sample {
@@ -20,6 +21,21 @@ export const SAMPLES: Sample[] = [
 ];
 
 export const sampleQuestion = (s: Sample) => t(s.q);
+
+/** The question a chosen sample picture asks by itself, if a sample is in the window. */
+export function chosenSampleQuestion(): string | undefined {
+  const id = view().chosen?.sample;
+  const s = SAMPLES.find((x) => x.id === id);
+  return s ? t(s.q) : undefined;
+}
+
+/** One press: put the sample in the window and ask its own question at once (no listening). */
+export async function askSample(id: Sample['id']) {
+  const s = SAMPLES.find((x) => x.id === id);
+  if (!s) return;
+  await chooseSample(id);
+  startAsk(t(s.q));
+}
 
 export async function chooseSample(id: Sample['id']) {
   const s = SAMPLES.find((x) => x.id === id);

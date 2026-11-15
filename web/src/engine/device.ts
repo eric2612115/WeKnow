@@ -33,10 +33,28 @@ if (typeof window !== 'undefined') {
   window.addEventListener('offline', () => patch({ online: false }));
 }
 
+type LMAvailability = { availability?: (o?: unknown) => Promise<string> };
+
+/**
+ * The same question reader.deviceModelStatus asks (text and image in, English out), asked here directly so the
+ * status pill never has to load Firebase.
+ */
+async function availability(): Promise<string> {
+  const lm = (globalThis as unknown as { LanguageModel?: LMAvailability }).LanguageModel;
+  if (!lm?.availability) return 'unavailable';
+  try {
+    return await lm.availability({
+      expectedInputs: [{ type: 'text' }, { type: 'image' }],
+      expectedOutputs: [{ type: 'text', languages: ['en'] }],
+    });
+  } catch {
+    return 'unavailable';
+  }
+}
+
 export async function refreshModel(): Promise<ModelState> {
   try {
-    const { deviceModelStatus } = await import('../reader');
-    const s = (await deviceModelStatus()) as ModelState;
+    const s = (await availability()) as ModelState;
     const model: ModelState = ['available', 'downloadable', 'downloading', 'unavailable'].includes(s) ? s : 'unavailable';
     // Keep our own progress while we drive a download.
     if (deviceStore.get().pct === null || model === 'available') patch({ model, ...(model === 'available' ? { pct: null, almost: false } : {}) });

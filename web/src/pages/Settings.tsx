@@ -58,7 +58,7 @@ function Account() {
             <I.user />
           </span>
         )}
-        <div>
+        <div className="min-w-0">
           <b className="block text-body font-bold">{a?.signedIn ? (a.name ?? a.email) : t('set.account.out.title')}</b>
           <span className="text-small text-ink-2">{a?.signedIn ? a.email : t('set.account.out')}</span>
         </div>
@@ -150,7 +150,7 @@ export default function Settings() {
               </a>
             ))}
           </nav>
-          <div className="grid gap-4">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
             <Account />
             <Card id="set-voice" className="scroll-mt-4">
               <CardTitle>{t('set.voice.title')}</CardTitle>
@@ -186,7 +186,7 @@ export default function Settings() {
             </Card>
             <Card id="set-privacy" className="scroll-mt-4">
               <CardTitle>{t('set.privacy')}</CardTitle>
-              <div className="my-[0.6rem] mb-[0.4rem] grid gap-[0.8rem] lg:grid-cols-2">
+              <div className="my-[0.6rem] mb-[0.4rem] grid grid-cols-[minmax(0,1fr)] gap-[0.8rem] lg:grid-cols-2">
                 <div className="rounded-btn bg-card-2 px-4 py-[0.9rem]">
                   <h3 className="mb-[0.4rem] flex items-center gap-2 text-body font-bold [&_svg]:size-6 [&_svg]:flex-none">
                     <DeviceIcon device={device} />

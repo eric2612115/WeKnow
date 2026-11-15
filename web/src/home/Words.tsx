@@ -11,6 +11,7 @@ import { openSheet } from '../ui/uiStore';
 import { t, money } from '../strings';
 import { projectName, useData } from '../store/data';
 import { explainCurrent } from '../app/explainOpen';
+import { SampleButtons } from '../app/Sheets';
 import type { LineItem } from '../answer/types';
 
 const HEAD_ICON: Record<IconKey, () => ReactNode> = {
@@ -111,8 +112,9 @@ function Lines() {
   return (
     <div aria-live="polite">
       {v.lines.map((l) => {
+        // Every sentence stays readable; the one being said carries a green mark at its edge.
         const now = l.id === v.now && !v.done;
-        const ink = now || v.done || l.kind === 'strong' || l.kind === 'heard' ? 'text-ink' : 'text-ink-2';
+        const mark = now ? 'shadow-[inset_3px_0_0_var(--go)] pl-3 -ml-3' : '';
         if (l.kind === 'warn')
           return (
             <p key={l.id} className="my-[0.45rem] flex items-start gap-2 rounded-btn bg-warn-bg px-[0.8rem] py-[0.65rem] text-caption font-semibold tracking-[-0.012em] text-warn-ink lg:text-[1.4375rem] [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none">
@@ -123,11 +125,11 @@ function Lines() {
         return (
           <div key={l.id}>
             <p
-              className={`my-[0.45rem] tracking-[-0.012em] ${
+              className={`my-[0.45rem] tracking-[-0.012em] text-ink transition-shadow ${mark} ${
                 l.kind === 'strong' || l.kind === 'heard'
                   ? 'min-h-[1.4em] text-strong font-bold tracking-[-0.02em] lg:text-[1.7rem]'
                   : 'text-caption font-medium lg:text-[1.4375rem]'
-              } ${ink} ${l.kind === 'ok' ? 'flex items-start gap-2 [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none [&_svg]:text-go' : ''}`}
+              } ${l.kind === 'ok' ? 'flex items-start gap-2 [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none [&_svg]:text-go' : ''}`}
             >
               {l.kind === 'ok' && <I.ok />}
               <span>{l.text}</span>
@@ -136,6 +138,38 @@ function Lines() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Links that stay under an answer (Find a pro nearby, Call someone). */
+function Links() {
+  const v = useAsk();
+  if (!v.links.length) return null;
+  return (
+    <div className="mt-[0.9rem] grid gap-[0.7rem]">
+      {v.links.map((o, i) => (
+        <a
+          key={o.value}
+          href={o.href}
+          className={`btn ${i === 0 ? 'btn-yes' : ''}`}
+          {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        >
+          {o.icon === 'map' ? <I.map /> : <I.phone />}
+          {o.label}
+        </a>
+      ))}
+      {v.links.some((o) => o.external) && <p className="text-small text-ink-2">{t('maps.open')}</p>}
+    </div>
+  );
+}
+
+/** Phone home: the three sample pictures, each asking its own question with one press. */
+function SamplesRow() {
+  return (
+    <div className="mt-3">
+      <p className="mb-2 text-small font-semibold text-ink-2">{t('home.samples')}</p>
+      <SampleButtons compact />
     </div>
   );
 }
@@ -208,17 +242,26 @@ export function KeptChip() {
   );
 }
 
-/** Phone: the words sit on the page; the tag is pinned to the bottom. Desktop: the same inside a card. */
+/** Phone: the words sit on the page and scroll as one; nothing is pinned over them. Desktop: the same in a card. */
 export function Words({ desktop = false }: { desktop?: boolean }) {
   const v = useAsk();
   const box = useRef<HTMLDivElement>(null);
   const device = deviceWord();
+  const headKey = v.head ? `${v.head.tone}:${v.head.text}` : '';
+  // A new answer: show its start (the verdict and its reasons). Otherwise keep the newest words in view.
   useEffect(() => {
     const el = box.current;
-    if (el && !desktop) el.scrollTop = el.scrollHeight;
-  }, [v.lines.length, v.choices, v.typing, v.items, desktop]);
+    if (el && !desktop && headKey) el.scrollTop = 0;
+  }, [headKey, desktop]);
+  useEffect(() => {
+    const el = box.current;
+    if (el && !desktop && !headKey) el.scrollTop = v.phase === 'ready' ? 0 : el.scrollHeight;
+  }, [v.lines.length, v.choices, v.typing, desktop, headKey, v.phase]);
   const showAsked = v.asked && !(v.head && v.head.tone !== 'plain');
-  const coach = v.phase === 'ready' && !v.lines.length && !v.head;
+  const answerLike = !!v.head && v.phase !== 'listening';
+  const ready = v.phase === 'ready' && !v.head;
+  const coach = ready && !v.lines.length;
+  const explain = v.kept && (v.phase === 'settled' || v.phase === 'waiting');
   return (
     <div
       ref={box}
@@ -230,10 +273,7 @@ export function Words({ desktop = false }: { desktop?: boolean }) {
     >
       {showAsked && <p className="mb-2 text-small text-ink-2">{v.asked}</p>}
       <Steps />
-      <div className={desktop ? '' : 'sticky top-0 z-[1] bg-bg shadow-[0_0_0_0.45rem_var(--bg)]'}>
-        <Head />
-      </div>
-      <Items />
+      <Head />
       {coach ? (
         <p className="my-[0.45rem] text-caption font-medium tracking-[-0.012em] lg:text-[1.4375rem]">{t('home.coach')}</p>
       ) : (
@@ -241,17 +281,13 @@ export function Words({ desktop = false }: { desktop?: boolean }) {
       )}
       <Choices />
       <Typing />
+      <Links />
+      {answerLike && <Items />}
       {(v.receipt || v.kept) && (
-        <div
-          className={
-            desktop
-              ? 'flex flex-wrap gap-2 pt-4 empty:hidden'
-              : 'sticky bottom-0 mt-auto flex flex-wrap gap-2 bg-bg pt-3 pb-[0.2rem]'
-          }
-        >
+        <div className={desktop ? 'flex flex-wrap gap-2 pt-4 empty:hidden' : 'mt-3 flex gap-2 pb-[0.2rem] [&>*]:min-w-0 [&>*]:flex-1'}>
           {!desktop && v.receipt && <WhereTag r={v.receipt} device={device} onOpen={() => openSheet({ type: 'receipt' })} />}
           {desktop && <KeptChip />}
-          {v.kept && (v.phase === 'settled' || v.phase === 'waiting') && (
+          {explain && (
             <button type="button" className="tag" onClick={() => void explainCurrent()}>
               <I.lang />
               <span>{t('explain.button')}</span>
@@ -259,15 +295,7 @@ export function Words({ desktop = false }: { desktop?: boolean }) {
           )}
         </div>
       )}
-      {coach && !desktop && (
-        <button
-          type="button"
-          className="mt-1 self-start text-small font-semibold text-ink-2 underline underline-offset-[0.2em] min-h-11"
-          onClick={() => openSheet({ type: 'samples' })}
-        >
-          {t('home.samples')}
-        </button>
-      )}
+      {ready && !desktop && <SamplesRow />}
     </div>
   );
 }

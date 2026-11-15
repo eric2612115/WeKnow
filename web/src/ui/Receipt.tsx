@@ -2,6 +2,7 @@
 // and the sources; Technical details closed by default and the only place for words like model or pack version.
 
 import type { Receipt } from '../answer/types';
+import { getReady, useDevice } from '../engine/device';
 import { tagText } from '../answer/compose';
 import { t } from '../strings';
 import { DeviceIcon, I, WhereIcon } from './icons';
@@ -76,11 +77,40 @@ export function Lanes({ r, device, picture }: { r: Receipt; device: string; pict
   );
 }
 
+/** The hybrid, said plainly: what a device that reads by itself would do, and what this one can do now. */
+export function HybridNote({ device }: { device: string }) {
+  const d = useDevice();
+  const here =
+    d.pct !== null
+      ? t('hybrid.here.getting', { device, n: d.pct })
+      : d.model === 'available'
+        ? t('hybrid.here.ready', { device })
+        : d.model === 'downloadable'
+          ? t('hybrid.here.can', { device })
+          : t('hybrid.here.cloud', { device });
+  return (
+    <div className="border-t border-hair py-[0.85rem]" data-testid="hybrid">
+      <div className={`${laneH} [&_svg]:text-go`}>
+        <DeviceIcon device={device} />
+        {t('hybrid.title')}
+      </div>
+      <p className="text-small">{t('hybrid.line')}</p>
+      <p className="mt-1 text-small text-ink-2">{here}</p>
+      {d.model === 'downloadable' && d.pct === null && (
+        <button type="button" className="btn btn-sm mt-2" onClick={() => void getReady()}>
+          {t('ready.offer.yes')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ReceiptFull({ r, device, picture }: { r: Receipt; device: string; picture?: string | null }) {
   return (
     <div>
       <WhereTag r={r} device={device} className="mb-3" />
       <Lanes r={r} device={device} picture={picture} />
+      {r.w === 'cloud' && <HybridNote device={device} />}
       {r.saved && (
         <div className="border-t border-hair py-[0.85rem]">
           <div className={`${laneH} [&_svg]:text-go`}>

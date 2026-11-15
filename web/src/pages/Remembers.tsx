@@ -17,7 +17,7 @@ function NoteRow({ group, onDelete }: { group: Memory[]; onDelete: (g: Memory[])
   const f = noteFields(m, group);
   return (
     <div className="flex flex-wrap items-center justify-between gap-[0.8rem] border-t border-hair py-[0.8rem] first:border-t-0">
-      <div className="grid min-w-36 flex-1 gap-[0.15rem]">
+      <div className="grid min-w-0 flex-[1_1_9rem] gap-[0.15rem]">
         <b className="text-body leading-[1.25] font-bold tracking-[-0.01em]">{f.a}</b>
         <span className="text-small">{f.b}</span>
         <small className="text-small text-ink-2">{f.c}</small>
@@ -61,7 +61,7 @@ export default function Remembers() {
   const by = (k: Memory['kind']) => notes.filter((g) => g[0].kind === k);
   const pref = (label: string, value: string, action?: boolean) => (
     <div className="flex flex-wrap items-center justify-between gap-[0.8rem] border-t border-hair py-[0.8rem] first:border-t-0">
-      <div className="grid min-w-36 flex-1 gap-[0.15rem]">
+      <div className="grid min-w-0 flex-[1_1_9rem] gap-[0.15rem]">
         <b className="text-body font-bold">{label}</b>
         <span className="text-small">{value}</span>
       </div>
@@ -77,10 +77,10 @@ export default function Remembers() {
     <main id="page" className="min-h-0 flex-1 animate-rise overflow-auto px-4 pt-[0.4rem] pb-10 lg:px-7 lg:pt-2 lg:pb-12">
       <div className="mx-auto max-w-[40rem] lg:max-w-[76rem]">
         <PageTitle>{t('notes.title')}</PageTitle>
-        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2 lg:items-start">
           <div className="card flex items-start gap-[0.9rem] border-transparent bg-ok-bg px-[1.15rem] py-4 lg:col-span-2 [&>svg]:mt-0.5 [&>svg]:size-8 [&>svg]:flex-none [&>svg]:text-go">
             <DeviceIcon device={device} />
-            <div>
+            <div className="min-w-0">
               <b className="block text-[1.25rem] leading-[1.2] font-bold tracking-[-0.015em]">{t('notes.only.title', { device })}</b>
               <p className="mt-1 text-small">{t('notes.only.line', { device })}</p>
             </div>
@@ -117,7 +117,7 @@ export default function Remembers() {
               </span>
               <Toggle checked={p.offerNotes} onChange={(v) => setPrefs({ offerNotes: v })} label={t('notes.offer')} />
             </div>
-            <div className="row opacity-75">
+            <div className="row">
               <span>
                 {t('notes.backup')}
                 <small>{t('notes.backup.fine', { device })}</small>

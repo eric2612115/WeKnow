@@ -16,7 +16,7 @@ import { setPrefs, usePrefs } from '../store/prefs';
 import { deviceWord, getReady, useDevice } from '../engine/device';
 import { sayAloud, quiet } from '../engine/speech';
 import { cameraStore, requestCameraAndMic, useCamera } from '../engine/camera';
-import { chooseFile, chooseSample, SAMPLES } from '../samples';
+import { askSample, chooseFile, SAMPLES, type Sample } from '../samples';
 import { googleCalendarLink, icsFile } from '../core/reminders';
 import type { Memory } from '../core/memory';
 import { ExplainSheet } from './ExplainSheet';
@@ -226,20 +226,18 @@ function ConfirmSheet({ s }: { s: Extract<SheetState, { type: 'confirm' }> | nul
   );
 }
 
-export function SampleButtons({ onPicked }: { onPicked?: () => void }) {
+/** The three sample pictures. A press asks that picture's own question at once. */
+export function SampleButtons({ onPick, compact = false }: { onPick?: (id: Sample['id']) => void; compact?: boolean }) {
   const v = useAsk();
   return (
-    <div className="grid grid-cols-3 gap-[0.8rem]">
+    <div className={`grid grid-cols-3 ${compact ? 'gap-2' : 'gap-[0.8rem]'}`}>
       {SAMPLES.map((s) => (
         <button
           key={s.id}
           type="button"
           aria-pressed={v.chosen?.sample === s.id}
           className="group flex min-w-0 flex-col items-stretch gap-[0.45rem] text-center text-small leading-tight font-semibold transition-transform duration-150 hover:-translate-y-0.5"
-          onClick={async () => {
-            await chooseSample(s.id);
-            onPicked?.();
-          }}
+          onClick={() => (onPick ? onPick(s.id) : void askSample(s.id))}
         >
           <span className="thumb group-aria-pressed:shadow-[0_0_0_3px_var(--go)]">
             <img src={s.url} alt="" />
@@ -279,14 +277,22 @@ export function ChoosePhoto({ onPicked, className = '' }: { onPicked?: () => voi
 
 function SamplesSheet({ open }: { open: boolean }) {
   const nav = useNavigate();
-  const picked = () => {
-    closeSheet();
-    nav('/');
-  };
   return (
     <Sheet open={open} onClose={closeSheet} title={t('home.samples')}>
-      <SampleButtons onPicked={picked} />
-      <ChoosePhoto onPicked={picked} className="mt-4 w-full" />
+      <SampleButtons
+        onPick={(id) => {
+          closeSheet();
+          nav('/');
+          void askSample(id);
+        }}
+      />
+      <ChoosePhoto
+        onPicked={() => {
+          closeSheet();
+          nav('/');
+        }}
+        className="mt-4 w-full"
+      />
     </Sheet>
   );
 }

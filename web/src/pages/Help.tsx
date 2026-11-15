@@ -7,6 +7,7 @@ import { I } from '../ui/icons';
 import { openSheet } from '../ui/uiStore';
 import { SampleButtons, ChoosePhoto } from '../app/Sheets';
 import { deviceWord } from '../engine/device';
+import { askSample } from '../samples';
 import { quiet, sayAloud } from '../engine/speech';
 import { t } from '../strings';
 
@@ -18,10 +19,11 @@ export default function Help() {
     <main id="page" className="min-h-0 flex-1 animate-rise overflow-auto px-4 pt-[0.4rem] pb-10 lg:px-7 lg:pt-2 lg:pb-12">
       <div className="mx-auto max-w-[40rem] lg:max-w-[52rem]">
         <PageTitle>{t('help.title')}</PageTitle>
-        <div className="grid gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
           <Card>
             <CardTitle>{t('help.how.title')}</CardTitle>
             <p className="text-small text-ink-2">{t('help.how')}</p>
+            <p className="mt-2 text-small text-ink-2">{t('help.hybrid')}</p>
             <button
               type="button"
               className="btn btn-yes mt-[0.9rem]"
@@ -37,7 +39,12 @@ export default function Help() {
           <Card>
             <CardTitle>{t('home.samples')}</CardTitle>
             <div className="mt-[0.6rem]">
-              <SampleButtons onPicked={() => nav('/')} />
+              <SampleButtons
+                onPick={(id) => {
+                  nav('/');
+                  void askSample(id);
+                }}
+              />
             </div>
             <ChoosePhoto className="mt-4" onPicked={() => nav('/')} />
           </Card>

@@ -95,8 +95,8 @@ export function Soon() {
 
 export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mt-1 mb-4 flex items-center justify-between gap-4">
-      <h1 className="text-page font-bold tracking-[-0.035em] lg:text-[2.3rem]">{children}</h1>
+    <div className="mt-1 mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <h1 className="min-w-0 text-page font-bold tracking-[-0.035em] lg:text-[2.3rem]">{children}</h1>
       {action}
     </div>
   );
