@@ -6,15 +6,15 @@
    "region": "US",
    "language": "en",
    "currency": "USD",
-   "version": "2026-11-16.1f335f17",
+   "version": "2026-11-16.b83e022b",
    "dataAsOf": "2026-11-16",
-   "root": "us-home/root.e2b96706d8f6774e.json",
-   "bytes": 538782,
+   "root": "us-home/root.8545a00f91fb28fb.json",
+   "bytes": 561420,
    "counts": {
-    "prices": 162,
+    "prices": 173,
     "guides": 80,
     "shards": 17,
-    "blocks": 32
+    "blocks": 33
    }
   }
  ]

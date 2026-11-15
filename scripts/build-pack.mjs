@@ -1,4 +1,5 @@
-// Build WeKnow's knowledge pack from Fair Quote's US price book and DIY guides plus packs-src/*.json.
+// Build WeKnow's knowledge pack from Fair Quote's US price book and DIY guides plus packs-src/*.json
+// (hand-researched prices and guides, each source with a fetched quote).
 // Usage: node scripts/build-pack.mjs [fair-quote data dir]   (default: ../fair-quote/product/backend/data)
 // Writes:
 //   web/public/packs/catalog.json         level 0: which packs exist and each one's current root
@@ -60,11 +61,44 @@ for (const cat of spec.categories) {
   }
 }
 
-// Hand-researched items that Fair Quote did not have, each backed by a fetched quote. Every packs-src/*.json is read.
+// Hand-researched items that Fair Quote did not have, each backed by a fetched quote. Every packs-src/*.json is read
+// and may hold "prices" and "guides". A price gets the same shape as a Fair Quote price (known fields only, in the
+// same order); a source may say `fetched` or Fair Quote's `fetched_at`. Problems name the file they came from, and
+// buildLayeredPack then checks the whole pack (unique refs, https sources, low <= typical <= high, categories).
+const fairQuoteRefs = new Set(prices.map((p) => p.ref));
+const handRefs = new Map(); // ref -> file that defined it
+const srcProblems = [];
+const handSource = (s) => ({ url: s?.url, title: s?.title, quote: s?.quote, fetched: s?.fetched ?? s?.fetched_at });
+const isText = (v) => typeof v === 'string' && v.trim().length > 0;
 for (const f of readdirSync(join(root, 'packs-src')).filter((f) => f.endsWith('.json')).sort()) {
   const extra = JSON.parse(readFileSync(join(root, 'packs-src', f), 'utf8'));
-  for (const p of extra.prices ?? []) prices.push({ ...p, aliases: p.aliases ?? [] });
+  for (const p of extra.prices ?? []) {
+    const where = `packs-src/${f}: price ${String(p?.ref)}`;
+    if (fairQuoteRefs.has(p?.ref)) srcProblems.push(`${where}: ref already used by a Fair Quote price`);
+    else if (handRefs.has(p?.ref)) srcProblems.push(`${where}: ref already used in packs-src/${handRefs.get(p.ref)}`);
+    handRefs.set(p?.ref, f);
+    const sources = Array.isArray(p?.sources) ? p.sources.map(handSource) : [];
+    sources.forEach((s, i) => {
+      for (const field of ['title', 'quote', 'fetched']) if (!isText(s[field])) srcProblems.push(`${where}: source ${i + 1} has no ${field}`);
+    });
+    prices.push({
+      ref: p?.ref,
+      category: p?.category,
+      name: p?.name,
+      aliases: p?.aliases ?? [],
+      unit: p?.unit,
+      low: p?.low,
+      typical: p?.typical,
+      high: p?.high,
+      includes: p?.includes || undefined,
+      sources,
+    });
+  }
   for (const g of extra.guides ?? []) guides.push({ ...g, aliases: g.aliases ?? [], proRefs: g.proRefs ?? [] });
+}
+if (srcProblems.length) {
+  console.error(`packs-src has ${srcProblems.length} problem(s):\n- ${srcProblems.join('\n- ')}`);
+  process.exit(1);
 }
 
 let built;
