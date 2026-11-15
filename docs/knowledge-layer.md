@@ -42,7 +42,9 @@ PMTiles' size discipline (the root fits one small first download) and ZIM's spli
 stemming from [`@orama/stemmers`](https://www.npmjs.com/package/@orama/stemmers) (Apache-2.0, 0.8 KB for
 English, the same API for 30 languages). The only code we wrote ourselves is the glue those libraries do not
 cover: the file layout, a small Bloom filter for routing (a dependency would be larger than the code), the
-loader with hash checks, and token budgeting. Synonyms are expanded at query time, as
+loader with hash checks, and token budgeting. Where routing cannot be exact (a typo, a partial word, a question
+made only of common words), the device searches one index over the whole kind instead, built at pack time: the
+same answer one whole-pack index would give. Synonyms are expanded at query time, as
 [Elastic recommends](https://www.elastic.co/docs/solutions/search/full-text/search-with-synonyms) for synonym
 lists that change, so editing them never rewrites a shard.
 
@@ -50,13 +52,16 @@ lists that change, so editing them never rewrites a shard.
 
 ```
 catalog.json                       level 0  which packs exist; each one's current root          ~0.4 KB
-us-home/root.<hash>.json           level 1  top index: one Bloom filter per shard (which words   10.3 KB (4.6 KB gzip)
+us-home/root.<hash>.json           level 1  top index: one Bloom filter per shard (which words   10.5 KB (4.7 KB gzip)
                                             live where, plus "ref:<ref>" for every item)
                                             top map: shards, their blocks, sizes; the lexicon
 us-home/s/<shard>.<hash>.json      level 2  shard index: MiniSearch BM25+ over names + aliases,  17 files, 72.8 KB (20.9 KB gzip)
                                             built at pack time
                                             shard map: ref -> name, data block, and for guides
                                             where their pro prices live
+us-home/s/<kind>.all.<hash>.json   level 2  fallback: one index over every price (or every guide),  2 files, 70.1 KB (16.7 KB gzip)
+                                            each item pointing at its shard and block; loaded only
+                                            when routing cannot be exact
 us-home/d/<shard>.<n>.<hash>.json  level 3  the data: prices, guides, steps, and every source     32 files, 372.7 KB (92.8 KB gzip)
 ```
 
@@ -68,7 +73,8 @@ shell and the eval runner.
 
 ## 3. How a question walks the levels
 
-1. **Open** (once per session): catalog + root, 5 KB over the wire. Nothing else.
+1. **Open** (once per session): catalog + root, 5 KB over the wire. Nothing else. Every file, from the network
+   or from the device's own copy, is checked against the hash in its name before it is used.
 2. **Candidates** for a printed line, e.g. `R&R front pads & rotors`:
    - text pipeline: rewrite `r&r` → `replace`; words; drop stop words; Porter stems
      → `replac front pad rotor`; synonyms add `frt`, `brake disc`, `brake disk` at weight 0.6;
@@ -77,9 +83,14 @@ shell and the eval runner.
      the best are loaded, at most 3. Here: `car-service.price` and `locksmith.price` ("front door");
    - **search** each loaded shard with BM25+ (name ×2, aliases ×1, synonym terms ×0.6, one typo per five
      letters for words of six letters or more, prefix match for words of four or more);
+   - **fall back** to the whole-kind index when more than 3 shards score close to the best (a line of common words
+     such as "Replace"), or when a printed word of four letters or more matched nothing in the routed shards: a
+     typo ("altenrator"), the start of a longer word ("refrig"), or a filter's 1% "maybe". Filters only know whole
+     words, so this is what keeps typo and prefix matching as good as one whole-pack index;
    - merge, drop anything under 20% of the best score, keep 5. Here: `brake-pads-rotors`, then `brake-pads`.
-3. **Choose**: the on-device model picks one ref per line or null (reader.ts stage C). `core/budget.ts` trims
-   the lists beforehand so the prompt fits: lowest-ranked option first, never a line's best option.
+3. **Choose**: the on-device model picks one ref per line or null (reader.ts stage C). Stage B first caps the
+   reading at 30 lines of 120 characters, then `core/budget.ts` trims until the prompt fits: options beyond 3,
+   labels to 60 characters, options beyond the best one, labels to 32 and then 16 characters, and only then lines.
 4. **Resolve** the chosen refs: the shard map says which block holds each item, and for a guide where its pro
    prices live, so only those blocks load. Any ref can also be resolved cold: the root's filters hold
    `ref:<ref>`, which finds its shard without a search.
@@ -89,18 +100,32 @@ shell and the eval runner.
 `node scripts/bench-pack.mjs` (files served from memory, so times are device-side work: parsing, hash checks,
 search; a laptop, expect 5–10× on an old phone):
 
-| Query, cold start | Raw bytes loaded (median / max) | Gzip on the wire (median / max) | Shards / blocks (median) | Time cold (median) | Warm, per line | Choose prompt (median / max tokens) |
+| Query, cold start | Raw bytes loaded (median / max) | Gzip on the wire (median / max) | Index files / blocks (median) | Time cold (median) | Warm, per line | Choose prompt (median / max tokens) |
 |---|---|---|---|---|---|---|
-| A quote photo, all its lines (25 eval quotes) | 71 / 87 KB | 17.8 / 21.0 KB | 3 / 3 | 1.7 ms | 0.13 ms | 287 / 608 |
-| One shop-printed line (44 hand-written) | 26 / 41 KB | 9.0 / 11.3 KB | 1 / 1 | 0.7 ms | 0.08 ms | 95 / 208 |
-| One household problem (30 hand-written) | 37 / 48 KB | 12.5 / 15.1 KB | 1 / 2 | 0.8 ms | 0.08 ms | 107 / 182 |
+| A quote photo, all its lines (25 eval quotes; 11 used the fallback index) | 75 / 129 KB | 19.5 / 30.1 KB | 4 / 3 | 2.2 ms | 0.14 ms | 412 / 941 |
+| One shop-printed line (44 hand-written; 8 used it) | 26 / 82 KB | 9.2 / 19.6 KB | 1 / 1 | 0.8 ms | 0.08 ms | 131 / 299 |
+| One household problem (30 hand-written; 11 used it) | 43 / 72 KB | 13.6 / 22.0 KB | 2 / 2 | 1.1 ms | 0.12 ms | 151 / 243 |
 
-Token budgets for the choose prompt (`core/budget.ts`, 3 characters per token to stay safe):
+Eval quotes use the fallback index for lines the pack does not cover ("Shop supplies", "Diagnostic labor"); a
+household problem is a sentence, and words such as "slowly" are in no index.
 
-| Model | Context | Left for the choose prompt | Typical quote | Worst case (30 lines × 5 longest names) |
+Typo and prefix tolerance, on every price whose name has a word of six letters or more (150 cases; test
+"the layered pack finds typo and prefix queries at least as well as one whole-pack index"):
+
+| Query | Layered, before the fallback | Layered now | One whole-pack index |
+|---|---|---|---|
+| The name with two letters swapped in its longest word | 145 | **150** | 150 |
+| That misspelled word alone | 0 | **22** | 22 |
+| The first six letters of that word | 29 | **75** | 75 |
+
+Token budgets for the choose prompt (`core/budget.ts`). No tokenizer for either model ships to the web, so the
+count is pessimistic: every digit and every symbol is a token (the Gemini family's tokenizers split numbers into
+digits), letters count one token per 2.5 characters (Apple documents 3–4), and any non-ASCII character is a token.
+
+| Model | Context | Left for the choose prompt | Eval quotes | Worst case: 30 lines × 120 characters (letters, shop text, or all digits) × 5 longest names |
 |---|---|---|---|---|
-| Chrome Gemini Nano | ~9,216 | 6,000 (after schema, 30 answers, margin) | 287 tokens | trimmed to fit, every line keeps its best option |
-| Apple on-device | 4,096 | 2,400 | 287 tokens | trimmed to fit, every line keeps its best option |
+| Chrome Gemini Nano | ~9,216 | 6,000 (after schema, 30 answers, margin) | ≤ 941 tokens, untrimmed | trimmed to fit, all 30 lines kept with their best option |
+| Apple on-device | 4,096 | 2,400 | ≤ 941 tokens, untrimmed | trimmed to fit, all 30 lines kept with their best option |
 
 Stage A's prompt holds no pack data at all, so pack growth never touches it. Size limits enforced by tests: root
 ≤ 16 KiB gzip (the PMTiles rule), each shard ≤ 64 KiB gzip, each block ≤ 16 KB unless it holds one item.
@@ -116,9 +141,14 @@ shard filters). Nothing else changes.
 | Level | Where | Why |
 |---|---|---|
 | 0 catalog | Hosting, `Cache-Control: no-cache` (revalidated, a 304 when unchanged); last copy in Cache Storage | The only mutable file; tiny |
-| 1–3 | Hosting, `public, max-age=31536000, immutable`; Cache Storage on the device (`weknow-packs-v1`) | Content-hashed, so CDNs and browsers may keep them forever. No sign-in needed before the first answer. No per-document reads against the Spark plan's daily quota. Cache Storage works in the page and in a future service worker, holds HTTP bodies as they are, and lets the loader work offline without one |
+| 1 root | Hosting, `public, max-age=300`; Cache Storage on the device (`weknow-packs-v1`) | Content-hashed; kept short in browsers on request, it costs one revalidation at most |
+| 2–3 | Hosting, `public, max-age=300, s-maxage=31536000`; Cache Storage on the device | Content-hashed. The CDN keeps them until the next deploy (Hosting clears the CDN on every deploy). Browsers keep a response at most 5 minutes, because header rules match paths, not status: a 404 for a pack path gets the same header, and must not stick (checked in the Hosting emulator). The device keeps its own verified copy in Cache Storage, so it does not depend on the browser's HTTP cache. No sign-in needed before the first answer; no per-document reads against the Spark plan's daily quota. Cache Storage works in the page and in a future service worker and lets the loader work offline without one |
 | learned list (shared) | Firestore, one document `packs/{packId}` field `learned` | Changes between pack builds; one read per session; Firestore's persistent cache serves it offline; clients can only read it (`firestore.rules`, tested in `web/rules-test`) |
 | learned (this device) | Cache Storage, `/packs/<pack>/learned.json` | A price found by this person's own cloud lookup, never shared automatically |
+
+Missing pack files are real 404s: the single-page-app rewrite in `firebase.json` excludes `/packs/**`, so Hosting
+never answers a missing pack file with `index.html` (checked in the local Hosting emulator: a missing shard, block
+or root returns 404 with `max-age=300`, while app routes still get `index.html`).
 
 Not chosen for the levels: Firestore documents (billed per read, each shard a read, slow queries over thousands of
 cached documents, sign-in before first use), IndexedDB directly (Cache Storage does the same for whole files with
@@ -126,28 +156,32 @@ less code), SQLite/PGlite in WASM (runtime cost, section 1).
 
 ## 6. Versions and updates
 
-- **Version** = the newest source date plus a content hash (`2026-11-16.ebe69ea4`). Rebuilding unchanged data
+- **Version** = the newest source date plus a content hash (`2026-11-16.1f335f17`). Rebuilding unchanged data
   produces byte-identical files.
 - **Delta updates.** A new release changes the catalog, the root, and only the files whose bytes changed.
-  Editing one price rewrites one block and the root; editing a name or alias also rewrites that shard; editing the
-  lexicon rewrites only the root. The device revalidates the catalog, fetches the new root, and fetches changed
+  Editing one price rewrites one block and the root; editing a name or alias also rewrites that shard and its
+  kind's fallback index; editing the lexicon rewrites only the root. The device revalidates the catalog, fetches the new root, and fetches changed
   shards or blocks only when a question needs them (or all of them in `prefetch`). Unchanged files are cache hits
   under the same names. `gc()` then deletes files the new root no longer names.
 - **Remote Config.** `pack_id` picks the pack per region or language (conditions); `pack_root` pins a root for a
   staged rollout while its files are served, and the loader falls back to the catalog if they are not. The main
   rollback is a Hosting rollback, which restores the previous catalog and files together.
-- **After a deploy**, a device holding the old root may ask for a file that is gone. Hosting's SPA rewrite would
-  answer with `index.html`; the hash check rejects it, the loader re-reads the catalog once, adopts the new root and
-  retries. The root records the search engine version (`minisearch@7.2.0`); an app with a different engine
-  refuses the pack rather than misread it (the dependency is pinned exactly).
+- **After a deploy**, a device holding the old root may ask for a file that is gone and get a 404. The loader asks
+  once more past the HTTP cache (`cache: 'reload'`, in case the browser kept an old answer), then re-reads the
+  catalog once, adopts the new root and retries. A body that does not match its hash is handled the same way.
+- **Only hashed roots** are accepted, including a root pinned in Remote Config, so nothing unverified loads. The
+  root records the search engine version (`minisearch@7.2.0`); an app with a different engine refuses the pack
+  rather than misread it (the dependency is pinned exactly).
 
 ## 7. Offline
 
 After one session the files it used are on the device, and the same questions work with no network (test:
-"after one session, the same questions work with no network at all"). A shard that was never downloaded is
+"after one session, the same questions work with no network at all"). A device copy is checked against its hash on
+every read: a copy edited or damaged after download (test: a cached price changed from 700 to 7000) is deleted
+and fetched again online, and refused offline; it is never shown. A shard that was never downloaded is
 reported in `stats().unavailable` and the question is answered from what is there; nothing throws. With nothing
 downloaded and no network, opening says so (`KnowledgeUnavailableError`), and the app can explain it.
-`prefetch(true)` downloads the whole pack (118 KB gzip today) for "keep it all offline", like downloading a map
+`prefetch(true)` downloads the whole pack (135 KB gzip today, fallback indexes included) for "keep it all offline", like downloading a map
 region.
 
 ## 8. Regions and languages
@@ -180,13 +214,19 @@ the list to Firestore; the next pack build moves them into `packs-src/` with the
   cold and unchanged; every item is top-5 for its own name; any alias unique to an item finds it (property);
   shop noise around a name does not lose it (property); recall@5 on the 71 labelled eval lines is 100%; recall@5
   on 44 hand-written shop labels and 30 household problems is 100%; sharded ranking agrees with one whole-pack
-  index on ≥ 97% of top-1 results; offline, integrity, delta update, stale-root recovery, pinned root, learned items.
+  index on ≥ 97% of top-1 results (99.1% measured); typo and prefix queries do at least as well as one whole-pack
+  index; any input (undefined, numbers, emoji, 5,000 characters, random text as a property) never throws;
+  offline; device copies re-hashed on every read (700 → 7000); stale HTTP 404 asked again with reload; delta
+  update; stale-root recovery; pinned and unhashed roots; engine mismatch refused; learned items.
 - `packBuild.test.ts`: refuses unsourced items, http sources, duplicate refs, unknown pro refs, bad ranges,
   foreign categories, reserved refs (and a property: removing any item's sources stops the build); random valid
   packs resolve every ref; identical input gives identical bytes; one edit changes only its own category's files
-  and the root (property); the shipped files equal a fresh build; size budgets.
-- `budget.test.ts`: every eval quote fits the Apple budget untrimmed; the worst case is trimmed to fit both; the
-  trimming never exceeds a budget and only removes options from the end (property).
+  and the root (property); the shipped files equal a fresh build; every index term and ref passes its shard's
+  filter (no false negatives, 1,000+ terms); one fallback index per kind; size budgets.
+- `budget.test.ts`: digits and symbols count one token each, never more optimistic than 3 characters per token
+  (property); readings capped at 30 lines of 120 characters; every eval quote fits the Apple budget untrimmed; the
+  worst case (letters, shop text, all digits) fits both budgets with every line kept; fitting never exceeds a
+  budget and only shortens lists and labels from the end (property).
 
 `node scripts/bench-pack.mjs [--json out.json]` prints section 4.
 

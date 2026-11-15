@@ -46,7 +46,11 @@ export async function servedBuild(
 export interface Server {
   files: Map<string, string>;
   log: string[];
+  /** URLs asked for again past the HTTP cache (`reload`). */
+  reloads: string[];
   online: boolean;
+  /** Simulates a stale HTTP cache: answers for these URLs until the loader asks with `reload`. */
+  staleHttpCache: Map<string, { status: number; body: string }>;
   fetch: Fetcher;
 }
 
@@ -54,10 +58,15 @@ export function server(files: Map<string, string>): Server {
   const s: Server = {
     files,
     log: [],
+    reloads: [],
     online: true,
-    fetch: async (url) => {
+    staleHttpCache: new Map(),
+    fetch: async (url, init) => {
       if (!s.online) throw new TypeError('Failed to fetch');
       s.log.push(url);
+      if (init?.reload) s.reloads.push(url);
+      const stale = init?.reload ? undefined : s.staleHttpCache.get(url);
+      if (stale) return { ok: stale.status === 200, status: stale.status, text: async () => stale.body };
       const body = s.files.get(url);
       return body === undefined
         ? { ok: false, status: 404, text: async () => 'not found' }

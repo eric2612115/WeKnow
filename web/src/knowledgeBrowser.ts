@@ -44,7 +44,8 @@ export async function openBrowserKnowledge(options: BrowserKnowledgeOptions = {}
     packId: options.packId ?? 'us-home',
     root: options.root || undefined,
     // Hashed files never change, so the HTTP cache may answer without asking; the catalog is always revalidated.
-    fetch: (url) => fetch(url, { cache: HASHED.test(url) ? 'force-cache' : 'no-cache' }),
+    // After a 404 or a hash mismatch the loader asks again with `reload`, which skips the HTTP cache.
+    fetch: (url, init) => fetch(url, { cache: init?.reload ? 'reload' : HASHED.test(url) ? 'force-cache' : 'no-cache' }),
     cache: cacheStoragePackCache() ?? memoryCache(),
   });
   // Ask the browser not to evict the pack under storage pressure (best effort, no prompt in most browsers).

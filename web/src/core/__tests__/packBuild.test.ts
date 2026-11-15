@@ -4,6 +4,7 @@
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
+import { bloomOpen } from '../bloom';
 import { buildLayeredPack, catalogJson, DEFAULT_LIMITS, PackValidationError, validatePack } from '../packBuild';
 import type { Guide, PriceItem } from '../packs';
 import { US_HOME } from '../packSpecs';
@@ -116,8 +117,9 @@ describe('what the builder writes', () => {
         expect(changed.some((f) => f.includes('/root.'))).toBe(true);
         const others = changed.filter((f) => !f.includes('/root.'));
         expect(others.length).toBeGreaterThan(0);
-        // Only files of the edited category's price shard; a price edit leaves the shard index untouched.
-        expect(others.every((f) => f.includes(`/${target.category}.price.`))).toBe(true);
+        // Only files of the edited category's price shard (and, for a name or alias edit, the price fallback
+        // index); a price edit leaves every index untouched.
+        expect(others.every((f) => f.includes(`/${target.category}.price.`) || f.includes('/s/price.all.'))).toBe(true);
         if (change === 'price') expect(others.every((f) => f.includes('/d/'))).toBe(true);
       }),
       { numRuns: 25 },
@@ -131,6 +133,31 @@ describe('what the builder writes', () => {
     const layered = [...shipped.keys()].filter((u) => u.startsWith('/packs/us-home/'));
     expect(layered.length).toBe(built.files.size);
     expect(shipped.get('/packs/catalog.json')).toBe(catalogJson([built.entry]));
+  });
+});
+
+describe('routing filters', () => {
+  it('every term in every shipped shard index, and every ref, passes the filter of its shard (no false negatives)', async () => {
+    const built = await buildLayeredPack(US_HOME, pack.prices, pack.guides);
+    let checked = 0;
+    for (const meta of built.root.shards) {
+      const bloom = bloomOpen(meta.bloom);
+      const file = JSON.parse(built.files.get(`us-home/${meta.file}`)!) as { index: { index: Array<[string]>; documentIds: Record<string, string> } };
+      for (const [term] of file.index.index) {
+        expect(bloom.has(term), `${meta.id}: ${term}`).toBe(true);
+        checked++;
+      }
+      for (const ref of Object.values(file.index.documentIds)) expect(bloom.has(`ref:${ref}`), `${meta.id}: ${ref}`).toBe(true);
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it('each kind has one fallback index holding every item of that kind', async () => {
+    const built = await buildLayeredPack(US_HOME, pack.prices, pack.guides);
+    expect(built.root.kinds?.map((k) => [k.kind, k.count])).toEqual([
+      ['price', pack.prices.length],
+      ['guide', pack.guides.length],
+    ]);
   });
 });
 

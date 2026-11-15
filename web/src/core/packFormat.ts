@@ -5,6 +5,8 @@
 //                                     live where) and top map (shards, their blocks, sizes and hashes)
 //   <pack>/s/<shard>.<hash>.json      level 2: one shard's search index (MiniSearch BM25+, built at pack time)
 //                                     and its map (ref -> name, and which data block holds the full item)
+//   <pack>/s/<kind>.all.<hash>.json   level 2 fallback: one index over every item of a kind, loaded only when a
+//                                     word is in no shard exactly (a typo or a partial word)
 //   <pack>/d/<shard>.<n>.<hash>.json  level 3: the data itself: prices, guides, steps and their sources
 //
 // Every file below the catalog is named by the first 16 hex digits of the SHA-256 of its bytes, so it never
@@ -54,6 +56,14 @@ export interface ShardMeta {
   blocks: BlockMeta[];
 }
 
+/** One index over every item of a kind (the whole-pack index), used when a word is not known exactly. */
+export interface KindIndexMeta {
+  kind: ItemKind;
+  file: string;
+  bytes: number;
+  count: number;
+}
+
 export interface PackRoot {
   schema: number;
   id: string;
@@ -68,6 +78,8 @@ export interface PackRoot {
   counts: { prices: number; guides: number };
   categories: Array<{ id: string; prices: number; guides: number }>;
   shards: ShardMeta[];
+  /** Fallback indexes for typo and prefix queries; absent in packs built before they existed. */
+  kinds?: KindIndexMeta[];
 }
 
 /** A pro price location stored with a guide: [ref, shard id, block index]. */
@@ -78,6 +90,7 @@ export interface ShardStored {
   name: string;
   b: number; // block index within the shard
   p?: ProLocation[]; // guides only: where their pro prices live
+  s?: string; // kind indexes only: the shard that holds the item
 }
 
 export interface ShardFile {

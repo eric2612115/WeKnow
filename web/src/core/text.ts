@@ -43,6 +43,9 @@ export interface TextPipeline {
   expand(text: string): Expansion;
 }
 
+/** Anything to query text: null and undefined become empty, never the word "undefined". */
+export const asText = (v: unknown): string => (v === null || v === undefined ? '' : typeof v === 'string' ? v : String(v));
+
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function textPipeline(lexicon: Lexicon): TextPipeline {
@@ -54,7 +57,7 @@ export function textPipeline(lexicon: Lexicon): TextPipeline {
   );
 
   const tokenize = (text: string): string[] => {
-    let t = String(text).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    let t = asText(text).normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
     for (const [re, to] of rewrites) t = t.replace(re, `$1${to}`);
     t = t.replace(/([\p{L}\p{N}])\+/gu, '$1 plus ').replace(/['’]/g, '');
     return t.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -84,7 +87,8 @@ export function textPipeline(lexicon: Lexicon): TextPipeline {
     return false;
   };
 
-  const expand = (text: string): Expansion => {
+  const expand = (input: string): Expansion => {
+    const text = asText(input);
     const base = terms(text);
     const have = new Set(base);
     const phrases: string[] = [];

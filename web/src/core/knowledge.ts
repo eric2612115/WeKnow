@@ -1,7 +1,10 @@
 // The knowledge layer on the device. A question walks the levels and loads only what it needs:
 //   open       -> catalog (level 0) + pack root (level 1): which shards hold which words
-//   candidates -> the few level-2 shards the root's Bloom filters point at; BM25+ inside each
+//   candidates -> the few level-2 shards the root's Bloom filters point at; BM25+ inside each.
+//                 A word no shard knows exactly may be a typo or a partial word, so then every shard of
+//                 that kind is searched with typo and prefix matching (as one whole-pack index would)
 //   resolve    -> the level-3 blocks that hold the items finally chosen, with their sources
+// Every file is checked against the hash in its name whenever it is read, from the network or the device.
 // Network and storage are injected, so the same code runs in the browser (fetch + Cache Storage),
 // in Node scripts (files) and in tests (an in-memory map). No UI, no Firebase.
 
@@ -23,8 +26,8 @@ import {
   type ShardMeta,
 } from './packFormat.ts';
 import type { Guide, Pack, PriceItem } from './packs.ts';
-import { createIndex, loadIndex, searchOptions, SEARCH_ENGINE, type IndexDoc, type MiniSearch } from './searchIndex.ts';
-import { textPipeline, type Expansion, type Lexicon, type TextPipeline } from './text.ts';
+import { createIndex, loadIndex, PREFIX_MIN, searchOptions, SEARCH_ENGINE, type IndexDoc, type MiniSearch } from './searchIndex.ts';
+import { asText, textPipeline, type Expansion, type Lexicon, type TextPipeline } from './text.ts';
 
 export interface Candidate {
   ref: string;
@@ -53,6 +56,10 @@ export interface KnowledgeStats {
   blocks: string[];
   unavailable: string[];
   learned: number;
+  /** Queries that searched every shard of their kind because a word was not known exactly. */
+  widened: number;
+  /** Device copies that failed their hash check and were thrown away. */
+  rejectedCopies: number;
 }
 
 export interface LearnOptions {
@@ -77,6 +84,16 @@ export interface Knowledge {
 // ---------- shared ranking ----------
 
 export const DEFAULT_K = 5;
+const MAX_K = 20;
+
+/** k from a query, whatever the caller passed: a whole number from 1 to 20, default 5. */
+const clampK = (k: unknown) => (typeof k === 'number' && Number.isFinite(k) ? Math.min(MAX_K, Math.max(1, Math.floor(k))) : DEFAULT_K);
+const isKind = (k: unknown): k is ItemKind => k === 'price' || k === 'guide';
+/** Refs from a caller, whatever it passed: strings only, no duplicates. */
+function refList(refs: unknown): string[] {
+  if (refs === null || refs === undefined || typeof (refs as Iterable<unknown>)[Symbol.iterator] !== 'function') return [];
+  return [...new Set([...(refs as Iterable<unknown>)].filter((r): r is string => typeof r === 'string' && r.length > 0))];
+}
 /** Candidates scoring below this share of the best one are not offered (fewer tokens, less noise). */
 export const MIN_RELATIVE_SCORE = 0.2;
 /** At most this many level-2 shards per query. */
@@ -164,7 +181,8 @@ export interface FetchedFile {
   status: number;
   text(): Promise<string>;
 }
-export type Fetcher = (url: string) => Promise<FetchedFile>;
+/** `reload` asks to bypass any HTTP cache (the browser adapter maps it to `cache: 'reload'`). */
+export type Fetcher = (url: string, init?: { reload?: boolean }) => Promise<FetchedFile>;
 
 /** Where downloaded pack files are kept on the device (Cache Storage in the browser). */
 export interface PackCache {
@@ -199,7 +217,7 @@ export interface OpenOptions {
 export class KnowledgeUnavailableError extends Error {}
 export class IncompatiblePackError extends Error {}
 
-type FileProblem = 'offline' | 'missing' | 'mismatch' | 'unreadable';
+type FileProblem = 'offline' | 'missing' | 'mismatch' | 'unreadable' | 'unhashed';
 
 class FileError extends Error {
   readonly problem: FileProblem;
@@ -241,11 +259,14 @@ export class LayeredKnowledge implements Knowledge {
   private pipe!: TextPipeline;
   private blooms = new Map<string, Bloom>();
   private shards = new Map<string, Promise<MiniSearch<IndexDoc> | undefined>>();
+  private kindIndexes = new Map<ItemKind, Promise<MiniSearch<IndexDoc> | undefined>>();
   private blocks = new Map<string, Promise<BlockFile | undefined>>();
   private overlay!: Overlay;
   private records: LoadRecord[] = [];
   private unavailable = new Set<string>();
   private staleSeen = false;
+  private widened = 0;
+  private rejectedCopies = 0;
 
   constructor(options: OpenOptions) {
     this.o = options;
@@ -274,7 +295,9 @@ export class LayeredKnowledge implements Knowledge {
     const entry: CatalogEntry | undefined = catalog.packs.find((p) => p.id === this.o.packId);
     if (!entry) throw new KnowledgeUnavailableError(`no pack ${this.o.packId} in the catalog`);
     // A pinned root (Remote Config) wins while its files are served; if it is gone, follow the catalog.
-    let path = this.o.root || entry.root;
+    // Only content-hashed root names are accepted, so a pinned root is verified like every other file.
+    const pinned = this.o.root && hashInName(this.o.root) ? this.o.root : undefined;
+    let path = pinned ?? entry.root;
     let root: PackRoot | undefined;
     for (const candidate of [...new Set([path, entry.root])]) {
       if (candidate === this.rootPath) return false;
@@ -295,6 +318,7 @@ export class LayeredKnowledge implements Knowledge {
     this.pipe = textPipeline(root.text);
     this.blooms = new Map(root.shards.map((s) => [s.id, bloomOpen(s.bloom)]));
     this.shards.clear();
+    this.kindIndexes.clear();
     this.blocks.clear();
     this.unavailable.clear();
     if (first) this.overlay = new Overlay(this.pipe);
@@ -323,26 +347,45 @@ export class LayeredKnowledge implements Knowledge {
   private async file<T>(path: string, level: LoadRecord['level']): Promise<T> {
     const url = `${this.o.base}/${path.startsWith(`${this.o.packId}/`) ? path : `${this.o.packId}/${path}`}`;
     const expect = hashInName(path);
+    if (!expect) throw new FileError(path, 'unhashed');
+    const matches = async (body: string) => (await sha256Hex(body)).slice(0, HASH_HEX) === expect;
+
+    // The device copy is checked on every read: an edited or damaged copy is thrown away, never used.
     const cached = await this.o.cache?.get(url).catch(() => undefined);
     if (cached !== undefined) {
-      try {
-        const parsed = JSON.parse(cached) as T;
+      if (await matches(cached)) {
         this.records.push({ path, level, bytes: byteLength(cached), from: 'cache' });
-        return parsed;
-      } catch {
-        await this.o.cache?.delete(url).catch(() => undefined);
+        return JSON.parse(cached) as T;
       }
+      this.rejectedCopies++;
+      await this.o.cache?.delete(url).catch(() => undefined);
     }
-    let body: string;
-    try {
-      const res = await this.o.fetch(url);
-      if (!res.ok) throw new FileError(path, res.status === 404 ? 'missing' : 'offline');
-      body = await res.text();
-    } catch (e) {
-      throw e instanceof FileError ? e : new FileError(path, 'offline');
+
+    // From the network; a 404 or a body that does not match its name is asked for once more past any HTTP
+    // cache (a hosting fallback page or a stale cached response must not stick).
+    let body: string | undefined;
+    let problem: FileProblem = 'offline';
+    for (const reload of [false, true]) {
+      let res: FetchedFile;
+      try {
+        res = await this.o.fetch(url, reload ? { reload: true } : undefined);
+      } catch {
+        problem = 'offline';
+        break;
+      }
+      if (!res.ok) {
+        problem = res.status === 404 ? 'missing' : 'offline';
+        if (res.status !== 404) break;
+        continue;
+      }
+      const text = await res.text().catch(() => '');
+      if (await matches(text)) {
+        body = text;
+        break;
+      }
+      problem = 'mismatch';
     }
-    // A file whose bytes do not match its name is a stale or broken copy (for example a hosting fallback page).
-    if (expect && (await sha256Hex(body)).slice(0, HASH_HEX) !== expect) throw new FileError(path, 'mismatch');
+    if (body === undefined) throw new FileError(path, problem);
     let parsed: T;
     try {
       parsed = JSON.parse(body) as T;
@@ -356,7 +399,26 @@ export class LayeredKnowledge implements Knowledge {
 
   private note(path: string, e: unknown) {
     this.unavailable.add(path);
-    if (e instanceof FileError && e.problem !== 'offline') this.staleSeen = true;
+    if (e instanceof FileError && (e.problem === 'missing' || e.problem === 'mismatch')) this.staleSeen = true;
+  }
+
+  /** The whole-kind fallback index, or undefined when the pack has none or it is not available. */
+  private kindIndex(kind: ItemKind): Promise<MiniSearch<IndexDoc> | undefined> {
+    const meta = this.rootData.kinds?.find((k) => k.kind === kind);
+    if (!meta) return Promise.resolve(undefined);
+    let p = this.kindIndexes.get(kind);
+    if (!p) {
+      p = this.file<ShardFile>(meta.file, 2).then(
+        (f) => loadIndex(this.pipe, f.index),
+        (e) => {
+          this.note(meta.file, e);
+          this.kindIndexes.delete(kind);
+          return undefined;
+        },
+      );
+      this.kindIndexes.set(kind, p);
+    }
+    return p;
   }
 
   private shard(meta: ShardMeta): Promise<MiniSearch<IndexDoc> | undefined> {
@@ -390,8 +452,11 @@ export class LayeredKnowledge implements Knowledge {
     return p;
   }
 
-  /** Level 1: which shards of a kind could hold these terms, best first. */
-  route(terms: string[], kind: ItemKind | 'any', added: ReadonlySet<string> = new Set()): ShardMeta[] {
+  /**
+   * Level 1: which shards of a kind could hold these terms, best first. `ambiguous` means more shards scored
+   * close to the best than a query may load (a question made only of common words like "replace").
+   */
+  plan(terms: string[], kind: ItemKind | 'any', added: ReadonlySet<string> = new Set()): { shards: ShardMeta[]; ambiguous: boolean } {
     const shards = this.rootData.shards.filter((s) => kind === 'any' || s.kind === kind);
     const hits = shards.map((s) => ({ s, ts: terms.filter((t) => this.blooms.get(s.id)!.has(t)) }));
     const cf = new Map<string, number>();
@@ -400,29 +465,66 @@ export class LayeredKnowledge implements Knowledge {
       .map((h) => ({ s: h.s, score: h.ts.reduce((a, t) => a + Math.log(1 + shards.length / cf.get(t)!) * (added.has(t) ? 0.6 : 1), 0) }))
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score || (a.s.id < b.s.id ? -1 : 1));
-    if (!scored.length) return [];
-    const top = scored[0].score;
-    return scored
-      .filter((x) => x.score >= top * 0.5)
-      .slice(0, this.o.maxShards ?? MAX_SHARDS_PER_QUERY)
-      .map((x) => x.s);
+    if (!scored.length) return { shards: [], ambiguous: false };
+    const close = scored.filter((x) => x.score >= scored[0].score * 0.5);
+    const max = this.o.maxShards ?? MAX_SHARDS_PER_QUERY;
+    return { shards: close.slice(0, max).map((x) => x.s), ambiguous: close.length > max };
+  }
+
+  route(terms: string[], kind: ItemKind | 'any', added: ReadonlySet<string> = new Set()): ShardMeta[] {
+    return this.plan(terms, kind, added).shards;
   }
 
   async candidates(text: string, query: CandidateQuery): Promise<Candidate[]> {
-    const k = query.k ?? DEFAULT_K;
-    const q = this.pipe.expand(text);
+    const kind = query?.kind;
+    if (!isKind(kind)) return [];
+    const k = clampK(query.k);
+    const q = this.pipe.expand(asText(text));
     if (!q.terms.length) return [];
-    const routed = this.route(q.terms, query.kind, q.added);
-    const indexes = await Promise.all(routed.map((s) => this.shard(s)));
-    if (indexes.some((x) => !x) && (await this.recover())) return this.candidates(text, query);
+    const pool = this.rootData.shards.filter((s) => s.kind === kind);
     const opts = searchOptions(q.added);
     const results: Candidate[] = [];
-    routed.forEach((s, i) => {
-      for (const r of indexes[i]?.search(q.text, opts) ?? []) {
-        results.push({ ref: r.id, name: r.name as string, score: r.score, kind: s.kind, shard: s.id });
+    const matched = new Set<string>();
+    const searchIn = async (shards: ShardMeta[]) => {
+      const indexes = await Promise.all(shards.map((s) => this.shard(s)));
+      shards.forEach((s, i) => {
+        for (const r of indexes[i]?.search(q.text, opts) ?? []) {
+          for (const t of r.queryTerms) matched.add(t);
+          results.push({ ref: r.id, name: r.name as string, score: r.score, kind: s.kind, shard: s.id });
+        }
+      });
+      return indexes.every((x) => !!x);
+    };
+
+    // 1. The shards the root's filters point at, when they narrow the question down to a few.
+    // 2. Otherwise, or when a printed word of PREFIX_MIN letters or more matched nothing in those shards (a typo,
+    //    the start of a longer word, or a filter's "maybe"), the whole-kind index built at pack time: one index
+    //    over every item of the kind, so the ranking is the same as a whole-pack index.
+    const plan = this.plan(q.terms, kind, q.added);
+    const hasWhole = !!this.rootData.kinds?.some((x) => x.kind === kind);
+    const searched = new Set<ShardMeta>();
+    let useWhole = plan.ambiguous && hasWhole;
+    if (!useWhole) {
+      plan.shards.forEach((s) => searched.add(s));
+      if (!(await searchIn(plan.shards)) && (await this.recover())) return this.candidates(text, query);
+      const missed = plan.ambiguous || q.terms.some((t) => t.length >= PREFIX_MIN && !q.added.has(t) && !matched.has(t));
+      if (missed) useWhole = true;
+    }
+    if (useWhole) {
+      this.widened++;
+      const whole = hasWhole ? await this.kindIndex(kind) : undefined;
+      if (whole) {
+        results.length = 0;
+        for (const r of whole.search(q.text, opts)) {
+          results.push({ ref: r.id, name: r.name as string, score: r.score, kind, shard: (r.s as string) ?? `${kind}.all` });
+        }
+      } else {
+        // No whole-kind index (an older pack, or offline before it was downloaded): search every shard there is.
+        const rest = pool.filter((s) => !searched.has(s));
+        if (!(await searchIn(rest)) && (await this.recover())) return this.candidates(text, query);
       }
-    });
-    return rank(results, k, this.overlay.search(q, query.kind));
+    }
+    return rank(results, k, this.overlay.search(q, kind));
   }
 
   /** After a missing or mismatched file, re-read the catalog once: a newer pack may have replaced this one. */
@@ -437,6 +539,13 @@ export class LayeredKnowledge implements Knowledge {
   }
 
   private async locate(ref: string): Promise<{ meta: ShardMeta; b: number; p?: ProLocation[] } | undefined> {
+    // A whole-kind index already in memory knows every item of its kind and the shard that holds it.
+    for (const p of this.kindIndexes.values()) {
+      const ms = await p;
+      const stored = ms?.has(ref) ? (ms.getStoredFields(ref) as { b: number; p?: ProLocation[]; s?: string }) : undefined;
+      const meta = stored && this.rootData.shards.find((s) => s.id === stored.s);
+      if (stored && meta) return { meta, b: stored.b, p: stored.p };
+    }
     const known = this.rootData.shards.filter((s) => this.shards.has(s.id));
     const routed = this.rootData.shards.filter((s) => !this.shards.has(s.id) && this.blooms.get(s.id)!.has(`ref:${ref}`));
     for (const meta of [...known, ...routed]) {
@@ -450,7 +559,7 @@ export class LayeredKnowledge implements Knowledge {
   async resolve(refs: Iterable<string>): Promise<Pack> {
     const prices: PriceItem[] = [];
     const guides: Guide[] = [];
-    const wanted = [...new Set(refs)];
+    const wanted = refList(refs);
     const found = new Set<string>();
     const pro: ProLocation[] = [];
     const take = async (meta: ShardMeta, b: number, ref: string) => {
@@ -505,10 +614,10 @@ export class LayeredKnowledge implements Knowledge {
     await this.o.cache.put(key, JSON.stringify(list));
   }
 
-  /** Download every shard (level 2) and, with `data`, every block (level 3): "keep the whole book offline". */
+  /** Download every shard and fallback index (level 2) and, with `data`, every block (level 3): "keep it all offline". */
   async prefetch(data = false): Promise<number> {
     const before = this.bytesLoaded('network');
-    await Promise.all(this.rootData.shards.map((s) => this.shard(s)));
+    await Promise.all([...this.rootData.shards.map((s) => this.shard(s)), ...(this.rootData.kinds ?? []).map((k) => this.kindIndex(k.kind))]);
     if (data) await Promise.all(this.rootData.shards.flatMap((s) => s.blocks.map((_, i) => this.block(s, i))));
     return this.bytesLoaded('network') - before;
   }
@@ -522,6 +631,7 @@ export class LayeredKnowledge implements Knowledge {
       keep.add(dir + s.file);
       for (const b of s.blocks) keep.add(dir + b.file);
     }
+    for (const k of this.rootData.kinds ?? []) keep.add(dir + k.file);
     let n = 0;
     for (const key of await this.o.cache.keys()) {
       if (key.startsWith(dir) && !keep.has(key)) {
@@ -539,10 +649,15 @@ export class LayeredKnowledge implements Knowledge {
   stats(): KnowledgeStats {
     return {
       files: [...this.records],
-      shards: this.rootData.shards.filter((s) => this.shards.has(s.id)).map((s) => s.id),
+      shards: [
+        ...this.rootData.shards.filter((s) => this.shards.has(s.id)).map((s) => s.id),
+        ...[...this.kindIndexes.keys()].map((k) => `${k}.all`),
+      ],
       blocks: [...this.blocks.keys()],
       unavailable: [...this.unavailable],
       learned: this.overlay.items.size,
+      widened: this.widened,
+      rejectedCopies: this.rejectedCopies,
     };
   }
 }
@@ -580,17 +695,19 @@ class MemoryKnowledge implements Knowledge {
   }
 
   async candidates(text: string, query: CandidateQuery): Promise<Candidate[]> {
-    const q = this.pipe.expand(text);
+    const kind = query?.kind;
+    if (!isKind(kind)) return [];
+    const q = this.pipe.expand(asText(text));
     if (!q.terms.length) return [];
     const results: Candidate[] = [];
-    for (const r of this.indexes[query.kind].search(q.text, searchOptions(q.added))) {
-      results.push({ ref: r.id, name: r.name as string, score: r.score, kind: query.kind, shard: 'all' });
+    for (const r of this.indexes[kind].search(q.text, searchOptions(q.added))) {
+      results.push({ ref: r.id, name: r.name as string, score: r.score, kind, shard: 'all' });
     }
-    return rank(results, query.k ?? DEFAULT_K, this.overlay.search(q, query.kind));
+    return rank(results, clampK(query.k), this.overlay.search(q, kind));
   }
 
   async resolve(refs: Iterable<string>): Promise<Pack> {
-    const want = [...new Set(refs)];
+    const want = refList(refs);
     const guides = want.map((r) => this.pack.guides.find((g) => g.ref === r)).filter((g): g is Guide => !!g);
     const pro = new Set(guides.flatMap((g) => g.proRefs ?? []));
     const prices = [
@@ -606,7 +723,7 @@ class MemoryKnowledge implements Knowledge {
   }
 
   stats(): KnowledgeStats {
-    return { files: [], shards: ['all'], blocks: [], unavailable: [], learned: this.overlay.items.size };
+    return { files: [], shards: ['all'], blocks: [], unavailable: [], learned: this.overlay.items.size, widened: 0, rejectedCopies: 0 };
   }
 }
 

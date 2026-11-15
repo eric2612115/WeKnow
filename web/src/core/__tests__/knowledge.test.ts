@@ -3,7 +3,8 @@
 
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { knowledgeFromPack, KnowledgeUnavailableError, LearnRefusedError, memoryCache } from '../knowledge';
+import { IncompatiblePackError, knowledgeFromPack, KnowledgeUnavailableError, LearnRefusedError, memoryCache, type Knowledge } from '../knowledge';
+import { sha256Hex } from '../packFormat';
 import type { PriceItem } from '../packs';
 import {
   handLabels,
@@ -173,6 +174,92 @@ describe('recall', () => {
   });
 });
 
+describe('typos and partial words', () => {
+  // Every price whose name has a word of 6+ letters: swap two letters in the middle of its longest word.
+  const probe = pack.prices.flatMap((p) => {
+    const words = (p.name.match(/[A-Za-z]+/g) ?? []).filter((w) => w.length >= 6);
+    if (!words.length) return [];
+    const w = words.reduce((a, b) => (b.length > a.length ? b : a));
+    const i = Math.floor(w.length / 2) - 1;
+    const typo = w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2);
+    return typo.toLowerCase() === w.toLowerCase() ? [] : [{ ref: p.ref, full: p.name.replace(w, typo), word: typo, prefix: w.slice(0, 6) }];
+  });
+  const hits = async (kb: Knowledge, pick: (c: (typeof probe)[number]) => string) => {
+    let n = 0;
+    for (const c of probe) if ((await kb.candidates(pick(c), { kind: 'price' })).some((x) => x.ref === c.ref)) n++;
+    return n;
+  };
+
+  it('the layered pack finds typo and prefix queries at least as well as one whole-pack index', async () => {
+    expect(probe.length).toBeGreaterThan(100);
+    const kb = await open(server(files));
+    const whole = knowledgeFromPack(pack);
+    for (const pick of [(c: (typeof probe)[number]) => c.full, (c: (typeof probe)[number]) => c.word, (c: (typeof probe)[number]) => c.prefix]) {
+      expect(await hits(kb, pick)).toBeGreaterThanOrEqual(await hits(whole, pick));
+    }
+    expect(await hits(kb, (c) => c.full)).toBe(probe.length);
+  });
+
+  it('a partial or misspelled word on its own still finds the item', async () => {
+    const kb = await open(server(files));
+    expect((await kb.candidates('thermost', { kind: 'price' })).map((x) => x.ref)).toContain('water-heater-repair');
+    expect((await kb.candidates('refrig', { kind: 'price' })).map((x) => x.ref)).toContain('refrigerator-repair');
+    expect((await kb.candidates('Replace an alternatr', { kind: 'price' })).map((x) => x.ref)).toContain('alternator');
+  });
+
+  it('only a word no shard knows loads the whole-kind index; a clean line does not', async () => {
+    const s = server(files);
+    const kb = await open(s);
+    await kb.candidates('Replace brake pads (one axle)', { kind: 'price' });
+    expect(s.log.some((u) => u.includes('/s/price.all.'))).toBe(false);
+    await kb.candidates('Replace brake pdas and rotros', { kind: 'price' });
+    expect(s.log.some((u) => u.includes('/s/price.all.'))).toBe(true);
+    expect(s.log.some((u) => u.includes('/s/guide.all.'))).toBe(false);
+  });
+});
+
+describe('any input is safe', () => {
+  const weird: unknown[] = [undefined, null, 42, NaN, {}, [], '', '   ', '!!!', '💥🔥', '$12.50', 'the and of', 'x'.repeat(5000), '漢字'.repeat(1000), '\u0000\u0007\n\t', 'ref:brake-pads'];
+
+  it('candidates() never throws, returns at most k results, without duplicates', async () => {
+    const kb = await open(server(files));
+    const whole = knowledgeFromPack(pack);
+    for (const store of [kb, whole]) {
+      for (const text of weird) {
+        for (const kind of ['price', 'guide']) {
+          const c = await store.candidates(text as string, { kind: kind as 'price' });
+          expect(c.length).toBeLessThanOrEqual(5);
+          expect(new Set(c.map((x) => x.ref)).size).toBe(c.length);
+        }
+      }
+      expect(await store.candidates('brake pads', { kind: 'nope' as 'price' })).toEqual([]);
+      expect(await store.candidates('brake pads', undefined as unknown as { kind: 'price' })).toEqual([]);
+      expect((await store.candidates('brake pads', { kind: 'price', k: -3 })).length).toBe(1);
+      expect((await store.candidates('brake pads', { kind: 'price', k: Infinity })).length).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it('random text never breaks retrieval (property)', async () => {
+    const kb = await open(server(files));
+    await fc.assert(
+      fc.asyncProperty(fc.string({ maxLength: 200, unit: 'grapheme' }), fc.constantFrom('price', 'guide'), async (text, kind) => {
+        const c = await kb.candidates(text, { kind: kind as 'price' });
+        expect(c.length).toBeLessThanOrEqual(5);
+        expect(new Set(c.map((x) => x.ref)).size).toBe(c.length);
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it('resolve() ignores anything that is not a known ref', async () => {
+    const kb = await open(server(files));
+    for (const refs of [undefined, null, 7, ['brake-pads', 'brake-pads', 'nope', '', 3, null, 'ref:brake-pads']]) {
+      const slice = await kb.resolve(refs as string[]);
+      expect(slice.prices.map((p) => p.ref)).toEqual(Array.isArray(refs) ? ['brake-pads'] : []);
+    }
+  });
+});
+
 describe('offline', () => {
   it('after one session, the same questions work with no network at all', async () => {
     const s = server(files);
@@ -216,6 +303,71 @@ describe('integrity and versions', () => {
     await kb.candidates('Unclog a toilet', { kind: 'price' });
     expect(kb.stats().unavailable).toContain(shardUrl.replace('/packs/us-home/', ''));
     expect(cache.map.has(shardUrl)).toBe(false);
+  });
+
+  it('a device copy edited after download (high 700 -> 7000) is never used: re-fetched online, refused offline', async () => {
+    const s = server(files);
+    const cache = memoryCache();
+    const kb = await open(s, cache);
+    const original = (await kb.resolve(['toilet-unclog'])).prices[0];
+    expect(original.high).toBe(700);
+    const blockUrl = [...cache.map.keys()].find((k) => k.includes('/d/plumbing.price.'))!;
+    cache.map.set(blockUrl, cache.map.get(blockUrl)!.replace('"high":700', '"high":7000'));
+    expect(cache.map.get(blockUrl)).toContain('"high":7000');
+
+    s.online = false;
+    const offline = await open(s, cache);
+    expect((await offline.resolve(['toilet-unclog'])).prices).toEqual([]);
+    expect(offline.stats().unavailable).toContain(blockUrl.replace('/packs/us-home/', ''));
+    expect(offline.stats().rejectedCopies).toBe(1);
+    expect(cache.map.has(blockUrl)).toBe(false); // the edited copy is gone, not kept for next time
+
+    cache.map.set(blockUrl, files.get(blockUrl)!.replace('"high":700', '"high":7000'));
+    s.online = true;
+    const online = await open(s, cache);
+    expect((await online.resolve(['toilet-unclog'])).prices[0]).toEqual(original);
+    expect(cache.map.get(blockUrl)).toBe(files.get(blockUrl)); // healed from the network
+  });
+
+  it('an edited copy of the root or a shard on the device is refused too', async () => {
+    const s = server(files);
+    const cache = memoryCache();
+    const kb = await open(s, cache);
+    await kb.candidates('Unclog a toilet', { kind: 'price' });
+    const shardUrl = [...cache.map.keys()].find((k) => k.includes('/s/plumbing.price.'))!;
+    cache.map.set(shardUrl, cache.map.get(shardUrl)!.replace('Unclog a toilet', 'Unclog a bathtub'));
+    s.online = false;
+    const offline = await open(s, cache);
+    expect(await offline.candidates('Unclog a toilet', { kind: 'price' })).toEqual([]);
+    expect(offline.stats().unavailable).toContain(shardUrl.replace('/packs/us-home/', ''));
+
+    const rootUrl = [...cache.map.keys()].find((k) => k.includes('/root.'))!;
+    cache.map.set(rootUrl, cache.map.get(rootUrl)!.replace('"currency":"USD"', '"currency":"EUR"'));
+    await expect(open(s, cache)).rejects.toBeInstanceOf(KnowledgeUnavailableError);
+  });
+
+  it('a 404 or wrong body from a stale HTTP cache is asked for again past that cache', async () => {
+    const s = server(files);
+    const shardUrl = [...files.keys()].find((u) => u.includes('/s/car-service.price.'))!;
+    s.staleHttpCache.set(shardUrl, { status: 404, body: 'not found' });
+    const kb = await open(s);
+    expect((await kb.candidates('Replace an alternator', { kind: 'price' }))[0].ref).toBe('alternator');
+    expect(s.reloads).toContain(shardUrl);
+    s.staleHttpCache.set(shardUrl, { status: 200, body: '<!doctype html><title>WeKnow</title>' });
+    const kb2 = await open(s);
+    expect((await kb2.candidates('Replace an alternator', { kind: 'price' }))[0].ref).toBe('alternator');
+  });
+
+  it('a pack built for another search engine version is refused, not misread', async () => {
+    const rootUrl = [...files.keys()].find((u) => u.includes('/root.'))!;
+    const root = JSON.parse(files.get(rootUrl)!);
+    root.engine.search = 'minisearch@8.0.0';
+    const body = JSON.stringify(root);
+    const forged = `/packs/us-home/root.${(await sha256Hex(body)).slice(0, 16)}.json`;
+    const catalog = JSON.parse(files.get('/packs/catalog.json')!);
+    catalog.packs[0].root = forged.replace('/packs/', '');
+    const s = server(new Map([...files, [forged, body], ['/packs/catalog.json', JSON.stringify(catalog)]]));
+    await expect(open(s)).rejects.toBeInstanceOf(IncompatiblePackError);
   });
 
   it('a new version downloads only the files that changed, and old files are cleaned up', async () => {
@@ -266,10 +418,22 @@ describe('integrity and versions', () => {
   });
 });
 
-describe('a pinned root that is no longer served', () => {
+describe('a pinned root that is no longer served, or not content-hashed', () => {
+  const current = () => JSON.parse(files.get('/packs/catalog.json')!).packs[0].version;
+
   it('falls back to the catalog instead of failing', async () => {
     const kb = await open(server(files), memoryCache(), 'us-home/root.0000000000000000.json');
-    expect(kb.version).toBe(JSON.parse(files.get('/packs/catalog.json')!).packs[0].version);
+    expect(kb.version).toBe(current());
+  });
+
+  it('a pin without a hash in its name is ignored, so nothing unverified is loaded', async () => {
+    const rootUrl = [...files.keys()].find((u) => u.includes('/root.'))!;
+    const forged = JSON.parse(files.get(rootUrl)!);
+    forged.version = 'forged';
+    const s = server(new Map([...files, ['/packs/us-home/root.json', JSON.stringify(forged)]]));
+    const kb = await open(s, memoryCache(), 'us-home/root.json');
+    expect(kb.version).toBe(current());
+    expect(s.log).not.toContain('/packs/us-home/root.json');
   });
 });
 

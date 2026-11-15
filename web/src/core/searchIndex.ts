@@ -15,13 +15,14 @@ export interface IndexDoc {
   aliases: string[];
   b?: number;
   p?: Array<[string, string, number]>;
+  s?: string;
 }
 
 export function indexOptions(pipe: TextPipeline): Options<IndexDoc> {
   return {
     idField: 'ref',
     fields: ['name', 'aliases'],
-    storeFields: ['name', 'b', 'p'],
+    storeFields: ['name', 'b', 'p', 's'],
     tokenize: (text) => pipe.tokenize(text),
     processTerm: (term) => pipe.processTerm(term),
     // MiniSearch reads stored fields through this too, so only the indexed alias list is joined into text.
@@ -33,16 +34,18 @@ export function indexOptions(pipe: TextPipeline): Options<IndexDoc> {
   };
 }
 
-/**
- * How a query is ranked. Names count double; synonym-only terms count 0.6; long words tolerate one typo in
- * five letters; words of four letters or more also match longer words that start with them.
- */
+/** Words this long also match longer words that start with them ("refrig" -> refrigerator). */
+export const PREFIX_MIN = 4;
+/** Words this long tolerate one typo in five letters ("thermsotat"). */
+export const FUZZY_MIN = 6;
+
+/** How a query is ranked. Names count double; synonym-only terms count 0.6; prefix and typo matches as above. */
 export function searchOptions(added: ReadonlySet<string>): SearchOptions {
   return {
     boost: { name: 2 },
     boostTerm: (term) => (added.has(term) ? 0.6 : 1),
-    fuzzy: (term) => (term.length >= 6 ? 0.2 : false),
-    prefix: (term) => term.length >= 4,
+    fuzzy: (term) => (term.length >= FUZZY_MIN ? 0.2 : false),
+    prefix: (term) => term.length >= PREFIX_MIN,
     combineWith: 'OR',
   };
 }

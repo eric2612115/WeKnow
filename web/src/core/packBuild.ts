@@ -12,6 +12,7 @@ import {
   type Catalog,
   type CatalogEntry,
   type ItemKind,
+  type KindIndexMeta,
   type PackRoot,
   type ProLocation,
   type ShardFile,
@@ -185,11 +186,10 @@ export async function buildLayeredPack(
     const body = JSON.stringify(shardFile);
     const path = await named('s/', s.id, body);
     files.set(dir + path, body);
-    const words = new Set<string>();
-    for (const d of docs) {
-      for (const t of pipe.terms(`${d.name} ${d.aliases.join(' ')}`)) words.add(t);
-      words.add(`ref:${d.ref}`);
-    }
+    // The filter holds exactly the terms the serialised index holds, so routing can never miss a term the
+    // index would match exactly (no false negatives by construction), plus "ref:<ref>" for every item.
+    const words = new Set<string>(index.index.map(([term]) => term));
+    for (const d of docs) words.add(`ref:${d.ref}`);
     shards.push({
       id: s.id,
       category: s.category,
@@ -200,6 +200,24 @@ export async function buildLayeredPack(
       bloom: bloomCreate(words, limits.bloomFpRate),
       blocks: blockMetas,
     });
+  }
+
+  // Level-2 fallback: one index per kind over all its items, each pointing at its shard and block.
+  const kinds: KindIndexMeta[] = [];
+  for (const kind of ['price', 'guide'] as const) {
+    const docs: IndexDoc[] = planned
+      .filter((s) => s.kind === kind)
+      .flatMap((s) => s.items.map((it) => ({ ref: it.ref, name: it.name, aliases: it.aliases, b: loc.get(it.ref)![1], s: s.id })));
+    if (!docs.length) continue;
+    for (const d of docs) {
+      const pro = kind === 'guide' ? ((guides.find((g) => g.ref === d.ref)?.proRefs) ?? []) : [];
+      if (pro.length) d.p = pro.map((r): ProLocation => [r, ...loc.get(r)!]);
+    }
+    const index = createIndex(pipe, docs).toJSON();
+    const body = JSON.stringify({ schema: PACK_SCHEMA, shard: `${kind}.all`, kind, index } satisfies ShardFile);
+    const path = await named('s/', `${kind}.all`, body);
+    files.set(dir + path, body);
+    kinds.push({ kind, file: path, bytes: byteLength(body), count: docs.length });
   }
 
   const dataAsOf = [...prices, ...guides]
@@ -228,6 +246,7 @@ export async function buildLayeredPack(
       }))
       .filter((c) => c.prices + c.guides > 0),
     shards,
+    kinds,
   };
   const root: PackRoot = { ...draft, version: `${dataAsOf}.${(await sha256Hex(JSON.stringify(draft))).slice(0, 8)}` };
   const rootBody = JSON.stringify(root);

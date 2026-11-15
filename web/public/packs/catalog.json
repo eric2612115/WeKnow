@@ -6,10 +6,10 @@
    "region": "US",
    "language": "en",
    "currency": "USD",
-   "version": "2026-11-16.ebe69ea4",
+   "version": "2026-11-16.1f335f17",
    "dataAsOf": "2026-11-16",
-   "root": "us-home/root.f9e486b4ee1b1b2a.json",
-   "bytes": 466797,
+   "root": "us-home/root.e2b96706d8f6774e.json",
+   "bytes": 538782,
    "counts": {
     "prices": 162,
     "guides": 80,

@@ -84,10 +84,11 @@ async function scenario(name, cases, kind) {
       msCold: tCold - t0,
       msWarmPerLine: warm / c.texts.length,
       tokens: chooseTokens(items.filter((it) => it.options.length)),
+      widened: kb.stats().widened > 0 ? 1 : 0,
     });
   }
   const pick = (k) => summary(rows.map((r) => r[k]));
-  return { name, cases: rows.length, bytes: pick('bytes'), wire: pick('wire'), l2: pick('l2'), l3: pick('l3'), shards: pick('shards'), blocks: pick('blocks'), msCold: pick('msCold'), msWarmPerLine: pick('msWarmPerLine'), tokens: pick('tokens') };
+  return { name, cases: rows.length, widened: rows.reduce((n, r) => n + r.widened, 0), bytes: pick('bytes'), wire: pick('wire'), l2: pick('l2'), l3: pick('l3'), shards: pick('shards'), blocks: pick('blocks'), msCold: pick('msCold'), msWarmPerLine: pick('msWarmPerLine'), tokens: pick('tokens') };
 }
 
 const results = [
@@ -105,7 +106,8 @@ const whole = {
   singleFile: sizes((u) => u === '/packs/us-home.json'),
   layeredAll: sizes((u) => u.startsWith('/packs/us-home/')),
   root: sizes((u) => u.includes('/root.')),
-  shards: sizes((u) => u.includes('/s/')),
+  shards: sizes((u) => u.includes('/s/') && !u.includes('.all.')),
+  kindIndexes: sizes((u) => u.includes('.all.')),
   blocks: sizes((u) => u.includes('/d/')),
 };
 
@@ -115,7 +117,7 @@ console.log('Whole pack on disk (raw / gzip):');
 for (const [k, v] of Object.entries(whole)) console.log(`  ${k.padEnd(11)} ${String(v.files).padStart(3)} files  ${kb(v.bytes).padStart(9)} / ${kb(v.gzip)}`);
 console.log('\nPer query, cold start (catalog + root + what the query needs), median / p95 / max:');
 for (const r of results) {
-  console.log(`  ${r.name} (${r.cases} cases)`);
+  console.log(`  ${r.name} (${r.cases} cases, ${r.widened} used the whole-kind index)`);
   console.log(`    bytes loaded   ${kb(r.bytes.median)} / ${kb(r.bytes.p95)} / ${kb(r.bytes.max)}   (level 2: ${kb(r.l2.median)}, level 3: ${kb(r.l3.median)} median)`);
   console.log(`    gzip on wire   ${kb(r.wire.median)} / ${kb(r.wire.p95)} / ${kb(r.wire.max)}`);
   console.log(`    shards, blocks ${r.shards.median} / ${r.shards.max} shards, ${r.blocks.median} / ${r.blocks.max} blocks`);
