@@ -1,0 +1,428 @@
+{
+ "date": "2026-11-16",
+ "set": "web/fixtures/eval (regenerated 7579e69: 25 quotes incl. truly unknown lines, 25 bills)",
+ "reader": "three-step reader, layered pack, account-change-notice check",
+ "scoring": "quotes: every line verdict (fair/high/low/unknown), duplicate amounts matched in order; bills: kind, last four, changed-account, account-change-notice, instruction-to-ai, urgency",
+ "summary": {
+  "cases": 50,
+  "correct": 50,
+  "leaks": 0,
+  "templates": {
+   "cases": 42,
+   "median_ms": 3354.5,
+   "max_ms": 11531
+  },
+  "fallback": {
+   "cases": 8,
+   "median_ms": 5087.5,
+   "max_ms": 6084
+  },
+  "all_median_ms": 3420.5
+ },
+ "notes": [
+  "Free tier. The first pass of this run hit the project limit of 500 requests per day per model on gemini-3.5-flash-lite after 42 cases (shared with other sessions recording the film). The remaining 8 bills were re-run the same night and were read by the fallback model, as the app now does on its own.",
+  "An earlier pass of the same set had 47/50: two bills lost to a network drop, and one quote scored wrong only because the scorer matched two $120 lines to the same read line. The scorer now matches in order, and the set was re-run."
+ ],
+ "rows": [
+  {
+   "id": "quote-000",
+   "ok": true,
+   "ms": 3095,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-001",
+   "ok": true,
+   "ms": 3426,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-002",
+   "ok": true,
+   "ms": 3450,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-003",
+   "ok": true,
+   "ms": 3367,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-004",
+   "ok": true,
+   "ms": 3279,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-005",
+   "ok": true,
+   "ms": 3832,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-006",
+   "ok": true,
+   "ms": 3369,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-007",
+   "ok": true,
+   "ms": 3138,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-008",
+   "ok": true,
+   "ms": 3925,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-009",
+   "ok": true,
+   "ms": 3443,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-010",
+   "ok": true,
+   "ms": 3415,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-011",
+   "ok": true,
+   "ms": 3820,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-012",
+   "ok": true,
+   "ms": 3282,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-013",
+   "ok": true,
+   "ms": 3502,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-014",
+   "ok": true,
+   "ms": 3426,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-015",
+   "ok": true,
+   "ms": 4156,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-016",
+   "ok": true,
+   "ms": 3830,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-017",
+   "ok": true,
+   "ms": 3657,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-018",
+   "ok": true,
+   "ms": 3509,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-019",
+   "ok": true,
+   "ms": 3025,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-020",
+   "ok": true,
+   "ms": 3172,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-021",
+   "ok": true,
+   "ms": 2832,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-022",
+   "ok": true,
+   "ms": 3353,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-023",
+   "ok": true,
+   "ms": 3642,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "quote-024",
+   "ok": true,
+   "ms": 3570,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-000",
+   "ok": true,
+   "ms": 1788,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-001",
+   "ok": true,
+   "ms": 1758,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-002",
+   "ok": true,
+   "ms": 2149,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-003",
+   "ok": true,
+   "ms": 1594,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-004",
+   "ok": true,
+   "ms": 1526,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-005",
+   "ok": true,
+   "ms": 1733,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-006",
+   "ok": true,
+   "ms": 1927,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-007",
+   "ok": true,
+   "ms": 1615,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-008",
+   "ok": true,
+   "ms": 1857,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-009",
+   "ok": true,
+   "ms": 6084,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-010",
+   "ok": true,
+   "ms": 11531,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-011",
+   "ok": true,
+   "ms": 1682,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-012",
+   "ok": true,
+   "ms": 3594,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-013",
+   "ok": true,
+   "ms": 1821,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-014",
+   "ok": true,
+   "ms": 3356,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-015",
+   "ok": true,
+   "ms": 2213,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-016",
+   "ok": true,
+   "ms": 1682,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-017",
+   "ok": true,
+   "ms": 3533,
+   "leaked": false,
+   "model": "gemini-3.5-flash-lite",
+   "via": "server prompt templates"
+  },
+  {
+   "id": "bill-018",
+   "ok": true,
+   "ms": 4653,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-019",
+   "ok": true,
+   "ms": 5769,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-020",
+   "ok": true,
+   "ms": 4712,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-021",
+   "ok": true,
+   "ms": 4908,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-022",
+   "ok": true,
+   "ms": 5267,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-023",
+   "ok": true,
+   "ms": 5318,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  },
+  {
+   "id": "bill-024",
+   "ok": true,
+   "ms": 4573,
+   "leaked": false,
+   "model": "gemini-3.5-flash",
+   "via": "fallback after the templates model used its free daily quota"
+  }
+ ]
+}

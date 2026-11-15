@@ -52,23 +52,23 @@ lists that change, so editing them never rewrites a shard.
 
 ```
 catalog.json                       level 0  which packs exist; each one's current root          ~0.4 KB
-us-home/root.<hash>.json           level 1  top index: one Bloom filter per shard (which words   10.5 KB (4.7 KB gzip)
+us-home/root.<hash>.json           level 1  top index: one Bloom filter per shard (which words   10.7 KB (4.8 KB gzip)
                                             live where, plus "ref:<ref>" for every item)
                                             top map: shards, their blocks, sizes; the lexicon
-us-home/s/<shard>.<hash>.json      level 2  shard index: MiniSearch BM25+ over names + aliases,  17 files, 72.8 KB (20.9 KB gzip)
+us-home/s/<shard>.<hash>.json      level 2  shard index: MiniSearch BM25+ over names + aliases,  17 files, 76.5 KB (21.9 KB gzip)
                                             built at pack time
                                             shard map: ref -> name, data block, and for guides
                                             where their pro prices live
-us-home/s/<kind>.all.<hash>.json   level 2  fallback: one index over every price (or every guide),  2 files, 70.1 KB (16.7 KB gzip)
+us-home/s/<kind>.all.<hash>.json   level 2  fallback: one index over every price (or every guide),  2 files, 74.0 KB (17.7 KB gzip)
                                             each item pointing at its shard and block; loaded only
                                             when routing cannot be exact
-us-home/d/<shard>.<n>.<hash>.json  level 3  the data: prices, guides, steps, and every source     32 files, 372.7 KB (92.8 KB gzip)
+us-home/d/<shard>.<n>.<hash>.json  level 3  the data: prices, guides, steps, and every source     33 files, 387.7 KB (97.3 KB gzip)
 ```
 
 A shard is one category and one kind (`plumbing.price`, `plumbing.guide`); a category above 400 items splits
 into several shards, each with its own filter. Blocks are packed up to 16 KB of JSON in ref order. Every file
 below the catalog is named by the first 16 hex digits of its SHA-256, so it never changes once published. The
-builder also writes the same items as one file, `us-home.json` (427.5 KB, 77.8 KB gzip), for the current app
+builder also writes the same items as one file, `us-home.json` (444.8 KB, 81.6 KB gzip), for the current app
 shell and the eval runner.
 
 ## 3. How a question walks the levels
@@ -98,13 +98,14 @@ shell and the eval runner.
 ## 4. Budgets and measured numbers
 
 `node scripts/bench-pack.mjs` (files served from memory, so times are device-side work: parsing, hash checks,
-search; a laptop, expect 5–10× on an old phone):
+search; a laptop, expect 5–10× on an old phone). Bytes and tokens re-measured on the 2026-11-16 pack (173 prices,
+80 guides); times are from the first run on an idle laptop:
 
 | Query, cold start | Raw bytes loaded (median / max) | Gzip on the wire (median / max) | Index files / blocks (median) | Time cold (median) | Warm, per line | Choose prompt (median / max tokens) |
 |---|---|---|---|---|---|---|
-| A quote photo, all its lines (25 eval quotes; 11 used the fallback index) | 75 / 129 KB | 19.5 / 30.1 KB | 4 / 3 | 2.2 ms | 0.14 ms | 412 / 941 |
-| One shop-printed line (44 hand-written; 8 used it) | 26 / 82 KB | 9.2 / 19.6 KB | 1 / 1 | 0.8 ms | 0.08 ms | 131 / 299 |
-| One household problem (30 hand-written; 11 used it) | 43 / 72 KB | 13.6 / 22.0 KB | 2 / 2 | 1.1 ms | 0.12 ms | 151 / 243 |
+| A quote photo, all its lines (25 eval quotes; 11 used the fallback index) | 88 / 155 KB | 19.3 / 38.2 KB | 4 / 3 | 2.2 ms | 0.14 ms | 404 / 887 |
+| One shop-printed line (44 hand-written; 8 used it) | 31 / 86 KB | 10.6 / 21.3 KB | 1 / 1 | 0.8 ms | 0.08 ms | 137 / 299 |
+| One household problem (30 hand-written; 11 used it) | 44 / 73 KB | 14.8 / 23.4 KB | 2 / 2 | 1.1 ms | 0.12 ms | 151 / 243 |
 
 Eval quotes use the fallback index for lines the pack does not cover ("Shop supplies", "Diagnostic labor"); a
 household problem is a sentence, and words such as "slowly" are in no index.
@@ -181,7 +182,7 @@ every read: a copy edited or damaged after download (test: a cached price change
 and fetched again online, and refused offline; it is never shown. A shard that was never downloaded is
 reported in `stats().unavailable` and the question is answered from what is there; nothing throws. With nothing
 downloaded and no network, opening says so (`KnowledgeUnavailableError`), and the app can explain it.
-`prefetch(true)` downloads the whole pack (135 KB gzip today, fallback indexes included) for "keep it all offline", like downloading a map
+`prefetch(true)` downloads the whole pack (142 KB gzip today, fallback indexes included) for "keep it all offline", like downloading a map
 region.
 
 ## 8. Regions and languages

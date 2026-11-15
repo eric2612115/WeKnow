@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { lastFour, parseChoice, parseLine, withRetry } from '../templateParse';
+import { isDailyQuota, lastFour, parseChoice, parseLine, withRetry } from '../templateParse';
 
 describe('parsing template output', () => {
   it('splits a line into label and amount', () => {
@@ -38,6 +38,18 @@ describe('plain-code guards around the cloud', () => {
     const broken = () => (++m, Promise.reject(new Error('[400 ] bad request')));
     await expect(withRetry(broken, [1, 1, 1])).rejects.toThrow('400');
     expect(m).toBe(1);
+  });
+  it('gives up at once when the day\'s quota is gone, but waits out a per-minute limit', async () => {
+    const day =
+      '[429 ] You exceeded your current quota. Quota exceeded for metric: generate_content_free_tier_requests, limit: 500. ' +
+      'Please retry in 11h8m23.3s. [{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"},{"retryDelay":"40103s"}]';
+    expect(isDailyQuota(new Error(day))).toBe(true);
+    expect(isDailyQuota(new Error('[429 ] Please retry in 8.9s. [{"retryDelay":"8s"}]'))).toBe(false);
+    expect(isDailyQuota(new Error('[400 ] bad request, PerDay'))).toBe(false);
+    let n = 0;
+    const gone = () => (++n, Promise.reject(new Error(day)));
+    await expect(withRetry(gone, [1, 1, 1])).rejects.toThrow('429');
+    expect(n).toBe(1);
   });
   it('waits as long as the server asks, capped at 30 s', async () => {
     const waited: number[] = [];

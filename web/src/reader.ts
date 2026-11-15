@@ -11,7 +11,7 @@ import type { Pack } from './core/packs';
 import { isKnowledge, knowledgeFromPack, type Candidate, type Knowledge } from './core/knowledge';
 import { BUDGETS, capLines, fitChoices } from './core/budget';
 import { checkUnderstanding, type Understanding } from './core/understanding';
-import { lastFour, parseChoice, parseLine, withRetry } from './core/templateParse';
+import { isDailyQuota, lastFour, parseChoice, parseLine, withRetry } from './core/templateParse';
 
 export type Where = 'device' | 'cloud';
 
@@ -117,6 +117,35 @@ function templates(): TemplateGenerativeModel {
   return templateModel;
 }
 
+// The free tier counts requests per day per model. When the templates' model has used its day, the same
+// reading runs once more on a second model with the same form and the instructions below; the checks after
+// it are the same plain code. Never a fallback for a per-minute limit (that one is waited out).
+export const FALLBACK_MODEL = 'gemini-3.5-flash';
+function fallback(schema: Record<string, unknown>, name: string): GenerativeModel {
+  const key = `fallback:${name}`;
+  let m = models.get(key);
+  if (!m) {
+    m = getGenerativeModel(ai, {
+      mode: InferenceMode.ONLY_IN_CLOUD,
+      inCloudParams: {
+        model: FALLBACK_MODEL,
+        generationConfig: { responseMimeType: 'application/json', responseJsonSchema: schema, temperature: 0 },
+      },
+    });
+    models.set(key, m);
+  }
+  return m;
+}
+async function viaTemplate<T>(call: () => Promise<T>, onDayUsed: () => Promise<T>, used: { fallback?: string }): Promise<T> {
+  try {
+    return await withRetry(call);
+  } catch (e) {
+    if (!isDailyQuota(e)) throw e;
+    used.fallback = FALLBACK_MODEL;
+    return withRetry(onDayUsed);
+  }
+}
+
 function model(where: Where, schema: Record<string, unknown>, name: string, withImage: boolean): GenerativeModel {
   const key = `${where}:${name}`;
   let m = models.get(key);
@@ -148,6 +177,8 @@ export interface Reading {
   steps: { read: number; choose: number };
   /** Only the pack items this reading points at (with their sources): what verdicts and guides need. */
   pack: Pack;
+  /** Set when the templates' model had used its daily quota and the reading ran on this model instead. */
+  fallback?: string;
   /** What stage B loaded and offered: shards touched, bytes downloaded, options trimmed to fit the prompt. */
   retrieval: { shards: string[]; bytes: number; offered: number; trimmed: number };
 }
@@ -162,20 +193,25 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
   const t0 = performance.now();
   const data = await blobToBase64(image);
   const asked = question.replace(/"/g, "'").slice(0, 200);
+  const used: { fallback?: string } = {};
+  const inlineRead = (m: GenerativeModel) =>
+    m.generateContent([
+      { type: 'text', text: `${READ_PROMPT}\nThe person asked: "${asked}"` },
+      { type: 'inlineData', inlineData: { mimeType: image.type || 'image/jpeg', data } },
+    ]);
   const readText =
     where === 'cloud'
       ? (
-          await withRetry(() => templates().generateContent({
-            templateId: TEMPLATES.read,
-            templateVariables: { question: asked, photoType: image.type || 'image/jpeg', photoData: data },
-          }))
+          await viaTemplate(
+            () => templates().generateContent({
+              templateId: TEMPLATES.read,
+              templateVariables: { question: asked, photoType: image.type || 'image/jpeg', photoData: data },
+            }),
+            () => inlineRead(fallback(READ_SCHEMA, 'read')),
+            used,
+          )
         ).response.text()
-      : (
-          await model(where, READ_SCHEMA, 'read', true).generateContent([
-            { type: 'text', text: `${READ_PROMPT}\nThe person asked: "${asked}"` },
-            { type: 'inlineData', inlineData: { mimeType: image.type || 'image/jpeg', data } },
-          ])
-        ).response.text();
+      : (await inlineRead(model(where, READ_SCHEMA, 'read', true))).response.text();
   const parsed = JSON.parse(readText) as Record<string, unknown>;
   if (Array.isArray(parsed.lines)) parsed.lines = parsed.lines.map((l) => (typeof l === 'string' ? parseLine(l) : l));
   // The template must fill every field; 'none' (or an empty string) means the photo does not have it.
@@ -219,9 +255,23 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
   if (askable.length) {
     let choices: Array<{ i: number; ref: string | null }>;
     if (where === 'cloud') {
-      const c = await withRetry(() => templates().generateContent({ templateId: TEMPLATES.choose, templateVariables: { items: itemsText(askable) } }));
-      const out = JSON.parse(c.response.text()) as { choices?: unknown[] };
-      choices = (out.choices ?? []).map(parseChoice).filter((x): x is { i: number; ref: string | null } => !!x);
+      const viaFallback = async () => {
+        const c = await fallback(CHOOSE_SCHEMA, 'choose').generateContent(choosePrompt(askable));
+        return (JSON.parse(c.response.text()) as { choices?: Array<{ i: number; ref: string | null }> }).choices ?? [];
+      };
+      if (used.fallback) {
+        choices = await withRetry(viaFallback);
+      } else {
+        choices = await viaTemplate(
+          async () => {
+            const c = await templates().generateContent({ templateId: TEMPLATES.choose, templateVariables: { items: itemsText(askable) } });
+            const out = JSON.parse(c.response.text()) as { choices?: unknown[] };
+            return (out.choices ?? []).map(parseChoice).filter((x): x is { i: number; ref: string | null } => !!x);
+          },
+          viaFallback,
+          used,
+        );
+      }
     } else {
       const c = await model(where, CHOOSE_SCHEMA, 'choose', false).generateContent(choosePrompt(askable));
       choices = (JSON.parse(c.response.text()) as { choices?: Array<{ i: number; ref: string | null }> }).choices ?? [];
@@ -254,6 +304,7 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
     ms: Math.round(t2 - t0),
     steps: { read: Math.round(t1 - t0), choose: Math.round(t2 - t1) },
     pack: slice,
+    ...(used.fallback ? { fallback: used.fallback } : {}),
     retrieval: {
       shards: loaded.shards,
       bytes: loaded.files.slice(filesBefore).filter((f) => f.from === 'network').reduce((n, f) => n + f.bytes, 0),

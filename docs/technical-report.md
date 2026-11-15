@@ -38,7 +38,7 @@ knowledge in the cloud: they send the whole page, cite no source, and give no ve
    9k tokens, Apple about 4k). See `docs/knowledge-layer.md`.
 3. **Choose (model, text only).** The model may only pick one of the offered candidates or none.
 4. **Decide (plain code).** `checkUnderstanding` rejects any ref that was not offered; prices come from the pack's
-   sourced range; bill flags (`new-payee`, `changed-account`, `urgency`, `instruction-to-ai`) are rules over the form plus
+   sourced range; bill flags (`account-change-notice`, `new-payee`, `changed-account`, `urgency`, `instruction-to-ai`) are rules over the form plus
    on-device household memory. Missing or malformed warning fields count as warnings.
 5. **Route (explicit).** On-device when Chrome reports the model available; cloud only after consent, labelled on screen.
 6. **Leave the device only as a masked line item.** `buildCloudLookup` admits only an item name and a region and refuses
@@ -67,12 +67,16 @@ the rules also miss. It cannot clear a warning, invent a price, or move money; W
 
 | Run | Cases | Correct | Leaks | Median latency | Source |
 |---|---|---|---|---|---|
-| Cloud, three-step reader via server prompt templates, free tier, 2026-11-16 | 50 (25 quotes, 25 bills) | 50 | 0 | 2.8 s | `docs/eval/cloud-templates-2026-11-16.json` |
+| Cloud, three-step reader via server prompt templates, free tier, 2026-11-16 (regenerated set) | 50 (25 quotes, 25 bills) | 50 | 0 | 3.4 s (42 via templates); 5.1 s (8 via the fallback model) | `docs/eval/cloud-templates-2026-11-16b.json` |
+| Same reader, first set | 50 | 50 | 0 | 2.8 s | `docs/eval/cloud-templates-2026-11-16.json` |
 | On-device, Apple model, iOS Simulator, 2026-11-16 | 2 fixtures (brake quote x4, changed-account bill) | all | 0 | 25–50 s in the simulator | `design/screens/ios/` |
 | On-device, Chrome Gemini Nano | TODO | TODO | TODO | TODO | TODO |
 
 The set is synthetic: fictional quotes built from pack items at fair, high and low prices plus unknown lines, and bills
 with and without a changed account, urgency and a hidden instruction (hand-written templates, `scripts/make-eval.mjs`).
+Bills are scored on six checks: kind, last four digits, `changed-account`, `account-change-notice`, `instruction-to-ai`
+and `urgency`. When the free tier's daily quota for the templates' model is used, the reader runs the same form once
+on a second model (`FALLBACK_MODEL` in `web/src/reader.ts`); verdicts are the same plain code either way.
 
 ## 7. Limitations
 

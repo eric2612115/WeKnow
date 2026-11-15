@@ -7,7 +7,8 @@ import { getGenerativeModel, InferenceMode } from 'firebase/ai';
 import { ai } from './firebase';
 import { checkUnderstanding, type Understanding } from './core/understanding';
 import { maskText } from './core/pii';
-import type { Where } from './reader';
+import { FALLBACK_MODEL, type Where } from './reader';
+import { isDailyQuota } from './core/templateParse';
 
 const TEXT_SCHEMA = {
   type: 'object',
@@ -45,6 +46,14 @@ export async function readMailText(
 ): Promise<{ understanding: Understanding; where: Where; ms: number; masked: string }> {
   const masked = mailPayload(text);
   const t0 = performance.now();
+  const cloud = (name: string) =>
+    getGenerativeModel(ai, {
+      mode: InferenceMode.ONLY_IN_CLOUD,
+      inCloudParams: {
+        model: name,
+        generationConfig: { responseMimeType: 'application/json', responseJsonSchema: TEXT_SCHEMA, temperature: 0.1 },
+      },
+    });
   const model =
     where === 'device'
       ? getGenerativeModel(ai, {
@@ -54,14 +63,13 @@ export async function readMailText(
             promptOptions: { responseConstraint: TEXT_SCHEMA },
           },
         })
-      : getGenerativeModel(ai, {
-          mode: InferenceMode.ONLY_IN_CLOUD,
-          inCloudParams: {
-            model: cloudModel,
-            generationConfig: { responseMimeType: 'application/json', responseJsonSchema: TEXT_SCHEMA, temperature: 0.1 },
-          },
-        });
-  const res = await model.generateContent(`${TEXT_PROMPT}\n\nEMAIL:\n"""\n${masked}\n"""`);
+      : cloud(cloudModel);
+  const prompt = `${TEXT_PROMPT}\n\nEMAIL:\n"""\n${masked}\n"""`;
+  const res = await model.generateContent(prompt).catch((e) => {
+    // The free tier counts requests per day per model; when this one's day is used, ask the second model once.
+    if (where === 'cloud' && isDailyQuota(e)) return cloud(FALLBACK_MODEL).generateContent(prompt);
+    throw e;
+  });
   const raw = JSON.parse(res.response.text()) as Record<string, unknown>;
   // No lines and no refs: nothing in an email can point at a pack item or set a price.
   const understanding = checkUnderstanding({ ...raw, lines: [], problemRef: null }, new Set());

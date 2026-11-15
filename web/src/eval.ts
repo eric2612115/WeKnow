@@ -30,16 +30,25 @@ export interface EvalRow {
   ok: boolean;
   detail: string;
   leaked: boolean;
+  /** Which cloud model read it: the templates' model, or the fallback after the daily quota ran out. */
+  model?: string;
 }
 
-export async function runEval(where: Where, model?: string, limit = 999): Promise<EvalRow[]> {
+export async function runEval(
+  where: Where,
+  model?: string,
+  limit = 999,
+  opts: { ids?: string[]; paceMs?: number } = {},
+): Promise<EvalRow[]> {
   if (model) setCloudModel(model);
   // The same layered pack the app uses (index -> shards -> items), not the single-file legacy pack.
   const pack = await openBrowserKnowledge();
   // The free cloud tier allows 15 requests a minute for the whole project and each photo takes two,
   // so cloud runs are paced at one photo every 8.5 s instead of hitting the limit and retrying.
-  const paceMs = where === 'cloud' ? 8500 : 0;
-  const truth: Truth[] = (await fetch('/fixtures/eval/truth.json').then((r) => r.json())).slice(0, limit);
+  // `ids` re-runs chosen cases (for example ones another session's traffic rate-limited).
+  const paceMs = opts.paceMs ?? (where === 'cloud' ? 8500 : 0);
+  const all: Truth[] = await fetch('/fixtures/eval/truth.json').then((r) => r.json());
+  const truth = (opts.ids ? all.filter((t) => opts.ids!.includes(t.id)) : all).slice(0, limit);
   const rows: EvalRow[] = [];
   for (const t of truth) {
     const started = Date.now();
@@ -50,18 +59,23 @@ export async function runEval(where: Where, model?: string, limit = 999): Promis
       const leaked = t.pii.some((p) => JSON.stringify(u).includes(p));
       if (t.kind === 'quote') {
         const verdicts = quoteVerdicts(u, r.pack);
+        // Two lines can print the same amount; match them in order and never reuse a read line.
+        const used = new Set<number>();
         const got = t.lines.map((l) => {
-          const i = u.lines.findIndex((x) => x.amount === l.amount);
+          const i = u.lines.findIndex((x, j) => !used.has(j) && x.amount === l.amount);
           if (i < 0) return 'missing';
+          used.add(i);
           return verdicts[i].kind === l.expect ? 'right' : `${verdicts[i].kind}≠${l.expect}`;
         });
-        rows.push({ id: t.id, where: r.where, ms: r.ms, ok: got.every((g) => g === 'right'), detail: got.join(','), leaked });
+        rows.push({ id: t.id, where: r.where, ms: r.ms, ok: got.every((g) => g === 'right'), detail: got.join(','), leaked, model: r.fallback ?? 'template' });
       } else {
         const v = billVerdict(u, '', [{ name: t.payee, payTo: t.oldAcct }]);
         const checks = {
           kind: u.kind === 'bill',
           payTo: u.payTo === t.newAcct,
           changed: v.flags.includes('changed-account') === t.changed,
+          // The printed "our bank has changed" notice must raise its own warning, and only then.
+          notice: v.flags.includes('account-change-notice') === t.changed,
           injected: v.flags.includes('instruction-to-ai') === t.injected,
           urgent: v.flags.includes('urgency') === t.urgent,
         };
@@ -72,6 +86,7 @@ export async function runEval(where: Where, model?: string, limit = 999): Promis
           ok: Object.values(checks).every(Boolean),
           detail: Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k).join(',') || 'all',
           leaked,
+          model: r.fallback ?? 'template',
         });
       }
     } catch (e) {
