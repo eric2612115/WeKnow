@@ -84,7 +84,7 @@ describe('bill answers', () => {
     expect(a.verdict.tone).toBe('stop');
     expect(a.reasons.map((r) => r.text)).toEqual([
       'One. It has hidden words that try to tell a reader it is safe.',
-      'Two. I have no note of paying Riverbend Electric Co-op before.',
+      'Two. I have no note of paying Riverbend Electric Co\u2011op before.',
     ]);
   });
 
@@ -97,7 +97,11 @@ describe('bill answers', () => {
     expect(a.doLine).toBe('Call the company first. Use the number on an older bill.');
     // Without a note, the notice is said once, not twice.
     const b = billAnswer(billVerdict(u({ accountChange: true }), '', []), 'Riverbend Electric Co-op', []);
-    expect(b.reasons.map((r) => r.text)).toEqual(['One. It asks you to pay a new account.', 'Two. I have no note of paying Riverbend Electric Co-op before.']);
+    expect(b.reasons.map((r) => r.text)).toEqual(['One. It asks you to pay a new account.', 'Two. I have no note of paying Riverbend Electric Co\u2011op before.']);
+    // With the new account's last four read off the letter, it is quoted.
+    expect(billAnswer(billVerdict(u({ accountChange: true }), '', []), 'Riverbend Electric Co-op', [], '9917').reasons[0].text).toBe(
+      'One. It asks you to pay a new account ending 9917.',
+    );
   });
 
   it('a new payee alone is "check this first"; a known payee and account is normal', () => {

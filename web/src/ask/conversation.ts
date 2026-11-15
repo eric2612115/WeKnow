@@ -70,6 +70,8 @@ export interface AskView {
   level: number;
   /** Links that stay under an answer (for example "Find a pro nearby"); they do not end the conversation. */
   links: Choice[];
+  /** Offer the sample pictures under the words (when nothing could be answered). */
+  offerSamples: boolean;
 }
 
 const INITIAL: AskView = {
@@ -94,6 +96,7 @@ const INITIAL: AskView = {
   sheet: null,
   level: 0,
   links: [],
+  offerSamples: false,
 };
 
 export const askStore = createStore<AskView>(INITIAL);
@@ -172,7 +175,7 @@ export async function run(fn: (t: number) => Promise<void>) {
 // ---------- the words ----------
 
 export function clearWords() {
-  patch({ asked: null, head: null, lines: [], now: null, items: null, choices: null, steps: null, receipt: null, kept: null, typing: false, links: [] });
+  patch({ asked: null, head: null, lines: [], now: null, items: null, choices: null, steps: null, receipt: null, kept: null, typing: false, links: [], offerSamples: false });
 }
 
 export function setHead(tone: Tone | null, text = '', icon?: IconKey) {

@@ -102,18 +102,23 @@ export interface BillAnswer {
 const ORDER: BillFlag[] = ['account-change-notice', 'changed-account', 'instruction-to-ai', 'new-payee', 'urgency'];
 const STOP: BillFlag[] = ['account-change-notice', 'changed-account', 'instruction-to-ai'];
 
-export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPayee[]): BillAnswer {
+/** A name inside a sentence never breaks at its hyphen ("Co-op"). */
+export const keepTogether = (s: string) => s.replace(/(\w)-(\w)/g, '$1\u2011$2');
+
+export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPayee[], payTo: string | null = null): BillAnswer {
   const match = known.find((k) => payee && k.name.toLowerCase() === payee.toLowerCase());
+  const digits = (payTo ?? '').replace(/\D/g, '');
   const has = (f: BillFlag) => v.flags.includes(f);
   const raw: Array<{ text: string; fromNote?: boolean }> = [];
   for (const f of ORDER.filter(has)) {
-    if (f === 'account-change-notice') raw.push({ text: t('letter.sign.notice') });
+    if (f === 'account-change-notice')
+      raw.push({ text: digits.length === 4 ? t('letter.sign.notice.digits', { digits }) : t('letter.sign.notice') });
     if (f === 'changed-account') {
       if (match) raw.push({ text: t('note.payee', { old: match.payTo }), fromNote: true });
       else if (!has('account-change-notice')) raw.push({ text: t('letter.sign.account') });
     }
     if (f === 'instruction-to-ai') raw.push({ text: t('letter.sign.ai') });
-    if (f === 'new-payee') raw.push({ text: payee ? t('letter.sign.newpayee', { payee }) : t('letter.sign.nopayee') });
+    if (f === 'new-payee') raw.push({ text: payee ? t('letter.sign.newpayee', { payee: keepTogether(payee) }) : t('letter.sign.nopayee') });
     if (f === 'urgency') raw.push({ text: t('letter.sign.rush') });
   }
   if (v.safe) return { verdict: { tone: 'ok', text: t('letter.fine.title') }, reasons: [{ text: t('letter.fine') }] };

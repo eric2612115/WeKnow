@@ -218,7 +218,15 @@ export default function Home() {
   const phase = v.phase;
   // Phone: the camera takes half the height while listening; when nothing has been asked yet it leaves a little
   // more room, so the greeting and the three sample pictures fit under it without the menu.
-  const winH = phase === 'guide' ? '40dvh' : phase === 'ready' && !v.head ? '36dvh' : phase === 'ready' || phase === 'listening' ? '50dvh' : '20dvh';
+  // On short screens with large text the window gives way first, so the samples never end up in a tiny scroll area.
+  const winH =
+    phase === 'guide'
+      ? '40dvh'
+      : phase === 'ready' && !v.head
+        ? 'max(6rem, min(36dvh, calc(100dvh - 24rem)))'
+        : phase === 'ready' || phase === 'listening'
+          ? '50dvh'
+          : '20dvh';
   const showSamples = !(phase === 'listening' || phase === 'looking' || phase === 'guide');
   const nothingAsked = !v.head && !v.receipt;
 

@@ -93,8 +93,8 @@ function Mail() {
     <Card id="set-mail" className="scroll-mt-4">
       <CardTitle>{t('set.mail')}</CardTitle>
       <p className="text-small text-ink-2">{t('set.mail.line', { device })}</p>
-      <div className="row mt-2">
-        <span className="flex items-center gap-2 [&_svg]:size-6">
+      <div className="row mt-2 flex-wrap gap-y-2">
+        <span className="flex items-center gap-2 [&_svg]:size-6 [&_svg]:flex-none">
           <I.mail />
           {m.connected ? t('set.mail.on') : t('set.mail.off')}
         </span>
@@ -160,7 +160,7 @@ export default function Settings() {
               <Row title={t('set.speed')} wrap>
                 <RateSeg />
               </Row>
-              <Row title={t('set.size')}>
+              <Row title={t('set.size')} wrap>
                 <SizeSeg />
               </Row>
             </Card>

@@ -152,6 +152,7 @@ export const EN = {
   'letter.fine.title': 'This looks normal',
   'letter.sign.account': 'It wants the money sent to a new account.',
   'letter.sign.notice': 'It asks you to pay a new account.', // added: the letter itself announces a new bank or account
+  'letter.sign.notice.digits': 'It asks you to pay a new account ending {digits}.', // added: the same, quoting the last four
   'letter.sign.newpayee': 'I have no note of paying {payee} before.', // added: new-payee flag
   'letter.sign.nopayee': 'I cannot tell who is asking for the money.', // added: new-payee flag, no name read
   'letter.sign.changed': 'It wants the money sent to a different account than last time.', // added: changed account, no digits read
@@ -374,6 +375,9 @@ export const EN = {
   'what.line': 'Point me at a repair quote, a bill, or something at home that needs fixing.', // added
   'read.fail': 'I could not read that one. Hold it still and press Ask again.', // added: the reading failed
   'read.fail.title': 'Let’s try that again', // added
+  'read.fail.picture': 'I could not read that picture. Try another one, or press Ask to try again.', // added: a sample or chosen picture
+  'busy.title': 'Busy right now', // added: the cloud said too many requests, or the network failed
+  'busy.line': 'WeKnow is busy right now. Try again in a minute.', // added
   'cam.panel': 'The camera is off',
   'cam.title': 'I cannot see',
   'cam.line': 'The camera is turned off for WeKnow.',

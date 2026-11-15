@@ -9,6 +9,7 @@ import type { LayeredKnowledge } from '../core/knowledge';
 import type { Guide, PriceItem } from '../core/packs';
 import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
+import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts } from '../core/verdict';
 import { guideByRef, proPrice } from '../core/packs';
 import { maskText } from '../core/pii';
@@ -95,17 +96,23 @@ const READ_TIMEOUT = 90_000;
 setErrorHandler(async (e, t) => {
   console.warn('[WeKnow] ask failed', e);
   if (t !== current()) return;
-  patch({ reading: false });
-  setPhase('speaking');
+  patch({ reading: false, offerSamples: true });
   clearLines();
+  const fromPicture = !!view().chosen;
+  let line: string;
   if (!deviceStore.get().online) {
     setHead('plain', tr('net.none.title'), 'nonet');
-    await say(t, tr('net.stopped', { device: dev() }));
+    line = tr('net.stopped', { device: dev() });
+  } else if (isBusy(e)) {
+    setHead('plain', tr('busy.title'));
+    line = tr('busy.line');
   } else {
     setHead('plain', tr('read.fail.title'));
-    await say(t, tr('read.fail'));
+    line = fromPicture ? tr('read.fail.picture') : tr('read.fail');
   }
+  // Never hold the button: the words are on screen, the voice reads them, and Ask works at once.
   settle();
+  void narrate(t, [line]);
 });
 
 // ---------- the opening ----------
@@ -365,13 +372,22 @@ function firstTimeHere(where: Where): string[] {
 function tech(c: Ctx, extra: string[] = []): string[] {
   const r = c.reading;
   const chose = r.retrieval.offered > 0;
-  const who =
-    c.where === 'device'
-      ? `Read by the built-in model on this ${dev()} (Firebase AI Logic, on-device).`
-      : `Read in the cloud through the Firebase AI Logic server prompt template weknow-read-photo-v1${chose ? ', then weknow-choose-v1' : ''}.`;
+  const answered = chose ? 2 : 1;
+  let who: string;
+  let requests: string;
+  if (c.where === 'device') {
+    who = `Read by the built-in model on this ${dev()} (Firebase AI Logic, on-device).`;
+    requests = 'Requests to the cloud model: 0.';
+  } else if (r.fallback) {
+    who = `Read in the cloud by ${r.fallback} through Firebase AI Logic, with the same form, because the template model (weknow-read-photo-v1) had used its daily quota.`;
+    requests = `Requests answered by the cloud model: ${answered} (reading${chose ? ', choosing' : ''}), on ${r.fallback}. A request the template model turned away for its daily quota is not counted.`;
+  } else {
+    who = `Read in the cloud through the Firebase AI Logic server prompt template weknow-read-photo-v1${chose ? ', then weknow-choose-v1' : ''}.`;
+    requests = `Requests to the cloud model: ${answered}.`;
+  }
   return [
     `${who} ${(r.ms / 1000).toFixed(1)} s (reading ${r.steps.read} ms${chose ? `, choosing ${r.steps.choose} ms` : ''}).`,
-    `Requests to the cloud model: ${c.where === 'device' ? 0 : chose ? 2 : 1}.`,
+    requests,
     `Pack ${c.kb.id}, version ${c.kb.version}. Shards loaded: ${r.retrieval.shards.join(', ') || 'none'}; ${r.retrieval.bytes} bytes fetched; ${r.retrieval.offered} options offered${r.retrieval.trimmed ? `, ${r.retrieval.trimmed} trimmed to fit` : ''}.`,
     ...extra,
   ];
@@ -406,7 +422,9 @@ async function keep(
 }
 
 function keptLine(check: Check): string {
-  return dataStore.get().projects.length > 1 ? tr('kept.project', { project: projectName(check.projectId) }) : tr('kept.one');
+  // "under the car", not "under The car", in the middle of a sentence.
+  const project = projectName(check.projectId).replace(/^The /, 'the ');
+  return dataStore.get().projects.length > 1 ? tr('kept.project', { project }) : tr('kept.one');
 }
 
 /** The one-time offer to get ready to work without the internet, after an answer, when Chrome says it can. */
@@ -693,7 +711,7 @@ async function billFlow(c: Ctx) {
   const { matchesPhrase } = await import('../config');
   if (!v.flags.includes('urgency') && matchesPhrase(masked, settings.urgencyPhrases)) v = { safe: false, flags: [...v.flags, 'urgency'] };
   const payee = nameOf(u.payee);
-  const ans = billAnswer(v, payee, known);
+  const ans = billAnswer(v, payee, known, u.payTo);
   const match = known.find((k) => payee && k.name.toLowerCase() === payee.toLowerCase());
   const usedNote = ans.reasons.some((r) => r.fromNote) || (v.safe && !!match);
 

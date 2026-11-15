@@ -71,20 +71,24 @@ function Items() {
   const v = useAsk();
   if (!v.items?.length) return null;
   return (
-    <ol className="mb-2 grid grid-cols-[minmax(0,1fr)] gap-0.5 rounded-btn border border-hair bg-card px-2 py-1.5" aria-label="Lines on the paper">
+    // Every line name wraps, never truncates; the amount stays at the right and the status sits under the name.
+    <ol className="mt-4 mb-2 grid grid-cols-[minmax(0,1fr)] rounded-btn border border-hair bg-card px-3 py-1" aria-label="Lines on the paper">
       {v.items.map((it) => {
         const s = STATE[it.state];
         const Icon = s.icon;
         return (
-          <li key={it.n} className="flex min-h-9 min-w-0 items-center gap-2 px-1 text-small lg:min-h-10">
-            <span className="w-5 flex-none text-right font-semibold text-ink-2">{it.n}</span>
-            <span className="min-w-0 flex-1 truncate font-semibold" title={it.label}>
-              {it.label}
-            </span>
-            <span className="flex-none tabular-nums">{it.amount !== null ? money(it.amount) : ''}</span>
-            <span className={`inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 font-semibold [&_svg]:size-[1.1rem] ${s.cls}`}>
+          <li
+            key={it.n}
+            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2 gap-y-1 border-t border-hair py-2 text-small first:border-t-0 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
+          >
+            <span className="font-semibold text-ink-2 tabular-nums">{it.n}</span>
+            <span className="font-semibold [overflow-wrap:normal] [word-break:normal]">{it.label}</span>
+            <span className="text-right font-semibold whitespace-nowrap tabular-nums">{it.amount !== null ? money(it.amount) : ''}</span>
+            <span
+              className={`col-start-2 col-span-2 inline-flex items-center gap-1 justify-self-start rounded-full px-2 py-0.5 font-semibold [&_svg]:size-[1.1rem] [&_svg]:flex-none lg:col-span-1 lg:col-start-4 lg:row-start-1 lg:justify-self-end ${s.cls}`}
+            >
               <Icon />
-              <span className={it.state === 'high' || it.state === 'pending' ? '' : 'max-md:sr-only'}>{s.text(it)}</span>
+              <span>{s.text(it)}</span>
             </span>
           </li>
         );
@@ -168,7 +172,7 @@ function Links() {
 function SamplesRow() {
   return (
     <div className="mt-3">
-      <p className="mb-2 text-small font-semibold text-ink-2">{t('home.samples')}</p>
+      <p className="mb-2 text-small font-semibold text-ink-2 max-[22.5rem]:sr-only">{t('home.samples')}</p>
       <SampleButtons compact />
     </div>
   );
@@ -284,7 +288,7 @@ export function Words({ desktop = false }: { desktop?: boolean }) {
       <Links />
       {answerLike && <Items />}
       {(v.receipt || v.kept) && (
-        <div className={desktop ? 'flex flex-wrap gap-2 pt-4 empty:hidden' : 'mt-3 flex gap-2 pb-[0.2rem] [&>*]:min-w-0 [&>*]:flex-1'}>
+        <div className={desktop ? 'flex flex-wrap gap-2 pt-4 empty:hidden' : 'mt-3 flex flex-wrap gap-2 pb-[0.2rem] [&>*]:min-w-0 [&>*]:flex-[1_1_10rem]'}>
           {!desktop && v.receipt && <WhereTag r={v.receipt} device={device} onOpen={() => openSheet({ type: 'receipt' })} />}
           {desktop && <KeptChip />}
           {explain && (
@@ -295,7 +299,7 @@ export function Words({ desktop = false }: { desktop?: boolean }) {
           )}
         </div>
       )}
-      {ready && !desktop && <SamplesRow />}
+      {(ready || (v.offerSamples && v.phase !== 'listening' && v.phase !== 'looking')) && !desktop && <SamplesRow />}
     </div>
   );
 }

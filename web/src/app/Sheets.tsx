@@ -236,13 +236,17 @@ export function SampleButtons({ onPick, compact = false }: { onPick?: (id: Sampl
           key={s.id}
           type="button"
           aria-pressed={v.chosen?.sample === s.id}
+          aria-label={t(s.q)}
           className="group flex min-w-0 flex-col items-stretch gap-[0.45rem] text-center text-small leading-tight font-semibold transition-transform duration-150 hover:-translate-y-0.5"
           onClick={() => (onPick ? onPick(s.id) : void askSample(s.id))}
         >
           <span className="thumb group-aria-pressed:shadow-[0_0_0_3px_var(--go)]">
             <img src={s.url} alt="" />
           </span>
-          “{t(s.q)}”
+          {/* Words are never broken mid-word; on the narrowest phones the compact row shows the pictures only. */}
+          <span aria-hidden="true" className={`[overflow-wrap:normal] ${compact ? 'max-[22.5rem]:hidden' : ''}`}>
+            “{t(s.q)}”
+          </span>
         </button>
       ))}
     </div>

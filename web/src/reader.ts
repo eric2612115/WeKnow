@@ -136,11 +136,19 @@ function fallback(schema: Record<string, unknown>, name: string): GenerativeMode
   }
   return m;
 }
+// Once the templates' model says its day is used, go straight to the second model for the next hour instead of
+// paying one refused request (about a second) before every reading.
+let templatesClosedUntil = 0;
 async function viaTemplate<T>(call: () => Promise<T>, onDayUsed: () => Promise<T>, used: { fallback?: string }): Promise<T> {
+  if (Date.now() < templatesClosedUntil) {
+    used.fallback = FALLBACK_MODEL;
+    return withRetry(onDayUsed);
+  }
   try {
     return await withRetry(call);
   } catch (e) {
     if (!isDailyQuota(e)) throw e;
+    templatesClosedUntil = Date.now() + 60 * 60 * 1000;
     used.fallback = FALLBACK_MODEL;
     return withRetry(onDayUsed);
   }

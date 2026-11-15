@@ -59,7 +59,7 @@ export default function Welcome() {
     );
 
   return (
-    <main className="flex h-dvh flex-col items-center justify-between gap-4 overflow-auto bg-bg px-5 pt-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-center lg:justify-center lg:gap-10">
+    <main className="flex h-dvh flex-col items-center justify-between gap-4 overflow-auto bg-bg px-5 pt-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-center md:justify-center md:gap-10">
       <div className="animate-rise">
         <span className="text-[1.6rem] lg:text-[1.9rem]">
           <Wordmark />

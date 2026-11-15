@@ -720,6 +720,14 @@
   .row > div {
     min-width: 0;
   }
+  /* With very large text on a narrow phone, a switch or a button moves under its label instead of squeezing it. */
+  .row {
+    flex-wrap: wrap;
+  }
+  .row > span:first-child {
+    flex: 1 1 9rem;
+    overflow-wrap: normal;
+  }
   .row small {
     display: block;
     font: 500 1.0625rem/1.4 var(--font-sans);
@@ -974,7 +982,16 @@
     height: 1.6rem;
     flex: none;
   }
+  .nav-row {
+    flex-wrap: wrap;
+  }
+  .nav-row > span {
+    min-width: 0;
+    flex: 1 1 7rem;
+    overflow-wrap: normal;
+  }
   .nav-row small {
+    flex: none;
     margin-left: auto;
     font: 600 1.0625rem/1 var(--font-sans);
     color: var(--ink-2);

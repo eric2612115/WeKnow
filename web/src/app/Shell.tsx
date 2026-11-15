@@ -22,7 +22,7 @@ export function ThemeSeg({ full = false }: { full?: boolean }) {
       label={t('menu.screen')}
       value={p.theme}
       onChange={(theme) => setPrefs({ theme })}
-      className={full ? 'w-full [&>button]:flex-1 [&>button]:px-1' : ''}
+      className={full ? 'w-full [&>button]:flex-1 [&>button]:px-1 max-[22.5rem]:flex-col max-[22.5rem]:[&>button]:w-full' : ''}
       options={[
         { value: 'light', label: <><I.sun />{t('theme.light')}</> },
         { value: 'dark', label: <><I.moon />{t('theme.dark')}</> },

@@ -15,7 +15,7 @@ const estimate = (text: string, rate: number) => Math.max(1000, text.split(/\s+/
 export function sayAloud(text: string): Promise<void> {
   const p = getPrefs();
   const rate = RATES[p.rate];
-  const spoken = text.replace(/[“”]/g, '');
+  const spoken = text.replace(/[“”]/g, '').replace(/\u2011/g, '-');
   if (FAST) return Promise.resolve();
   if (!p.voice || typeof speechSynthesis === 'undefined') return new Promise((r) => setTimeout(r, estimate(text, rate)));
   return new Promise<void>((resolve) => {
