@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WeKnow prototype</title>
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --ground:#EDF0EC; --surface:#FFFFFF; --sunk:#E1E6E1; --ink:#14211C; --ink-2:#3F4F48; --line:#76847C; --hair:#CDD5CF;
+  --go:#075C3D; --go-deep:#04402B; --on-go:#FFFFFF; --ok-bg:#DDF1E6;
+  --warn-bg:#FFE9A6; --warn-ink:#4A3000; --warn-line:#7A4B00;
+  --stop:#A31B12; --stop-bg:#FDE4E0;
+  --net:#1849A9; --net-bg:#E3ECFB;
+  --key:#14211C; --key-deep:#000000; --on-key:#FFFFFF;
+  --scrim:rgb(20 33 28 / .5);
+  --font:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang TC","Noto Sans TC",sans-serif;
+  color-scheme:light;
+}
+html[data-theme="dark"]{
+  --ground:#0F1613; --surface:#19231E; --sunk:#0A0F0D; --ink:#F2F6F3; --ink-2:#B9C6BF; --line:#6E7D75; --hair:#2C3832;
+  --go:#37C98B; --go-deep:#1F8A5D; --on-go:#06241A; --ok-bg:#123524;
+  --warn-bg:#3F2E00; --warn-ink:#FFD978; --warn-line:#E0A400;
+  --stop:#FF8A7A; --stop-bg:#431511;
+  --net:#9CC0FF; --net-bg:#14294D;
+  --key:#F2F6F3; --key-deep:#9AA8A1; --on-key:#0F1613;
+  --scrim:rgb(0 0 0 / .62);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{font-size:100%;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--sunk);color:var(--ink);font-family:var(--font)}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+h1,h2,h3,p,ul{margin:0;padding:0}
+:focus-visible{outline:3px solid var(--net);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+/* ---------- prototype bar (not part of the product) ---------- */
+.pbar{height:40px;display:flex;align-items:center;gap:10px;padding:0 10px;background:#22302A;color:#E8EEEA;font:500 13px/1 system-ui,sans-serif;overflow-x:auto;white-space:nowrap}
+.pbar b{font-weight:600;opacity:.7}
+.pbar select{font:500 13px system-ui,sans-serif;background:#33423B;color:#fff;border:1px solid #55655D;border-radius:6px;height:28px;padding:0 4px;max-width:46vw}
+.pbar label{display:flex;align-items:center;gap:5px}
+
+/* ---------- stage: the product lives in here ---------- */
+.stage{height:calc(100dvh - 40px);width:100%;container-type:size;container-name:stage;background:var(--ground);position:relative;overflow:hidden}
+@media (min-width:700px){
+  .stage[data-view="phone"]{width:390px;height:min(844px,calc(100dvh - 72px));margin:16px auto;border-radius:40px;border:1px solid var(--line);box-shadow:0 20px 50px -24px rgb(0 0 0 / .45)}
+}
+.app{height:100%;display:flex;flex-direction:column;position:relative}
+
+/* header: laptop only */
+.hdr{display:none;align-items:center;justify-content:space-between;padding:1.1rem 2.5rem .35rem;max-width:84rem;width:100%;margin:0 auto}
+.mark{display:inline-flex;align-items:center;gap:.5rem;font:800 1.5rem/1 var(--font);letter-spacing:-.02em}
+.mark i{width:.9em;height:.9em;border-radius:50%;background:var(--go);box-shadow:0 .12em 0 var(--go-deep)}
+.status{display:flex;align-items:center;gap:.45rem;font:600 1.0625rem/1 var(--font);color:var(--ink-2)}
+.status svg{width:1.4rem;height:1.4rem}
+.app:not([data-screen="home"]) .status{visibility:hidden}
+
+/* ---------- the big button ---------- */
+.big{--d:8rem;flex:none;width:var(--d);height:var(--d);border-radius:50%;border:0;background:var(--go);color:var(--on-go);
+  font:700 1.625rem/1 var(--font);display:grid;place-items:center;align-content:center;gap:.3rem;position:relative;
+  box-shadow:0 .4rem 0 var(--go-deep),0 1rem 1.1rem -.55rem rgb(0 0 0 / .45);transition:transform .08s,box-shadow .08s}
+.big:active{transform:translateY(.26rem);box-shadow:0 .14rem 0 var(--go-deep),0 .4rem .6rem -.4rem rgb(0 0 0 / .45)}
+.big svg{width:2.4rem;height:2.4rem}
+.big[data-face="stop"]{background:var(--key);color:var(--on-key);box-shadow:0 .4rem 0 var(--key-deep),0 1rem 1.1rem -.55rem rgb(0 0 0 / .45)}
+.big[data-face="stop"]:active{box-shadow:0 .14rem 0 var(--key-deep)}
+.big[data-face="listen"]::after{content:"";position:absolute;inset:-.55rem;border-radius:50%;border:.28rem solid var(--go);animation:ring 1.5s ease-in-out infinite}
+.bars{display:flex;align-items:center;gap:.36rem;height:3.4rem}
+.bars i{width:.5rem;border-radius:.3rem;background:currentColor;height:1rem;animation:bar .9s ease-in-out infinite}
+.bars i:nth-child(2){animation-delay:.15s}.bars i:nth-child(3){animation-delay:.3s}.bars i:nth-child(4){animation-delay:.45s}.bars i:nth-child(5){animation-delay:.6s}
+@keyframes bar{0%,100%{height:.8rem}50%{height:3rem}}
+@keyframes ring{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.06);opacity:.35}}
+
+/* ---------- welcome and allow ---------- */
+.cover{display:none;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;gap:1rem;overflow:auto;
+  padding:1.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom))}
+.app[data-screen="welcome"] #welcome,.app[data-screen="allow"] #allow{display:flex}
+.app:not([data-screen="home"]) .home{display:none}
+.cover h1{font:700 1.8rem/1.18 var(--font);letter-spacing:-.015em;margin-top:1rem}
+.cover h1 span{display:block}
+.cover .mark{font-size:1.75rem}
+.trio{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;width:100%;max-width:46rem}
+.trio li{display:flex;flex-direction:column;gap:.45rem;align-items:center}
+.trio q{font:600 1.0625rem/1.25 var(--font)}
+.thumb{display:block;width:100%;aspect-ratio:4/3;border-radius:.8rem;overflow:hidden;border:1px solid var(--line);background:#2A322E}
+.thumb svg,.scene svg{width:100%;height:100%;display:block}
+.fine{font:500 1.0625rem/1.35 var(--font);color:var(--ink-2);margin-top:.9rem}
+.w-bot{display:flex;flex-direction:column;align-items:center}
+.lead{font:500 1.375rem/1.3 var(--font);color:var(--ink-2);margin-top:.5rem}
+#allow h1{font-size:2.4rem}
+.sysbox{width:min(21rem,100%);background:#F4F4F4;color:#1c1c1e;border-radius:14px;padding:16px 16px 12px;font:400 15px/1.35 -apple-system,system-ui,"Segoe UI",sans-serif;text-align:left;box-shadow:0 12px 40px -12px rgb(0 0 0 / .5),0 0 0 1px rgb(0 0 0 / .12)}
+.sysbox b{display:block;margin-bottom:12px;font-size:16px}
+.sysbtns{display:flex;justify-content:flex-end;gap:8px}
+.sysbtns button{font:500 15px -apple-system,system-ui,sans-serif;height:44px;padding:0 18px;border-radius:22px;border:1px solid #B9B9BE;background:#fff;color:#1c1c1e}
+.sysbtns .hl{position:relative;border-color:#0B57D0;color:#0B57D0}
+.sysbtns .hl::after{content:"";position:absolute;inset:-9px;border:4px solid var(--go);border-radius:30px}
+.point{display:flex;flex-direction:column;align-items:flex-end;width:min(21rem,100%);font:700 1.375rem/1.2 var(--font);color:var(--go);margin-top:.4rem;padding-right:.4rem}
+.point svg{width:2.6rem;height:2.6rem;margin-right:1.3rem}
+
+/* ---------- home ---------- */
+.home{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--win-h,54cqh) minmax(0,1fr) auto;gap:.75rem;padding:.75rem .75rem 0;transition:grid-template-rows .28s ease}
+.app[data-phase="looking"] .home,.app[data-phase="speaking"] .home,.app[data-phase="waiting"] .home,.app[data-phase="settled"] .home{--win-h:24cqh}
+.app[data-phase="guide"] .home{--win-h:40cqh}
+.left,.right{display:contents}
+.win{grid-row:1;position:relative;min-height:0;border-radius:1.25rem;overflow:hidden;background:#2A322E;border:1px solid var(--line)}
+.scene{position:absolute;inset:0;transition:filter .3s}
+.win.dim .scene{filter:brightness(.16)}
+.chip{position:absolute;left:.6rem;top:.6rem;display:flex;align-items:center;gap:.45rem;background:var(--surface);color:var(--ink);font:600 1.0625rem/1 var(--font);padding:.42rem .65rem;border-radius:.55rem;box-shadow:0 1px 3px rgb(0 0 0 / .35)}
+.chip i{width:.7rem;height:.7rem;border-radius:50%;background:var(--go)}
+.chip[data-k="still"]{display:none}
+.chip[data-k="dark"] i{background:var(--warn-line)}
+.note{position:absolute;left:.6rem;bottom:.6rem;display:none;align-items:center;gap:.45rem;background:var(--surface);color:var(--ink);font:600 1.0625rem/1.15 var(--font);padding:.45rem .65rem;border-radius:.55rem;box-shadow:0 1px 3px rgb(0 0 0 / .35);max-width:calc(100% - 1.2rem)}
+.note.on{display:flex}
+.tag.on~.note{display:none}
+.note svg{width:1.3rem;height:1.3rem;flex:none}
+.brk{position:absolute;width:1.6rem;height:1.6rem;border:3px solid #fff;filter:drop-shadow(0 0 1px rgb(0 0 0 / .7));transition:transform .2s ease-out;pointer-events:none}
+.brk.tl{left:1.1rem;top:3.5rem;border-right:0;border-bottom:0}.brk.tr{right:1.1rem;top:3.5rem;border-left:0;border-bottom:0}
+.brk.bl{left:1.1rem;bottom:3.9rem;border-right:0;border-top:0}.brk.br{right:1.1rem;bottom:3.9rem;border-left:0;border-top:0}
+.win.looking .brk.tl{transform:translate(.5rem,.5rem)}.win.looking .brk.tr{transform:translate(-.5rem,.5rem)}
+.win.looking .brk.bl{transform:translate(.5rem,-.5rem)}.win.looking .brk.br{transform:translate(-.5rem,-.5rem)}
+.win.reading::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:#fff;box-shadow:0 0 0 1px rgb(0 0 0 / .3);animation:sweep 1.25s ease-in-out infinite alternate}
+@keyframes sweep{from{top:6%}to{top:94%}}
+.blocked{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;background:var(--sunk);color:var(--ink-2);font:600 1.25rem/1.25 var(--font);text-align:center;padding:1rem}
+.blocked svg{width:3.2rem;height:3.2rem}
+.win.off .blocked{display:flex}.win.off .chip,.win.off .brk{display:none}
+
+/* scene marks (drawn on the picture, so they do not follow the theme) */
+.sc .mask{fill:#14211C;transform-box:fill-box;transform-origin:left center;transform:scaleX(0);transition:transform .22s ease-out}
+.sc.m .mask{transform:scaleX(1)}
+.sc .tick,.sc .hi,.sc .qm,.sc .qn,.sc .ql,.sc .flag{opacity:0;transition:opacity .25s}
+.sc .coveroff,.sc .tool,.sc .stream,.sc .ring{display:none}
+.sc.c .tick,.sc.r .hi,.sc.q-ask .qm,.sc.q-net .qn,.sc.q-local .ql,.sc.f .flag{opacity:1}
+
+/* the words */
+.say{grid-row:2;min-height:0;overflow:auto;padding:0 .35rem .25rem;scrollbar-width:thin}
+.asked{font:500 1.0625rem/1.3 var(--font);color:var(--ink-2);margin-bottom:.5rem}
+.asked:empty,.head:empty,.choices:empty{display:none}
+.head{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.55rem;font:700 1.875rem/1.12 var(--font);letter-spacing:-.012em;text-wrap:balance;
+  position:sticky;top:0;z-index:1;background:var(--ground);padding-bottom:.2rem}
+.head svg{flex:none;width:2.2rem;height:2.2rem;margin-top:-.02rem}
+.head[data-tone="ok"],.head[data-tone="warn"],.head[data-tone="stop"]{padding:.7rem .85rem;border-radius:.9rem}
+.head[data-tone="ok"]{background:var(--ok-bg)}.head[data-tone="ok"] svg{color:var(--go)}
+.head[data-tone="warn"]{background:var(--warn-bg);color:var(--warn-ink)}
+.head[data-tone="stop"]{background:var(--stop-bg)}.head[data-tone="stop"] svg{color:var(--stop)}
+.lines p{font:500 1.375rem/1.32 var(--font);margin:.4rem 0;color:var(--ink-2);text-wrap:pretty}
+.lines p.now,.lines.done p{color:var(--ink)}
+.lines p.strong{font-weight:700;font-size:1.5rem;color:var(--ink)}
+.lines p.heard{font-weight:700;font-size:1.5rem;color:var(--ink);min-height:1.4em}
+.lines p.ok,.lines p.warn{display:flex;gap:.5rem;align-items:flex-start}
+.lines p.ok svg,.lines p.warn svg{flex:none;width:1.7rem;height:1.7rem}
+.lines p.ok svg{color:var(--go)}
+.lines p.warn{background:var(--warn-bg);color:var(--warn-ink);padding:.6rem .75rem;border-radius:.8rem;font-weight:600}
+.steps{display:none;align-items:center;gap:.8rem;margin-bottom:.5rem;font:700 1.125rem/1 var(--font);color:var(--ink-2)}
+.steps.on{display:flex}
+.steps .bar{display:flex;gap:.3rem;flex:1}
+.steps .bar i{height:.55rem;flex:1;border-radius:.3rem;background:var(--hair);border:1px solid var(--line)}
+.steps .bar i.d{background:var(--go);border-color:var(--go)}
+.steps .bar i.n{background:var(--surface);border:2px solid var(--go)}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.9rem}
+.choices.stack{grid-template-columns:1fr}
+.btn{min-height:3.75rem;border-radius:1rem;border:2px solid var(--ink);background:var(--surface);color:var(--ink);font:700 1.25rem/1.15 var(--font);padding:.55rem .9rem}
+.btn.yes{background:var(--go);border-color:var(--go);color:var(--on-go);box-shadow:0 .25rem 0 var(--go-deep)}
+.btn:active{transform:translateY(.12rem)}
+.btn.sm{min-height:3rem;font-size:1.0625rem;padding:.3rem .9rem}
+
+/* where it ran: the tag */
+.tag{position:absolute;left:.6rem;bottom:.6rem;max-width:calc(100% - 1.2rem);box-shadow:0 1px 3px rgb(0 0 0 / .35);display:none;align-items:center;gap:.5rem;min-height:2.75rem;padding:.35rem .55rem .35rem .65rem;border:1.5px solid var(--line);border-radius:.6rem;background:var(--surface);color:var(--ink);font:600 1.0625rem/1.2 var(--font);text-align:left}
+.tag.on{display:inline-flex}
+.tag svg{width:1.45rem;height:1.45rem;flex:none}
+.tag .chev{width:1.1rem;height:1.1rem;opacity:.7}
+[data-where="mixed"],[data-where="cloud"]{--w:var(--net);--wb:var(--net-bg)}
+[data-where="pending"]{--w:var(--warn-line);--wb:var(--warn-bg)}
+.tag[data-where="mixed"],.tag[data-where="cloud"],.tag[data-where="pending"]{border-color:var(--w);background:var(--wb);color:var(--w)}
+.tag[data-where="pending"]{color:var(--warn-ink)}
+.rin{display:none}
+
+/* deck */
+.deck{grid-row:3;display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.2rem .7rem calc(1rem + env(safe-area-inset-bottom))}
+.flank{width:4.9rem;min-height:4.9rem;border-radius:1rem;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:600 1.0625rem/1.1 var(--font);display:grid;place-items:center;align-content:center;gap:.3rem;padding:.4rem .2rem}
+.flank svg{width:1.9rem;height:1.9rem}
+.flank:active{transform:translateY(.12rem)}
+.kbd,.samples{display:none}
+
+/* samples */
+.samples p{font:600 1.0625rem/1.25 var(--font);color:var(--ink-2);flex:none;width:7.5rem}
+.sbtn{flex:1;min-width:0;display:flex;flex-direction:column;gap:.35rem;align-items:stretch;background:none;border:0;padding:0;text-align:center;font:600 1.0625rem/1.2 var(--font)}
+.sbtn .thumb{border-width:2px}
+.sbtn[aria-pressed="true"] .thumb{border-color:var(--go);box-shadow:0 0 0 2px var(--go)}
+
+/* ---------- sheets ---------- */
+.scrim{z-index:5;position:absolute;inset:0;background:var(--scrim);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+.scrim.on{opacity:1;visibility:visible}
+.sheet{z-index:6;position:absolute;left:0;right:0;bottom:0;max-height:90%;overflow:auto;background:var(--surface);border-radius:1.5rem 1.5rem 0 0;
+  padding:1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));box-shadow:0 -10px 34px -12px rgb(0 0 0 / .5);
+  transform:translateY(104%);visibility:hidden;transition:transform .22s ease-out,visibility .22s}
+.sheet.open{transform:none;visibility:visible}
+.sheet.tall{top:0;max-height:none;border-radius:0}
+.sh-h{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.sheet h2{font:700 1.625rem/1.15 var(--font);letter-spacing:-.01em;text-wrap:balance}
+.sheet h2 svg{width:2rem;height:2rem;vertical-align:-.35rem;margin-right:.35rem;color:var(--net)}
+.sheet p{font:500 1.25rem/1.35 var(--font)}
+.sheet .small{font-size:1.0625rem;color:var(--ink-2)}
+.x{flex:none;min-height:3rem;padding:0 1rem;border-radius:.8rem;border:2px solid var(--line);background:var(--surface);font:700 1.0625rem/1 var(--font)}
+.parcel{display:flex;flex-direction:column;gap:.4rem;margin:.7rem 0;padding:.8rem .9rem;border:2px dashed var(--net);border-radius:.9rem;background:var(--net-bg);color:var(--ink);font:700 1.25rem/1.25 var(--font)}
+.parcel .pthumb{display:block;width:7rem;aspect-ratio:4/3;border-radius:.5rem;overflow:hidden;border:1px solid var(--line)}
+.parcel .pthumb svg{width:100%;height:100%;display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:1.1rem}
+.lane{padding:.8rem 0;border-top:1px solid var(--hair)}
+.lane-h{display:flex;align-items:center;gap:.5rem;font:700 1.25rem/1.2 var(--font);margin-bottom:.4rem}
+.lane-h svg{width:1.6rem;height:1.6rem;flex:none}
+.lane.n .lane-h{color:var(--net)}
+.lane ul{list-style:none;display:grid;gap:.25rem}
+.lane li,.lane p{font:500 1.125rem/1.35 var(--font)}
+.lane li small{display:block;color:var(--ink-2);font-size:1rem}
+.lane .parcel{font-size:1.125rem;margin:.3rem 0 .4rem}
+.wtag{display:inline-flex;align-items:center;gap:.5rem;font:700 1.25rem/1.2 var(--font);padding:.5rem .75rem;border-radius:.6rem;border:1.5px solid var(--w,var(--line));background:var(--wb,var(--ground));color:var(--w,var(--ink));margin-bottom:.8rem}
+.wtag[data-where="pending"]{color:var(--warn-ink)}
+.wtag svg{width:1.5rem;height:1.5rem}
+details{border-top:1px solid var(--hair);padding:.8rem 0 0}
+summary{font:600 1.0625rem/1.2 var(--font);color:var(--ink-2);cursor:pointer;min-height:2.75rem;display:flex;align-items:center}
+details p{font-size:1.0625rem;color:var(--ink-2)}
+
+/* help, earlier, family */
+.rowbtn{width:100%;min-height:4rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:1rem;padding:.6rem 1rem;font:700 1.25rem/1.2 var(--font);margin:.4rem 0}
+.rowbtn svg{width:1.6rem;height:1.6rem;flex:none}
+.grp{border-top:1px solid var(--hair);margin-top:1rem;padding-top:.5rem}
+.row{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:4rem;padding:.45rem 0;font:600 1.25rem/1.25 var(--font)}
+.row.col{flex-direction:column;align-items:stretch;gap:.6rem;padding:.8rem 0}
+.row small{display:block;font:500 1.0625rem/1.3 var(--font);color:var(--ink-2);margin-top:.15rem}
+.seg{display:flex;border:2px solid var(--line);border-radius:.9rem;overflow:hidden;flex:none}
+.seg button{min-width:3.4rem;min-height:3rem;padding:0 .7rem;border:0;background:var(--surface);font:700 1.0625rem/1 var(--font);border-left:2px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+#segSize button:nth-child(2){font-size:1.3rem}#segSize button:nth-child(3){font-size:1.6rem}
+.sw{flex:none;width:4.4rem;height:2.6rem;border-radius:1.3rem;border:2px solid var(--line);background:var(--sunk);position:relative;font:700 .8rem/1 var(--font)}
+.sw::before{content:"";position:absolute;top:.2rem;left:.2rem;width:1.95rem;height:1.95rem;border-radius:50%;background:var(--surface);border:2px solid var(--line);transition:transform .15s}
+.sw::after{content:"Off";position:absolute;right:.45rem;top:50%;transform:translateY(-50%);color:var(--ink-2)}
+.sw[aria-checked="true"]{background:var(--go);border-color:var(--go)}
+.sw[aria-checked="true"]::before{transform:translateX(1.8rem);border-color:var(--surface)}
+.sw[aria-checked="true"]::after{content:"On";right:auto;left:.5rem;color:var(--on-go)}
+.prog{height:1rem;border-radius:.5rem;background:var(--sunk);border:1px solid var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--go);width:0;transition:width .4s linear}
+.in-sheet{display:flex;gap:.6rem;margin:.6rem 0 .2rem}
+.erow{width:100%;display:flex;gap:.9rem;align-items:center;text-align:left;background:none;border:0;border-top:1px solid var(--hair);padding:.8rem 0}
+.erow .thumb{width:6.5rem;flex:none}
+.et{display:grid;gap:.25rem;font:500 1.0625rem/1.25 var(--font);color:var(--ink-2)}
+.et b{font:700 1.25rem/1.2 var(--font);color:var(--ink)}
+.ev{display:flex;align-items:center;gap:.35rem;font-weight:600;color:var(--ink)}
+.ev svg{width:1.4rem;height:1.4rem}
+.ev[data-tone="ok"] svg{color:var(--go)}.ev[data-tone="warn"] svg{color:var(--warn-line)}.ev[data-tone="stop"] svg{color:var(--stop)}
+.empty{color:var(--ink-2);padding:2rem 0}
+.fstep{display:grid;grid-template-columns:2.4rem 1fr;gap:.2rem .8rem;padding:.9rem 0;border-top:1px solid var(--hair)}
+.fstep .n{width:2.4rem;height:2.4rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font:700 1.125rem/1 var(--font)}
+.fstep.ok .n{background:var(--go);border-color:var(--go);color:var(--on-go)}
+.fstep .n svg{width:1.4rem;height:1.4rem}
+.fstep b{font:700 1.25rem/1.25 var(--font);align-self:center}
+.fstep .fb{grid-column:2;display:grid;gap:.5rem;justify-items:start;font:500 1.0625rem/1.35 var(--font);color:var(--ink-2)}
+.fstep label{display:flex;align-items:center;gap:.6rem;min-height:2.75rem;font:600 1.125rem/1.25 var(--font);color:var(--ink)}
+.fstep input[type=radio]{width:1.5rem;height:1.5rem;accent-color:var(--go);flex:none}
+.fstep input[type=text],.fstep input[type=tel]{font:600 1.125rem/1 var(--font);min-height:3rem;border:2px solid var(--line);border-radius:.7rem;padding:0 .7rem;background:var(--surface);color:var(--ink);width:100%;max-width:18rem}
+
+/* ---------- laptop ---------- */
+@container stage (min-width:900px){
+  .hdr{display:flex}
+  .home{grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:2.5rem;padding:.6rem 2.5rem 1.5rem;max-width:84rem;width:100%;margin:0 auto}
+  .left{display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:1rem;min-height:0;grid-column:1;grid-row:1}
+  .right{display:flex;flex-direction:column;gap:1.25rem;min-height:0;overflow:auto;grid-column:2;grid-row:1;padding:.25rem .5rem 0 0}
+  .win,.say,.deck{grid-row:auto}
+  .say{overflow:visible;flex:none;max-width:35rem}
+  .samples{display:flex;align-items:flex-start;gap:.8rem}
+  .samples .sbtn{max-width:9.5rem}
+  .deck{justify-content:center;gap:2.4rem;padding:.3rem 0 0}
+  .kbd{display:block;text-align:center;font:500 1.0625rem/1 var(--font);color:var(--ink-2);margin-top:-.2rem}
+  .head{font-size:2.3rem}
+  .lines p{font-size:1.55rem}
+  .lines p.strong,.lines p.heard{font-size:1.8rem}
+  .rin.on{display:block;max-width:35rem;border:1.5px solid var(--w,var(--line));border-radius:1rem;background:var(--surface);padding:1rem 1.1rem .6rem}
+  .rin-t{font:700 1.25rem/1.2 var(--font);margin-bottom:.5rem}
+  .rin .lane:first-of-type{border-top:0}
+  .rin .more{background:none;border:0;padding:0;min-height:2.75rem;font:600 1.0625rem/1 var(--font);color:var(--ink);text-decoration:underline;text-underline-offset:.2em}
+  .cover{justify-content:center;gap:2.2rem}
+  .cover h1{font-size:2.9rem;margin-top:1.2rem}
+  .cover h1 span{display:inline}
+  .cover .mark{font-size:2rem}
+  .trio{gap:1.4rem;max-width:44rem}
+  .trio q{font-size:1.25rem}
+  .sheet,.sheet.tall{left:50%;right:auto;bottom:auto;top:50%;width:min(37rem,92%);max-height:88%;border-radius:1.5rem;padding:1.75rem;transform:translate(-50%,-47%);opacity:0;transition:transform .2s ease-out,opacity .2s,visibility .2s;box-shadow:0 30px 80px -30px rgb(0 0 0 / .6)}
+  .sheet.tall{width:min(44rem,92%)}
+  .sheet.open{transform:translate(-50%,-50%);opacity:1}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .bars i:nth-child(odd){height:2rem}.bars i:nth-child(even){height:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<div class="pbar" role="region" aria-label="Prototype controls, not part of the product">
+  <b>Prototype</b>
+  <label>Scene
+    <select id="pScene">
+      <optgroup label="First time">
+        <option value="welcome">First open</option>
+        <option value="allow">Allow camera and microphone</option>
+        <option value="first">Ready for the first question</option>
+      </optgroup>
+      <optgroup label="Every day">
+        <option value="drain">Ask: a drain that will not empty</option>
+        <option value="drain-answer">Answer with an offer to guide</option>
+        <option value="guide">Step by step</option>
+        <option value="quote">Ask: a repair quote</option>
+        <option value="quote-result">Quote: one line is high</option>
+        <option value="say-this">Quote: a sentence to say</option>
+        <option value="letter">Ask: a letter asking for money</option>
+        <option value="letter-result">Letter: do not pay yet</option>
+      </optgroup>
+      <optgroup label="The internet">
+        <option value="consent">Asking before one item goes online</option>
+        <option value="consent-b">Asking when this device cannot read by itself</option>
+        <option value="receipt">Where the answer came from</option>
+        <option value="offer">Offer to work without the internet</option>
+        <option value="offline">No internet, still works</option>
+        <option value="nonet">No internet, and this device needs it</option>
+      </optgroup>
+      <optgroup label="When things go wrong">
+        <option value="e-hear">Did not hear</option>
+        <option value="e-dark">Too dark</option>
+        <option value="e-unknown">Does not know this yet</option>
+        <option value="e-camera">Camera is off</option>
+      </optgroup>
+      <optgroup label="Other">
+        <option value="earlier">Earlier</option>
+        <option value="help">Help and settings</option>
+        <option value="family">Set up for someone else</option>
+        <option value="reset">Start over (forget everything)</option>
+      </optgroup>
+    </select>
+  </label>
+  <label>This device
+    <select id="pDevice">
+      <option value="ready">Reads by itself, internet on</option>
+      <option value="cloud">Cannot read by itself, internet on</option>
+      <option value="offline">Reads by itself, no internet</option>
+    </select>
+  </label>
+  <label>View
+    <select id="pView"><option value="auto">Whole window</option><option value="phone">Phone size</option></select>
+  </label>
+  <label><input type="checkbox" id="pVoice" checked> Voice</label>
+</div>
+
+<div class="stage" id="stage" data-view="auto">
+<div class="app" id="app" data-screen="welcome" data-phase="ready">
+
+  <header class="hdr">
+    <div class="mark"><i></i>WeKnow</div>
+    <div class="status" id="status"></div>
+  </header>
+
+  <!-- S1 Welcome -->
+  <section class="cover" id="welcome">
+    <div>
+      <div class="mark"><i></i>WeKnow</div>
+      <h1><span>Point at it. </span><span>Ask out loud. </span><span>Hear what to do.</span></h1>
+    </div>
+    <ul class="trio">
+      <li><span class="thumb" data-thumb="drain"></span><q>Why won't this drain?</q></li>
+      <li><span class="thumb" data-thumb="quote"></span><q>Is this a fair price?</q></li>
+      <li><span class="thumb" data-thumb="letter"></span><q>Should I pay this?</q></li>
+    </ul>
+    <div class="w-bot">
+      <button class="big" id="startBtn"><span>Start</span></button>
+      <p class="fine">No account. No typing. Turn your sound up.</p>
+    </div>
+  </section>
+
+  <!-- S2 Allow -->
+  <section class="cover" id="allow">
+    <div>
+      <h1>Press Allow</h1>
+      <p class="lead">So WeKnow can see and hear.</p>
+    </div>
+    <div>
+      <div class="sysbox" role="group" aria-label="The box your device shows">
+        <b>Use your camera and microphone?</b>
+        <div class="sysbtns"><button id="denyBtn">Don't allow</button><button id="allowBtn" class="hl">Allow</button></div>
+      </div>
+      <div class="point" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V4M5 11l7-7 7 7"/></svg>
+        Press this one
+      </div>
+    </div>
+    <p class="fine">Pictures stay on this <span data-dev>phone</span> unless you say yes.</p>
+  </section>
+
+  <!-- S3 Home -->
+  <section class="home" id="home">
+    <div class="left">
+      <div class="win" id="win">
+        <div class="scene" id="scene"></div>
+        <span class="brk tl"></span><span class="brk tr"></span><span class="brk bl"></span><span class="brk br"></span>
+        <div class="chip" id="chip" data-k="live"><i></i><span>Camera on</span></div>
+        <button class="tag" id="tag"></button>
+        <div class="note" id="note"></div>
+        <div class="blocked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3l2-3h6l2 3h5v11H3z"/><circle cx="12" cy="13" r="3.5"/><path d="M3 3l18 18"/></svg>The camera is off</div>
+      </div>
+      <div class="samples" id="samples"></div>
+      <div class="deck">
+        <button class="flank" id="flankL"></button>
+        <button class="big" id="big"></button>
+        <button class="flank" id="flankR"></button>
+      </div>
+      <p class="kbd">The space bar works too</p>
+    </div>
+    <div class="right">
+      <div class="say" id="say">
+        <p class="asked" id="asked"></p>
+        <div class="steps" id="steps"></div>
+        <h2 class="head" id="head"></h2>
+        <div class="lines" id="lines"></div>
+        <div class="choices" id="choices"></div>
+      </div>
+      <div class="rin" id="rin"></div>
+    </div>
+  </section>
+
+  <div class="scrim" id="scrim"></div>
+
+  <!-- consent -->
+  <section class="sheet" id="sh-consent" role="dialog" aria-labelledby="cTitle">
+    <h2 id="cTitle"></h2>
+    <p id="cBody" style="margin-top:.7rem"></p>
+    <div class="parcel" id="cParcel"></div>
+    <p class="small" id="cNot"></p>
+    <div class="two"><button class="btn yes" id="cYes"></button><button class="btn" id="cNo"></button></div>
+  </section>
+
+  <!-- where it came from -->
+  <section class="sheet" id="sh-receipt" role="dialog" aria-labelledby="rT">
+    <div class="sh-h"><h2 id="rT">Where this answer came from</h2><button class="x" data-close>Close</button></div>
+    <div id="rBody"></div>
+  </section>
+
+  <!-- earlier -->
+  <section class="sheet tall" id="sh-earlier" role="dialog" aria-labelledby="eT">
+    <div class="sh-h"><h2 id="eT">Earlier</h2><button class="x" data-close>Close</button></div>
+    <div id="earlierList"></div>
+  </section>
+
+  <!-- help and settings -->
+  <section class="sheet tall" id="sh-help" role="dialog" aria-labelledby="hT">
+    <div class="sh-h"><h2 id="hT">Help and settings</h2><button class="x" data-close>Close</button></div>
+    <button class="rowbtn" id="howBtn"><span>Hear how WeKnow works</span></button>
+    <p class="small" style="margin-top:.8rem">No camera handy? Try a picture.</p>
+    <div class="in-sheet" id="samples2"></div>
+    <div class="grp">
+      <div class="row"><span>Text size</span><div class="seg" id="segSize"><button aria-label="Large">A</button><button aria-label="Larger">A</button><button aria-label="Largest">A</button></div></div>
+      <div class="row"><span>Voice speed</span><div class="seg" id="segRate"><button>Slower</button><button>Normal</button><button>Faster</button></div></div>
+      <div class="row"><span>Voice<small>Off shows the words only</small></span><button class="sw" role="switch" id="swVoice" aria-label="Voice"></button></div>
+      <div class="row"><span>Dark screen</span><button class="sw" role="switch" id="swDark" aria-label="Dark screen"></button></div>
+    </div>
+    <div class="grp">
+      <div class="row"><span>Ask me every time before using the internet</span><button class="sw" role="switch" id="swAsk" aria-label="Ask every time"></button></div>
+      <div class="row col" id="rowDevice"></div>
+    </div>
+    <div class="grp">
+      <div class="row"><span>Person to call when unsure<small id="trustName">Daniel, 512 555 0117</small></span><button class="btn sm">Change</button></div>
+      <button class="rowbtn" id="famBtn"><span>Set up for someone else</span></button>
+      <div class="row col" id="rowSign"></div>
+    </div>
+  </section>
+
+  <!-- family set-up -->
+  <section class="sheet tall" id="sh-family" role="dialog" aria-labelledby="fT">
+    <div class="sh-h"><h2 id="fT">Set up for someone else</h2><button class="x" data-close>Close</button></div>
+    <p class="small">Five things, about five minutes. Do them on their <span data-dev>phone</span>.</p>
+    <div style="margin-top:.8rem">
+      <div class="fstep ok"><span class="n" id="f1n"></span><b>Camera and microphone</b><div class="fb">Allowed.</div></div>
+      <div class="fstep" id="f2"><span class="n">2</span><b>Work without the internet</b><div class="fb" id="f2b"></div></div>
+      <div class="fstep"><span class="n">3</span><b>Voice and text they are comfortable with</b>
+        <div class="fb"><div class="seg" id="segRate2"><button>Slower</button><button>Normal</button><button>Faster</button></div>
+        <div class="seg" id="segSize2"><button>A</button><button>A</button><button>A</button></div>
+        <button class="btn sm" id="sampleBtn">Play a sample</button></div></div>
+      <div class="fstep"><span class="n">4</span><b>Before WeKnow uses the internet</b>
+        <div class="fb"><label><input type="radio" name="ask" id="askOnce" checked> Ask the first time, then just say so</label>
+        <label><input type="radio" name="ask" id="askEvery"> Ask every time</label></div></div>
+      <div class="fstep"><span class="n">5</span><b>Who they should call when unsure</b>
+        <div class="fb"><input type="text" id="tName" value="Daniel" aria-label="Name"><input type="tel" id="tTel" value="512 555 0117" aria-label="Phone number">Kept on this <span data-dev>phone</span> only.</div></div>
+    </div>
+    <button class="btn yes" id="tryBtn" style="width:100%;margin-top:1.2rem">Try it together</button>
+    <p class="small" style="margin-top:1rem">Then put WeKnow on the first screen, so it is one press away.</p>
+  </section>
+
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const html = document.documentElement, app = $('#app'), stage = $('#stage');
+const el = { win: $('#win'), scene: $('#scene'), chip: $('#chip'), note: $('#note'), say: $('#say'), asked: $('#asked'), steps: $('#steps'), head: $('#head'),
+  lines: $('#lines'), choices: $('#choices'), tag: $('#tag'), rin: $('#rin'), big: $('#big'), fl: $('#flankL'), fr: $('#flankR'), status: $('#status'), scrim: $('#scrim') };
+
+/* ---------- state ---------- */
+const S = { device: 'ready', scene: 'drain', cur: 'welcome', consent: false, askEvery: false, learned: false, told: false, offered: false,
+  voice: true, rate: 1, size: 0, fast: false, trusted: 'Daniel', signedIn: false, saved: [], dl: null, receipt: null, cut: null, onGuide: null, onConsent: null, step: 0 };
+const dev = () => stage.clientWidth >= 900 ? 'computer' : 'phone';
+
+/* ---------- icons ---------- */
+const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
+  stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
+  next: svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+  again: svg('<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/>'),
+  clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8M12 17h.01"/>'),
+  ok: svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8 5.7-5.8"/>'),
+  warn: svg('<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.4h.01"/>'),
+  hand: svg('<path d="M8.2 2.5h7.6l5.7 5.7v7.6l-5.7 5.7H8.2l-5.7-5.7V8.2z"/><path d="M7.5 12h9"/>'),
+  say: svg('<path d="M4 5h16v11H10l-5 4v-4H4z"/>'),
+  phone: svg('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/>'),
+  computer: svg('<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19.5h20"/><circle cx="12" cy="10.5" r="1.7" fill="currentColor" stroke="none"/>'),
+  net: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'),
+  nonet: svg('<path d="M2.5 9a14 14 0 0 1 19 0M6 12.6a9 9 0 0 1 12 0M9.5 16.2a4 4 0 0 1 5 0M12 19.6h.01M4 3l16 18"/>'),
+  lamp: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
+  chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+};
+const devIcon = () => I[dev()];
+
+/* ---------- scenes (what the camera sees) ---------- */
+const bg = c => `<rect x="-700" y="-700" width="1800" height="1700" fill="${c}"/>`;
+const QL = [['Front brake pads', '$185.00'], ['Front rotors, pair', '$240.00'], ['Brake labor, 3.5 hours', '$420.00'], ['Brake fluid flush', '$120.00'],
+  ['Oil and filter change', '$75.00'], ['Cabin air filter', '$45.00'], ['Tire rotation', '$40.00'], ['Shop supplies', '$35.00']];
+const tick = (x, y, c, g) => `<g transform="translate(${x} ${y})"><circle r="6.5" fill="${c}"/>${g}</g>`;
+const CHK = '<path d="M-3 .2l2.2 2.2L3.2-2.4" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+const QMK = '<text y="3.6" font-size="10" font-weight="700" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif">?</text>';
+const EXC = '<text y="3.6" font-size="10" font-weight="700" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif">!</text>';
+const SCENES = {
+  drain: () => `<svg class="sc" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" overflow="visible">${bg('#C9C2B2')}
+    <rect x="30" y="34" width="340" height="262" rx="54" fill="#FAFAF7"/><rect x="50" y="54" width="300" height="222" rx="40" fill="#E6EAE5"/>
+    <g class="water"><path d="M84 122c26-34 206-34 232 0 22 40 14 102-22 122-48 20-140 20-188 0-36-20-44-82-22-122z" fill="#AEC3BC"/><path d="M112 134c30-20 146-20 176 0" stroke="#D8E2DD" stroke-width="5" stroke-linecap="round" fill="none"/><ellipse cx="146" cy="214" rx="17" ry="7" fill="#D8E2DD"/><ellipse cx="266" cy="198" rx="10" ry="5" fill="#D8E2DD"/></g>
+    <g><circle cx="200" cy="184" r="27" fill="#7E8984"/><circle cx="200" cy="184" r="19" fill="#1F2623"/></g>
+    <g class="hair" stroke="#3A2F28" stroke-width="1.7" fill="none" stroke-linecap="round"><path d="M190 176c-14-10-30-4-40 8"/><path d="M208 192c12 14 30 12 44 2"/><path d="M196 196c-8 16-24 18-34 12"/><path d="M204 174c8-12 22-12 30-4"/></g>
+    <g class="cover"><circle cx="200" cy="184" r="27" fill="#9AA5A0"/><circle cx="200" cy="184" r="21" fill="#6C7772"/><path d="M186 184h28M200 170v28" stroke="#252C29" stroke-width="5" stroke-linecap="round"/></g>
+    <g class="coveroff"><circle cx="312" cy="98" r="22" fill="#9AA5A0"/><circle cx="312" cy="98" r="17" fill="#6C7772"/><path d="M301 98h22M312 87v22" stroke="#252C29" stroke-width="4" stroke-linecap="round"/></g>
+    <g class="stream"><rect x="194" y="72" width="12" height="106" rx="6" fill="#BFDCEA"/></g>
+    <g class="tool" stroke="#E0762B" stroke-linecap="round" fill="none"><path d="M226 64l-22 116" stroke-width="7"/><path d="M221 96l-9-2M217 118l-9-2M213 140l-9-2M209 160l-9-2M227 100l8 4M223 122l8 4M219 144l8 4" stroke-width="3"/><circle cx="228" cy="54" r="10" stroke-width="6"/></g>
+    <rect x="182" y="-14" width="36" height="88" rx="14" fill="#B4BCB8"/><rect x="189" y="36" width="22" height="46" rx="11" fill="#D2D8D5"/>
+    <circle cx="118" cy="26" r="17" fill="#D2D8D5"/><circle cx="118" cy="26" r="7" fill="#B4BCB8"/><circle cx="282" cy="26" r="17" fill="#D2D8D5"/><circle cx="282" cy="26" r="7" fill="#B4BCB8"/>
+    <circle class="ring" cx="200" cy="184" r="45" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="11 9"/></svg>`,
+  quote: () => `<svg class="sc" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" overflow="visible">${bg('#9A8D79')}
+    <g transform="rotate(-1.2 200 150)"><rect x="12" y="6" width="376" height="520" fill="#FDFDFB"/>
+    <g font-family="Helvetica Neue,Arial,sans-serif" fill="#1E2422">
+      <text x="30" y="34" font-size="15" font-weight="700">Marlow Street Garage</text>
+      <text x="370" y="28" font-size="10" text-anchor="end">Estimate 2291</text><text x="370" y="45" font-size="13" font-weight="700" text-anchor="end">Total $1,240.00</text>
+      <g font-size="10.5"><text x="30" y="62">Customer</text><text x="92" y="62">Margaret Lin</text><text x="30" y="76">Phone</text><text x="92" y="76">(512) 555-0142</text>
+      <text x="30" y="90">Address</text><text x="92" y="90">18 Alder Court, Austin, TX</text><text x="30" y="104">Plate</text><text x="92" y="104">KLM 4821</text></g>
+      <path d="M30 114h340" stroke="#1E2422"/>
+      ${QL.map((l, i) => `<text x="30" y="${134 + i * 19}" font-size="11.5">${i + 1}</text><text x="48" y="${134 + i * 19}" font-size="11.5">${l[0]}</text><text x="346" y="${134 + i * 19}" font-size="11.5" text-anchor="end">${l[1]}</text>`).join('')}
+      <path d="M30 278h340" stroke="#1E2422"/><text x="30" y="294" font-size="10.5">Subtotal $1,160.00</text><text x="346" y="294" font-size="10.5" text-anchor="end">Tax $80.00</text>
+      <text x="30" y="330" font-size="10.5">Estimate good for 14 days. Thank you.</text>
+    </g>
+    <rect class="mask" x="90" y="52" width="72" height="13" style="transition-delay:0s"/><rect class="mask" x="90" y="66" width="84" height="13" style="transition-delay:.12s"/>
+    <rect class="mask" x="90" y="80" width="140" height="13" style="transition-delay:.24s"/><rect class="mask" x="90" y="94" width="56" height="13" style="transition-delay:.36s"/>
+    ${[0, 1, 4, 5, 6, 7].map(i => `<g class="tick">${tick(364, 130 + i * 19, '#0A7A4F', CHK)}</g>`).join('')}
+    <g class="tick">${tick(364, 168, '#B86E00', EXC)}</g>
+    <g class="hi"><rect x="22" y="158" width="356" height="20" rx="5" fill="none" stroke="#B86E00" stroke-width="2.6"/><rect x="226" y="160" width="58" height="16" rx="4" fill="#FFE9A6" stroke="#7A4B00"/><text x="255" y="172" font-size="10.5" font-weight="700" text-anchor="middle" fill="#4A3000" font-family="Arial,sans-serif">$180 high</text></g>
+    <g class="qm"><rect x="22" y="177.5" width="356" height="20" rx="5" fill="none" stroke="#1849A9" stroke-width="2.2" stroke-dasharray="6 4"/>${tick(364, 187, '#1849A9', QMK)}</g>
+    <g class="qn">${tick(364, 187, '#1849A9', CHK)}</g><g class="ql">${tick(364, 187, '#0A7A4F', CHK)}</g>
+    </g></svg>`,
+  letter: () => `<svg class="sc" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" overflow="visible">${bg('#A7B3B0')}
+    <g transform="rotate(1 200 150)"><rect x="14" y="8" width="372" height="520" fill="#FDFDFB"/>
+    <g fill="#1E2422" font-family="Georgia,'Times New Roman',serif">
+      <path d="M30 32c6-9 12-9 18 0s12 9 18 0" stroke="#2B5E8C" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+      <text x="76" y="37" font-size="15" font-weight="700" font-family="Helvetica Neue,Arial,sans-serif">Pinefield Water &amp; Power</text>
+      <g font-size="10.5"><text x="30" y="64">Margaret Lin</text><text x="30" y="77">18 Alder Court, Austin, TX 78704</text><text x="30" y="90">Account</text><text x="74" y="90">5530-221-87</text></g>
+      <text x="30" y="120" font-size="15" font-weight="700">Final notice</text>
+      <text x="30" y="144" font-size="12">Your account is past due. Amount owed: $214.60.</text>
+      <text x="30" y="168" font-size="12">Our payment details have changed. Please send</text>
+      <text x="30" y="185" font-size="12">your payment to our new account 4471 0098 2231.</text>
+      <text x="30" y="210" font-size="12">Pay within 48 hours or your service will be shut off.</text>
+      <text x="30" y="236" font-size="12">Questions? Call 1-800-555-0199.</text>
+      <text x="30" y="270" font-size="11">Billing Department</text>
+    </g>
+    <rect class="mask" x="28" y="54" width="74" height="13" style="transition-delay:0s"/><rect class="mask" x="28" y="67" width="178" height="13" style="transition-delay:.12s"/><rect class="mask" x="72" y="80" width="70" height="13" style="transition-delay:.24s"/>
+    <g class="flag"><rect x="22" y="155" width="346" height="37" rx="6" fill="none" stroke="#B3261E" stroke-width="2.8"/><g transform="translate(368 173)"><circle r="9" fill="#B3261E"/><text y="4" font-size="12" font-weight="700" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif">1</text></g>
+    <rect x="22" y="197" width="346" height="20" rx="6" fill="none" stroke="#B3261E" stroke-width="2.8"/><g transform="translate(368 207)"><circle r="9" fill="#B3261E"/><text y="4" font-size="12" font-weight="700" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif">2</text></g></g>
+    </g></svg>`,
+  thermo: () => `<svg class="sc" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" overflow="visible">${bg('#DCD8CE')}
+    <rect x="-700" y="262" width="1800" height="8" fill="#C9C4B8"/>
+    <circle cx="200" cy="140" r="92" fill="#F7F7F4"/><circle cx="200" cy="140" r="92" fill="none" stroke="#C3C7C2" stroke-width="3"/><circle cx="200" cy="140" r="64" fill="#20272B"/>
+    <text x="200" y="158" font-size="50" font-weight="700" text-anchor="middle" fill="#F2F6F3" font-family="Helvetica Neue,Arial,sans-serif">72</text>
+    <text x="200" y="182" font-size="11" text-anchor="middle" fill="#9FB0AA" font-family="Helvetica Neue,Arial,sans-serif">HEAT</text>
+    <path d="M200 52v10M288 140h-10M112 140h10" stroke="#9AA5A0" stroke-width="3" stroke-linecap="round"/></svg>`,
+};
+const sceneSVG = (k, cls = '') => SCENES[k]().replace('class="sc"', `class="sc ${cls}"`);
+const thumbCls = k => k === 'quote' || k === 'letter' ? 'm' : '';
+function show(c, on) { $$('.' + c, el.scene).forEach(n => { n.style.display = on ? 'inline' : 'none'; }); }
+function drainLook(k, ring) { if (S.scene !== 'drain') return;
+  show('cover', k === 0 || k >= 5); show('coveroff', k >= 1 && k <= 4); show('hair', k <= 2); show('tool', k === 2 || k === 3);
+  show('water', k <= 3); show('stream', k === 4); show('ring', !!ring);
+  const w = $('.water', el.scene); if (w) w.style.opacity = k === 3 ? .45 : 1; }
+function docLook(o = {}) { const s = el.scene.firstElementChild; if (!s) return;
+  s.setAttribute('class', 'sc' + (o.masked ? ' m' : '') + (o.stage ? ' c' : '') + (o.stage === 'result' ? ' r' : '') + (o.q ? ' q-' + o.q : '') + (o.flags ? ' f' : '')); }
+function setScene(k) { S.scene = k; el.scene.innerHTML = sceneSVG(k); drainLook(0, false);
+  $$('.sbtn').forEach(b => b.setAttribute('aria-pressed', b.dataset.scene === k)); }
+
+/* ---------- speech (built into the browser, nothing leaves the page) ---------- */
+let token = 0, sub = 0, VOICE = null;
+class Cancel extends Error {}
+const alive = t => { if (t !== token) throw new Cancel(); };
+function pickVoice() { try { const v = speechSynthesis.getVoices();
+  VOICE = v.find(x => /^en[-_]US/i.test(x.lang) && x.localService && /Samantha|Ava|Allison|Aria|Jenny|Zira/i.test(x.name)) || v.find(x => /^en/i.test(x.lang) && x.localService) || v.find(x => /^en/i.test(x.lang)) || null; } catch (e) {} }
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function wait(ms, t) { return new Promise((res, rej) => setTimeout(() => t === token ? res() : rej(new Cancel()), S.fast ? 0 : ms)); }
+function speak(text, t) { return new Promise((res, rej) => {
+  if (t !== token) return rej(new Cancel());
+  const words = text.split(/\s+/).length, est = S.fast ? 0 : Math.max(1000, words * 340 / S.rate + 300);
+  let done = false, tm; const fin = () => { if (done) return; done = true; clearTimeout(tm); t === token ? res() : rej(new Cancel()); };
+  if (S.voice && !S.fast && 'speechSynthesis' in window) {
+    try { const u = new SpeechSynthesisUtterance(text.replace(/[“”]/g, '')); u.lang = 'en-US'; u.rate = .92 * S.rate; if (VOICE) u.voice = VOICE;
+      u.onend = fin; u.onerror = fin; speechSynthesis.speak(u); tm = setTimeout(fin, est * 2.2 + 2000); } catch (e) { tm = setTimeout(fin, est); }
+  } else tm = setTimeout(fin, est); }); }
+function quiet() { sub++; try { speechSynthesis.cancel(); } catch (e) {} }
+function hush() { token++; quiet(); S.cut = S.onGuide = S.onConsent = null; }
+async function speakSeq(t, arr) { const s = sub; for (const x of arr) { if (s !== sub) return; await speak(x, t); } }
+async function run(fn) { hush(); const t = token; try { await fn(t); } catch (e) { if (!(e instanceof Cancel)) throw e; } }
+
+/* ---------- small view helpers ---------- */
+function setBig(face) { const m = { ask: [I.mic, 'Ask'], stop: [I.stop, 'Stop'], next: [I.next, 'Next'], listen: ['<span class="bars"><i></i><i></i><i></i><i></i><i></i></span>', ''] }[face];
+  el.big.dataset.face = face; el.big.innerHTML = m[0] + (m[1] ? `<span>${m[1]}</span>` : '<span class="sr">Listening. Press when you have finished.</span>'); }
+function setPhase(p) { app.dataset.phase = p;
+  setBig(p === 'listening' ? 'listen' : (p === 'looking' || p === 'speaking') ? 'stop' : p === 'guide' ? 'next' : 'ask');
+  const g = p === 'guide';
+  el.fl.innerHTML = g ? I.again + '<span>Again</span>' : I.clock + '<span>Earlier</span>'; el.fl.dataset.act = g ? 'again' : 'earlier';
+  el.fr.innerHTML = g ? I.stop + '<span>Stop</span>' : I.help + '<span>Help</span>'; el.fr.dataset.act = g ? 'stop' : 'help'; }
+function chip(k) { const t = { live: 'Camera on', still: 'Looking at this picture', dark: 'Too dark', light: 'Light on' }[k]; el.chip.dataset.k = k; el.chip.lastElementChild.textContent = t; }
+const live = () => { chip('live'); el.win.classList.remove('looking', 'reading', 'dim', 'off'); };
+const freeze = () => { chip('still'); el.win.classList.add('looking'); };
+const reading = on => el.win.classList.toggle('reading', on);
+function head(tone, text, icon) { if (!tone) { el.head.innerHTML = ''; el.head.removeAttribute('data-tone'); return; }
+  el.head.dataset.tone = tone; el.head.innerHTML = (icon || { ok: I.ok, warn: I.warn, stop: I.hand, plain: '' }[tone]) + '<span></span>'; el.head.lastChild.textContent = text; }
+const scrollDown = () => { el.say.scrollTop = el.say.scrollHeight; };
+function addLine(text, cls = '') { $$('p.now', el.lines).forEach(p => p.classList.remove('now')); el.lines.classList.remove('done');
+  const p = document.createElement('p'); p.className = 'now ' + cls; if (cls === 'ok') p.innerHTML = I.ok; if (cls === 'warn') p.innerHTML = I.warn;
+  const s = document.createElement('span'); s.textContent = text; p.append(s); el.lines.append(p); scrollDown(); return s; }
+const clearLines = () => { el.lines.innerHTML = ''; };
+const clearChoices = () => { el.choices.innerHTML = ''; el.choices.onclick = null; };
+function stepsBar(n) { el.steps.classList.toggle('on', n > 0); if (!n) return;
+  el.steps.innerHTML = `<span>Step ${n} of 5</span><span class="bar">${[1, 2, 3, 4, 5].map(i => `<i class="${i < n ? 'd' : i === n ? 'n' : ''}"></i>`).join('')}</span>`; }
+function clearSay() { el.asked.textContent = ''; head(); clearLines(); clearChoices(); stepsBar(0); S.receipt = null; el.tag.classList.remove('on'); el.rin.classList.remove('on'); }
+async function say(t, text, cls) { alive(t); addLine(text, cls); await speak(text, t); }
+function settle() { el.lines.classList.add('done'); setPhase('settled'); }
+function choice(t, opts, o = {}) { alive(t); setPhase('waiting'); el.lines.classList.add('done'); el.choices.classList.toggle('stack', !!o.stack);
+  el.choices.innerHTML = opts.map(([v, l], i) => `<button class="btn ${i === 0 ? 'yes' : ''}" data-v="${v}">${l}</button>`).join(''); scrollDown();
+  return new Promise((res, rej) => { el.choices.onclick = e => { const b = e.target.closest('button'); if (!b) return; clearChoices(); quiet(); t === token ? res(b.dataset.v) : rej(new Cancel()); }; }); }
+
+/* ---------- where it ran ---------- */
+const tagText = (w, n = 1) => ({ local: `On this ${dev()}`, mixed: `Used the internet for ${n} item`, cloud: 'Answered using the internet', offline: `No internet. Answered on this ${dev()}.`, pending: `${n} item not checked` }[w]);
+const tagIcon = w => w === 'local' ? devIcon() : w === 'offline' ? I.nonet : w === 'pending' ? I.warn : I.net;
+const li = a => `<li>${Array.isArray(a) ? `${a[0]} <small>${a[1]}</small>` : a}</li>`;
+function lanes(r) { const d = dev();
+  return `<div class="lane"><div class="lane-h">${devIcon()}Stayed on this ${d}</div><ul>${r.stayed.map(li).join('')}</ul></div>
+  <div class="lane ${r.sent.length ? 'n' : ''}"><div class="lane-h">${I.net}Went over the internet</div>${r.sent.length ? `<div class="parcel">${r.sent.map(x => `<span>${x}</span>`).join('')}</div><p>Nothing else was sent.</p>` : '<p>Nothing.</p>'}${r.wait ? `<p>${r.wait}</p>` : ''}</div>`; }
+function setReceipt(r) { S.receipt = r; const t = `${tagIcon(r.w)}<span>${tagText(r.w)}</span>`;
+  el.tag.dataset.where = r.w; el.tag.innerHTML = t + I.chev; el.tag.classList.add('on');
+  el.rin.dataset.where = r.w; el.rin.innerHTML = `<div class="rin-t">Where this answer came from</div>${lanes(r)}<button class="more" id="rinMore">Sources and details</button>`; el.rin.classList.add('on'); }
+function openReceipt() { const r = S.receipt; if (!r) return;
+  $('#rBody').innerHTML = `<div class="wtag" data-where="${r.w}">${tagIcon(r.w)}<span>${tagText(r.w)}</span></div>${lanes(r)}
+    ${r.saved ? `<div class="lane"><div class="lane-h">${I.ok}Kept for next time</div><p>${r.saved}</p></div>` : ''}
+    <div class="lane"><div class="lane-h">Where the facts come from</div><ul>${r.src.map(li).join('')}</ul></div>
+    <details><summary>Technical details</summary><p>${r.tech}</p></details>`;
+  openSheet('receipt'); }
+const R = {
+  drain(w) { const d = dev(), src = [['Home repair guide: slow drains', 'checked 12 Nov 2026']];
+    return w === 'cloud' ? { w, stayed: ['The steps, kept for next time'], sent: ['This picture', 'Your question'], saved: `The steps are now on this ${d}. Next time they work without the internet.`, src, tech: 'Read by the internet model in 1.8 s. 1 request. Guide pack 12.' }
+      : { w, stayed: ['The picture', 'Your question', 'The steps, from the home repair guide'], sent: [], src, tech: `Read by the model on this ${d} in 2.6 s. 0 requests. Guide pack 12.` }; },
+  quote(k) { const d = dev(), base = ['The picture', 'Your name, phone, address and plate (covered)'];
+    const src = [['Repair price book, Texas', 'checked 12 Nov 2026'], ['Labor time guide', 'checked 12 Nov 2026']];
+    if (k === 'mixed') return { w: 'mixed', stayed: [...base, '7 of 8 price checks'], sent: ['“Brake fluid flush” price', 'City: Austin, TX'], saved: `That price is now on this ${d}. Next time this line works without the internet.`, src: [...src, ['Published cost guide, found today', '16 Nov 2026']], tech: `Read by the model on this ${d} in 3.1 s. 1 request, 148 bytes. Price pack 14.` };
+    if (k === 'cloud') return { w: 'cloud', stayed: base, sent: ['The 8 lines and their prices', 'City: Austin, TX'], saved: `The prices are now on this ${d} for next time.`, src, tech: 'Words read on this computer. Prices checked by the internet model in 2.2 s. 1 request. Price pack 14.' };
+    if (k === 'pending' || k === 'skipped') return { w: 'pending', stayed: [...base, '7 of 8 price checks'], sent: [], wait: k === 'pending' ? 'One line is waiting for the internet: brake fluid flush.' : 'You said no, so one line was not checked: brake fluid flush.', src, tech: `Read by the model on this ${d} in 3.0 s. 0 requests. Price pack 14.` };
+    return { w: k, stayed: [...base, 'All 8 price checks. One was kept from last time.'], sent: [], src, tech: `Read by the model on this ${d} in 2.9 s. 0 requests. Price pack 14, plus 1 kept item.` }; },
+  letter(w) { const d = dev(), src = [['Consumer advice on payment tricks', 'checked 10 Nov 2026']];
+    return w === 'cloud' ? { w, stayed: ['The picture', 'Your name, address and account number (covered)'], sent: ['The words of the letter, with your details covered'], src, tech: 'Words read on this computer. Checked by the internet model in 1.9 s. 1 request. Rule pack 6.' }
+      : { w, stayed: ['The picture', 'Your name, address and account number (covered)', 'The check for 2 warning signs'], sent: [], src, tech: `Read by the model on this ${d} in 2.4 s. 0 requests. Rule pack 6.` }; },
+};
+const where = () => S.device === 'cloud' ? 'cloud' : S.device === 'offline' ? 'offline' : 'local';
+
+/* ---------- sheets ---------- */
+function openSheet(id) { $$('.sheet.open').forEach(s => s.classList.remove('open')); $('#sh-' + id).classList.add('open'); el.scrim.classList.add('on'); }
+function closeSheets() { $$('.sheet.open').forEach(s => s.classList.remove('open')); el.scrim.classList.remove('on'); }
+async function consent(t, c) { alive(t);
+  $('#cTitle').innerHTML = I.net + '<span></span>'; $('#cTitle').lastChild.textContent = c.title; $('#cBody').textContent = c.body;
+  $('#cParcel').innerHTML = c.parcel.map(x => x === '@pic' ? `<span class="pthumb">${sceneSVG(S.scene)}</span>` : `<span>${x}</span>`).join('');
+  $('#cNot').textContent = c.not; $('#cYes').textContent = c.yes; $('#cNo').textContent = c.no;
+  setPhase('waiting'); openSheet('consent');
+  const picked = new Promise(res => { S.onConsent = res; });
+  speakSeq(t, c.speak).catch(() => {});
+  const v = await picked; S.onConsent = null; quiet(); closeSheets(); alive(t); return v === 'yes'; }
+const C = {
+  item: () => ({ title: 'May I look up one thing on the internet?', body: 'This is all I would send:', parcel: ['“Brake fluid flush” price', 'City: Austin, TX'],
+    not: 'Not sent: the picture, your name, phone, address or plate.', yes: 'Yes, look it up', no: 'No, skip it',
+    speak: ['May I look that one up on the internet?', 'I would send only those words, and your city. Not the picture.'] }),
+  thing: () => ({ title: 'May I send this picture over the internet?', body: `This ${dev()} cannot read pictures by itself. This is all I would send:`, parcel: ['@pic', 'Your question'],
+    not: 'I will tell you every time I use the internet.', yes: 'Yes, send it', no: 'No',
+    speak: [`This ${dev()} cannot read pictures by itself.`, 'May I send this picture over the internet?'] }),
+  paper: () => ({ title: 'May I check this on the internet?', body: `I read the words here, on this ${dev()}, and cover your details first. This is all I would send:`,
+    parcel: [S.scene === 'quote' ? 'The 8 lines and their prices' : 'The words of the letter', 'Your details are covered'],
+    not: 'Not sent: the picture, your name, phone, address, plate or account number.', yes: 'Yes, check it', no: 'No',
+    speak: [`This ${dev()} cannot check papers by itself.`, 'I cover your details first. May I check the rest on the internet?'] }),
+  unknown: () => ({ title: 'May I look this up on the internet?', body: 'This is all I would send:', parcel: ['“How do I reset a wall thermostat?”'],
+    not: 'Not sent: the picture.', yes: 'Yes, look it up', no: 'No thanks', speak: ['May I look this up on the internet?', 'I would send only your question. Not the picture.'] }),
+};
+
+/* ---------- flows ---------- */
+const Q = { drain: "Why won't this drain?", quote: 'Is this a fair price?', letter: 'Should I pay this?', thermo: 'How do I reset this?' };
+const SAVED = { drain: { title: 'Slow drain', sub: 'You can fix this', tone: 'ok', icon: 'ok' }, quote: { title: 'Repair quote, $1,240', sub: 'One line is high', tone: 'warn', icon: 'warn' },
+  letter: { title: 'Letter asking for payment', sub: "Don't pay this yet", tone: 'stop', icon: 'hand' } };
+const keep = k => { if (!S.saved.includes(k)) S.saved.unshift(k); };
+
+async function hear(t, text) { alive(t); live(); clearSay(); setPhase('listening'); head('plain', "I'm listening", I.mic);
+  const s = addLine('', 'heard'); let cut = false; S.cut = () => { cut = true; };
+  await wait(700, t); const w = text.split(' ');
+  for (let i = 0; i < w.length && !cut; i++) { s.textContent = w.slice(0, i + 1).join(' '); await wait(200, t); }
+  s.textContent = text; if (!cut) await wait(700, t);
+  S.cut = null; head(); clearLines(); el.asked.textContent = `You asked: “${text}”`; }
+
+async function gate(t, kind) {
+  if (S.device !== 'cloud' || (S.consent && !S.askEvery)) return true;
+  if (await consent(t, kind === 'thing' ? C.thing() : C.paper())) { S.consent = true; return true; }
+  setPhase('speaking'); head('plain', 'Nothing was sent'); clearLines();
+  await say(t, `All right. This ${dev()} needs the internet to see, so I cannot answer this one.`); await say(t, 'Ask me again any time.'); settle(); return false; }
+
+async function firstNote(t, w) { if (S.told) return; S.told = true;
+  if (w === 'local') await say(t, `I worked that out right here, on this ${dev()}. Nothing left it.`);
+  if (w === 'offline') await say(t, `There is no internet, so I worked it out right here, on this ${dev()}.`); }
+
+async function offer(t) { if (S.offered || S.device !== 'cloud' || S.dl != null) return; S.offered = true;
+  setPhase('speaking'); head('plain', 'Work without the internet?', devIcon()); clearLines();
+  await say(t, 'I can get ready to work without the internet. It takes about 20 minutes. You can keep using me.');
+  const c = await choice(t, [['yes', 'Get ready'], ['no', 'Not now']]); setPhase('speaking');
+  if (c === 'yes') { startDownload(); await say(t, 'I have started. I will tell you when I am ready.'); } else await say(t, 'All right. You can do it later, under Help.');
+  settle(); }
+
+async function drainFlow(t) { await hear(t, Q.drain); if (!(await gate(t, 'thing'))) return;
+  setPhase('looking'); freeze(); await say(t, 'Let me look.'); await wait(800, t); clearLines(); await drainAnswer(t); }
+async function drainAnswer(t) { const w = where();
+  setPhase('speaking'); freeze(); head('ok', 'You can fix this'); setReceipt(R.drain(w));
+  await say(t, 'This looks like a slow drain. Most likely hair.');
+  await firstNote(t, w);
+  await say(t, 'It takes about 15 minutes. Shall I talk you through it?');
+  const c = await choice(t, [['yes', 'Yes, guide me'], ['no', 'Not now']]);
+  if (c === 'yes') return guide(t, 0);
+  setPhase('speaking'); await say(t, 'All right. You will find it under Earlier.'); keep('drain'); settle(); await offer(t); }
+
+const STEPS = [
+  ['Take off the drain cover. Some lift out. Some unscrew.', 'Good. The cover is off.'],
+  ['Wipe the hair and soap off the cover.', 'Good. That is clean.'],
+  ['Push the tool into the drain. Twist it. Pull it out slowly.', 'Good. I can see hair on the tool.'],
+  ['Wipe the tool. Do it again until nothing comes up.', 'Good. Nothing more is coming up.'],
+  ['Run hot water for one minute. Then put the cover back.', 'Good. The water is going down.'],
+];
+const press = () => new Promise(res => { S.onGuide = v => { S.onGuide = null; res(v); }; });
+async function sayOrPress(t, text, cls) { const p = press(), sp = say(t, text, cls); sp.catch(() => {});
+  const first = await Promise.race([sp.then(() => null), p]); alive(t); return first; }
+async function guide(t, start) { alive(t); head(); clearChoices(); clearLines(); el.asked.textContent = ''; live(); setPhase('guide'); el.tag.classList.remove('on'); el.rin.classList.remove('on');
+  if (start === 0) { el.steps.classList.add('on'); el.steps.innerHTML = '<span>Before you start</span>'; drainLook(0, false);
+    let a = await sayOrPress(t, 'You need a plastic drain tool, or a bent wire hanger.', 'strong');
+    if (!a) a = await sayOrPress(t, 'One caution. If you poured drain cleaner in, do not use the tool.', 'warn');
+    if (!a) a = await press();
+    quiet(); alive(t); if (a === 'stop') return guideStop(t, 0); }
+  for (let i = start; i < STEPS.length; i++) { S.step = i; stepsBar(i + 1); drainLook(i, i === 0); clearLines();
+    let act = await sayOrPress(t, STEPS[i][0], 'strong'); if (!act) act = await press();
+    quiet(); alive(t);
+    if (act === 'stop') return guideStop(t, i);
+    if (act === 'again') { i--; continue; }
+    freeze(); await wait(900, t); live(); drainLook(i + 1, false);
+    await say(t, STEPS[i][1], 'ok'); await wait(450, t); }
+  stepsBar(0); setPhase('speaking'); head('ok', 'All five steps done'); clearLines(); setReceipt(R.drain(where()));
+  await say(t, 'Is the water going down now?');
+  const c = await choice(t, [['yes', 'Yes'], ['no', 'No']]); setPhase('speaking'); clearLines();
+  if (c === 'yes') { head('ok', 'Well done'); await say(t, 'A small mesh screen over the drain stops this from coming back.'); }
+  else { head('warn', 'Time for a plumber'); await say(t, 'A fair price to unclog a drain is $175 to $600. Most people pay about $385.'); await say(t, 'When you get a quote, show it to me and I will check it.'); }
+  keep('drain'); settle(); await offer(t); }
+async function guideStop(t, i) { stepsBar(0); setPhase('speaking'); head('plain', `Stopped at step ${i + 1}`); clearLines(); await say(t, 'No hurry. I will wait.');
+  const c = await choice(t, [['go', 'Carry on'], ['end', 'Finish for now']]); if (c === 'go') return guide(t, i);
+  setPhase('speaking'); await say(t, 'All right. You will find it under Earlier.'); keep('drain'); settle(); }
+
+async function quoteFlow(t) { await hear(t, Q.quote); if (!(await gate(t, 'paper'))) return;
+  setPhase('looking'); freeze(); reading(true); await say(t, 'Let me read it.'); await wait(600, t);
+  docLook({ masked: true }); await say(t, `I covered your name, phone, address and plate. They stay on this ${dev()}.`); reading(false);
+  await quoteCheck(t); }
+async function quoteCheck(t) { setPhase('looking'); freeze();
+  if (S.device === 'cloud') { docLook({ masked: true }); await say(t, 'I am checking the prices on the internet.'); await wait(900, t); S.learned = true; return quoteResult(t, 'cloud'); }
+  if (S.learned) { docLook({ masked: true, stage: 'c', q: 'local' }); await say(t, 'I know all eight lines. One I kept from last time.'); return quoteResult(t, where()); }
+  docLook({ masked: true, stage: 'c', q: 'ask' }); await say(t, 'I know seven lines. One I do not: brake fluid flush.');
+  if (S.device === 'offline') { await say(t, 'There is no internet, so that line has to wait.'); return quoteResult(t, 'pending'); }
+  let ok = S.consent && !S.askEvery;
+  if (ok) await say(t, 'I am looking that one up on the internet.'); else if ((ok = await consent(t, C.item()))) S.consent = true;
+  setPhase('looking');
+  if (!ok) { await say(t, 'All right. I will skip that line.'); return quoteResult(t, 'skipped'); }
+  await wait(1000, t); S.learned = true; docLook({ masked: true, stage: 'c', q: 'net' });
+  await say(t, 'Found it. That line is fair. I will keep it for next time.'); return quoteResult(t, 'mixed'); }
+async function quoteResult(t, kind) { S.quoteKind = kind; const part = kind === 'pending' || kind === 'skipped';
+  setPhase('speaking'); freeze(); reading(false); docLook({ masked: true, stage: 'result', q: kind === 'mixed' ? 'net' : part ? 'ask' : 'local' });
+  head('warn', 'One line is high'); setReceipt(R.quote(kind)); clearLines();
+  await say(t, 'Line 3, brake labor, is $420. Shops near you usually charge about $240.');
+  await say(t, part ? 'That is $180 high. Six other lines look fair. One is not checked.' : 'That is $180 high. The other seven lines look fair.');
+  await say(t, 'Do you want a sentence to say to the shop?');
+  const c = await choice(t, [['yes', 'Yes, tell me'], ['no', 'No thanks']]);
+  if (c === 'yes') return sayThis(t);
+  keep('quote'); settle(); await offer(t); }
+async function sayThis(t) { setPhase('speaking'); freeze(); docLook({ masked: true, stage: 'result', q: S.quoteKind === 'mixed' ? 'net' : (S.quoteKind === 'pending' || S.quoteKind === 'skipped') ? 'ask' : 'local' });
+  head('plain', 'Say this to the shop', I.say); clearLines(); if (!S.receipt) setReceipt(R.quote(S.quoteKind || 'mixed'));
+  await say(t, '“Could you go over the brake labor with me? Other shops near me charge about $240.”', 'strong');
+  const c = await choice(t, [['done', 'Done'], ['again', 'Say it again']]); if (c === 'again') return sayThis(t);
+  keep('quote'); settle(); await offer(t); }
+
+async function letterFlow(t) { await hear(t, Q.letter); if (!(await gate(t, 'paper'))) return;
+  setPhase('looking'); freeze(); reading(true); await say(t, 'Let me read it.'); await wait(600, t);
+  docLook({ masked: true }); await say(t, `I covered your name, address and account number. They stay on this ${dev()}.`); reading(false);
+  if (S.device === 'cloud') { await say(t, 'I am checking it on the internet.'); await wait(800, t); }
+  await letterResult(t); }
+async function letterResult(t) { const w = where(); setPhase('speaking'); freeze(); reading(false); docLook({ masked: true, flags: true });
+  head('stop', "Don't pay this yet"); setReceipt(R.letter(w)); clearLines();
+  await say(t, 'One. It wants the money sent to a new account.');
+  await say(t, 'Two. It rushes you: 48 hours.');
+  await say(t, 'Call the company first. Use the number on an older bill, not this letter.');
+  keep('letter');
+  const c = await choice(t, [['call', `Call ${S.trusted}`], ['again', 'Say it again']]);
+  if (c === 'again') return letterResult(t);
+  setPhase('speaking'); await say(t, `Calling ${S.trusted}.`); settle(); }
+
+async function unknownFlow(t) { await hear(t, Q.thermo); setPhase('looking'); freeze(); await say(t, 'Let me look.'); await wait(700, t); clearLines(); await unknownAnswer(t); }
+async function unknownAnswer(t) { setPhase('speaking'); freeze(); head('plain', "I don't know this one yet"); clearLines();
+  await say(t, 'I can see a wall thermostat. I do not have a guide for it yet.');
+  if (S.device === 'offline') { await say(t, 'There is no internet now. Ask me again when it is back.'); return settle(); }
+  if (!(await consent(t, C.unknown()))) { setPhase('speaking'); await say(t, 'All right. Nothing was sent.'); return settle(); }
+  S.consent = true; setPhase('looking'); await say(t, 'Looking it up.'); await wait(1000, t);
+  setPhase('speaking'); head('ok', 'Here is how'); clearLines();
+  setReceipt({ w: 'mixed', stayed: ['The picture'], sent: ['“How do I reset a wall thermostat?”'], saved: `The steps are now on this ${dev()} for next time.`, src: [['Maker’s instructions for wall thermostats, found today', '16 Nov 2026']], tech: '1 request, 96 bytes. Kept as a new guide.' });
+  await say(t, 'Take the round cover off. Take the batteries out. Wait one minute. Put them back.');
+  await say(t, 'I kept that, so next time I know it without the internet.'); settle(); }
+const FLOW = { drain: drainFlow, quote: quoteFlow, letter: letterFlow, thermo: unknownFlow };
+
+/* ---------- the model getting ready ---------- */
+function startDownload() { if (S.dl != null || S.device !== 'cloud') return; S.dl = 2; renderStatus();
+  const iv = setInterval(() => { S.dl += S.fast ? 34 : 2.5; if (S.dl >= 100) { clearInterval(iv); S.dl = null; S.device = 'ready'; $('#pDevice').value = 'ready';
+    const p = app.dataset.phase; if (p === 'ready' || p === 'settled') speak('I am ready. I can work without the internet now.', token).catch(() => {}); } renderStatus(); }, 400); }
+function renderStatus() { const d = dev(), pct = S.dl != null ? Math.round(S.dl) : null;
+  const [ic, tx] = pct != null ? [devIcon(), `Getting ready: ${pct}%`] : S.device === 'ready' ? [devIcon(), 'Works without the internet'] : S.device === 'cloud' ? [I.net, 'Using the internet'] : [I.nonet, 'No internet'];
+  el.status.innerHTML = ic + `<span>${tx}</span>`;
+  const n = pct != null ? `Getting ready: ${pct}%` : S.device === 'offline' ? 'No internet. Still works.' : '';
+  el.note.classList.toggle('on', !!n); el.note.innerHTML = n ? (pct != null ? devIcon() : I.nonet) + `<span>${n}</span>` : '';
+  const row = $('#rowDevice'), f2 = $('#f2b'); let h;
+  if (pct != null) h = `<span>Getting ready to work without the internet<small>${pct}%. You can keep using WeKnow.</small></span><div class="prog"><i style="width:${pct}%"></i></div>`;
+  else if (S.device === 'cloud') h = `<span>This ${d} needs the internet to see<small>It can get ready to work without it. About 20 minutes on home Wi-Fi.</small></span><button class="btn yes" data-dl>Get ready</button>`;
+  else h = `<span>This ${d} works without the internet<small>Ready. Guides and prices were last checked on 12 Nov.</small></span>`;
+  row.innerHTML = h; f2.innerHTML = h.replace(/<span>.*?<small>/, '<span>').replace('</small></span>', '</span>');
+  $('#f2').classList.toggle('ok', pct == null && S.device !== 'cloud'); $('#f2 .n').innerHTML = (pct == null && S.device !== 'cloud') ? I.ok.replace('<circle cx="12" cy="12" r="9"/>', '') : '2';
+  $$('[data-dev]').forEach(x => { x.textContent = d; }); }
+
+/* ---------- screens and jumps ---------- */
+function screen(n) { hush(); closeSheets(); app.dataset.screen = n; }
+function coach() { clearLines(); addLine("Point at it. Press Ask. Say what's wrong."); el.lines.classList.add('done'); }
+function goHome(k) { screen('home'); setScene(k || S.scene); live(); clearSay(); coach(); setPhase('ready'); renderStatus(); }
+function renderEarlier() { const b = $('#earlierList');
+  b.innerHTML = S.saved.length ? S.saved.map(k => `<button class="erow" data-k="${k}"><span class="thumb">${sceneSVG(k, thumbCls(k))}</span><span class="et"><b>${SAVED[k].title}</b><span class="ev" data-tone="${SAVED[k].tone}">${I[SAVED[k].icon]}${SAVED[k].sub}</span><span>Today</span></span></button>`).join('')
+    : `<p class="empty">Your answers are kept here, on this ${dev()}.</p>`; }
+function renderSign() { $('#rowSign').innerHTML = S.signedIn ? `<span>Signed in as margaret.lin@example.com<small>Your answers are kept safe. Pictures stay on this ${dev()}.</small></span><button class="btn" id="signBtn">Sign out</button>`
+  : `<span>Keep your answers if this ${dev()} is lost or replaced<small>Optional. WeKnow works the same without it.</small></span><button class="btn" id="signBtn">Sign in with Google</button>`; }
+function syncSettings() { [['#segSize', S.size], ['#segSize2', S.size], ['#segRate', S.rate === .8 ? 0 : S.rate === 1 ? 1 : 2], ['#segRate2', S.rate === .8 ? 0 : S.rate === 1 ? 1 : 2]]
+    .forEach(([s, v]) => $$(s + ' button').forEach((b, i) => b.setAttribute('aria-pressed', i === v)));
+  $('#swVoice').setAttribute('aria-checked', S.voice); $('#swDark').setAttribute('aria-checked', html.dataset.theme === 'dark'); $('#swAsk').setAttribute('aria-checked', S.askEvery);
+  $('#askEvery').checked = S.askEvery; $('#askOnce').checked = !S.askEvery; $('#pVoice').checked = S.voice;
+  html.style.fontSize = [100, 115, 130][S.size] + '%'; $('#trustName').textContent = `${S.trusted}, ${$('#tTel').value}`; renderSign(); }
+
+const J = {
+  welcome() { screen('welcome'); },
+  allow() { screen('allow'); renderStatus(); run(t => speakSeq(t, ["Hello. I'm WeKnow.", 'A box has appeared. Press Allow, so I can see and hear.'])); },
+  first() { goHome('drain'); run(async t => { clearLines(); await say(t, 'Good. Now point me at something.'); await say(t, "Press Ask, and tell me what's wrong."); el.lines.classList.add('done'); }); },
+  ready() { goHome(S.scene); },
+  drain() { goHome('drain'); run(drainFlow); },
+  'drain-answer'() { goHome('drain'); run(async t => { el.asked.textContent = `You asked: “${Q.drain}”`; clearLines(); await drainAnswer(t); }); },
+  guide() { goHome('drain'); run(t => guide(t, +(H.step || 0))); },
+  quote() { goHome('quote'); run(quoteFlow); },
+  'quote-result'() { goHome('quote'); run(async t => { el.asked.textContent = `You asked: “${Q.quote}”`; await quoteResult(t, S.device === 'cloud' ? 'cloud' : S.device === 'offline' ? (S.learned ? 'offline' : 'pending') : 'mixed'); }); },
+  'say-this'() { goHome('quote'); S.quoteKind = 'mixed'; run(async t => { el.asked.textContent = `You asked: “${Q.quote}”`; await sayThis(t); }); },
+  letter() { goHome('letter'); run(letterFlow); },
+  'letter-result'() { goHome('letter'); run(async t => { el.asked.textContent = `You asked: “${Q.letter}”`; await letterResult(t); }); },
+  consent() { setDevice('ready'); S.consent = false; S.learned = false; goHome('quote'); run(async t => { el.asked.textContent = `You asked: “${Q.quote}”`; clearLines(); await quoteCheck(t); }); },
+  'consent-b'() { setDevice('cloud'); S.consent = false; goHome('drain'); run(async t => { el.asked.textContent = `You asked: “${Q.drain}”`; clearLines(); freeze(); if (await gate(t, 'thing')) await drainAnswer(t); }); },
+  receipt() { setDevice('ready'); goHome('quote'); S.fast = true; run(async t => { el.asked.textContent = `You asked: “${Q.quote}”`; const p = quoteResult(t, 'mixed'); p.catch(() => {}); S.fast = !!H.fast; openReceipt(); await p; }); },
+  offer() { setDevice('cloud'); S.offered = false; S.dl = null; goHome('drain'); run(offer); },
+  offline() { setDevice('offline'); goHome(S.scene); },
+  nonet() { goHome('drain'); el.note.classList.add('on'); el.note.innerHTML = I.nonet + '<span>No internet</span>'; el.status.innerHTML = I.nonet + '<span>No internet</span>';
+    run(async t => { setPhase('speaking'); head('plain', 'No internet', I.nonet); clearLines(); await say(t, `There is no internet, and this ${dev()} needs it to see.`); await say(t, 'Your earlier answers still work.');
+      keep('drain'); const c = await choice(t, [['e', 'Open Earlier']], { stack: true }); renderEarlier(); openSheet('earlier'); settle(); }); },
+  'e-hear'() { goHome(S.scene); run(async t => { clearLines(); setPhase('listening'); head('plain', "I'm listening", I.mic); await wait(1900, t);
+      setPhase('speaking'); head('plain', "I didn't hear that", I.mic); await say(t, 'Sorry, I did not hear that. Say it once more.');
+      setPhase('listening'); await wait(1900, t); setPhase('speaking'); clearLines(); await say(t, 'I still cannot hear you. Press one of these instead.');
+      const c = await choice(t, [['a', 'What is this?'], ['b', 'How do I fix it?'], ['c', 'Is this a fair price?'], ['d', 'Type instead']], { stack: true });
+      el.asked.textContent = 'You pressed a question'; clearLines(); head(); if (S.scene === 'quote') await quoteFlowNoHear(t); else if (S.scene === 'letter') await letterResult(t); else await drainAnswer(t); }); },
+  'e-dark'() { goHome('drain'); run(async t => { el.win.classList.add('dim'); chip('dark'); setPhase('speaking'); head('plain', 'It is too dark', I.lamp); clearLines();
+      if (dev() === 'phone') { await say(t, 'It is too dark for me to see. I am turning on the light.'); await wait(500, t); el.win.classList.remove('dim'); chip('light'); await say(t, 'That is better. Press Ask when you are ready.'); }
+      else await say(t, 'It is too dark for me to see. Turn on a lamp, or move near a window.'); settle(); setPhase('ready'); }); },
+  'e-unknown'() { goHome('thermo'); S.consent = S.consent && false; run(async t => { el.asked.textContent = `You asked: “${Q.thermo}”`; clearLines(); await unknownAnswer(t); }); },
+  'e-camera'() { goHome('drain'); el.win.classList.add('off'); run(async t => { setPhase('speaking'); head('plain', 'I cannot see'); clearLines(); await say(t, 'The camera is turned off for WeKnow.');
+      const c = await choice(t, [['how', 'Show me how to turn it on'], ['pic', 'Use a picture instead']], { stack: true });
+      if (c === 'pic') { el.win.classList.remove('off'); goHome('drain'); openSheet('help'); } else { setPhase('speaking'); clearLines(); head('plain', 'Turn the camera on');
+        await say(t, dev() === 'phone' ? 'Open Settings. Press WeKnow. Switch Camera on. Then come back.' : 'Press the small camera picture at the top, next to the web address. Choose Allow.'); settle(); } }); },
+  earlier() { goHome(S.scene); ['letter', 'quote', 'drain'].forEach(keep); renderEarlier(); openSheet('earlier'); },
+  help() { goHome(S.scene); syncSettings(); openSheet('help'); },
+  family() { goHome(S.scene); syncSettings(); openSheet('family'); },
+  reset() { location.hash = ''; location.reload(); },
+};
+async function quoteFlowNoHear(t) { setPhase('looking'); freeze(); docLook({ masked: true }); await quoteCheck(t); }
+function setDevice(v) { S.device = v; S.dl = null; $('#pDevice').value = v; renderStatus(); }
+function jump(k) { if (!J[k]) k = 'welcome'; if (k !== 'reset') { S.cur = k; $('#pScene').value = k; } J[k](); }
+
+/* ---------- wiring ---------- */
+function fillSamples() { const b = k => `<button class="sbtn" data-scene="${k}"><span class="thumb">${sceneSVG(k)}</span>“${Q[k]}”</button>`;
+  $('#samples').innerHTML = '<p>No camera handy? Try a picture.</p>' + ['drain', 'quote', 'letter'].map(b).join('');
+  $('#samples2').innerHTML = ['drain', 'quote', 'letter'].map(b).join('');
+  $$('[data-thumb]').forEach(x => { x.innerHTML = sceneSVG(x.dataset.thumb); });
+  $('#f1n').innerHTML = I.ok.replace('<circle cx="12" cy="12" r="9"/>', ''); $('#howBtn').insertAdjacentHTML('beforeend', I.say); $('#famBtn').insertAdjacentHTML('beforeend', I.chev);
+  $('#startBtn').innerHTML = '<span>Start</span>'; }
+function bigClick() { const p = app.dataset.phase;
+  if (p === 'listening') { if (S.cut) S.cut(); return; }
+  if (p === 'looking' || p === 'speaking') { hush(); closeSheets(); el.lines.classList.add('done'); el.win.classList.remove('reading');
+    if (el.head.textContent || el.lines.textContent) setPhase('settled'); else { live(); coach(); setPhase('ready'); } return; }
+  if (p === 'guide') { if (S.onGuide) S.onGuide('next'); return; }
+  run(FLOW[S.scene] || drainFlow); }
+el.big.onclick = bigClick;
+$('#startBtn').onclick = () => jump('allow');
+$('#allowBtn').onclick = () => jump('first');
+$('#denyBtn').onclick = () => jump('e-camera');
+[el.fl, el.fr].forEach(b => { b.onclick = () => { const a = b.dataset.act;
+  if (a === 'earlier') { hush(); renderEarlier(); openSheet('earlier'); } else if (a === 'help') { hush(); syncSettings(); openSheet('help'); } else if (S.onGuide) S.onGuide(a); }; });
+el.tag.onclick = openReceipt;
+el.rin.onclick = e => { if (e.target.closest('#rinMore')) openReceipt(); };
+el.scrim.onclick = () => { if (!$('#sh-consent').classList.contains('open')) closeSheets(); };
+$('#cYes').onclick = () => S.onConsent && S.onConsent('yes');
+$('#cNo').onclick = () => S.onConsent && S.onConsent('no');
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-close]')) return closeSheets();
+  const sb = e.target.closest('.sbtn'); if (sb) { S.cur = 'ready'; return goHome(sb.dataset.scene); }
+  const er = e.target.closest('.erow'); if (er) { const k = er.dataset.k; goHome(k);
+    return run(async t => { el.asked.textContent = 'From earlier today'; clearLines(); if (k === 'quote') await quoteResult(t, S.quoteKind || 'local'); else if (k === 'letter') await letterResult(t); else await drainAnswer(t); }); }
+  if (e.target.closest('[data-dl]')) { startDownload(); return; }
+  if (e.target.closest('#signBtn')) { S.signedIn = !S.signedIn; return renderSign(); }
+  const seg = e.target.closest('.seg button'); if (seg) { const i = [...seg.parentNode.children].indexOf(seg);
+    if (/segSize/.test(seg.parentNode.id)) S.size = i; else { S.rate = [.8, 1, 1.2][i]; run(t => speak('This is how fast I will talk.', t)); } return syncSettings(); }
+  const sw = e.target.closest('.sw'); if (sw) { if (sw.id === 'swVoice') { S.voice = !S.voice; if (!S.voice) quiet(); } if (sw.id === 'swDark') html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark'; if (sw.id === 'swAsk') S.askEvery = !S.askEvery; return syncSettings(); }
+});
+$('#howBtn').onclick = () => run(t => speakSeq(t, ['Point me at something.', "Press Ask, and say what's wrong.", 'I will look, and tell you what to do.']));
+$('#famBtn').onclick = () => { syncSettings(); openSheet('family'); };
+$('#sampleBtn').onclick = () => run(t => speak('Take off the drain cover. Some lift out. Some unscrew.', t));
+$('#askEvery').onchange = $('#askOnce').onchange = () => { S.askEvery = $('#askEvery').checked; syncSettings(); };
+$('#tName').oninput = $('#tTel').oninput = () => { S.trusted = $('#tName').value.trim() || 'family'; syncSettings(); };
+$('#tryBtn').onclick = () => jump('drain');
+$('#pScene').onchange = e => jump(e.target.value);
+$('#pDevice').onchange = e => { setDevice(e.target.value); jump(S.cur); };
+$('#pView').onchange = e => { stage.dataset.view = e.target.value; requestAnimationFrame(() => jump(S.cur)); };
+$('#pVoice').onchange = e => { S.voice = e.target.checked; if (!S.voice) quiet(); syncSettings(); };
+document.addEventListener('keydown', e => { const tag = (e.target.tagName || '').toLowerCase(), free = !/^(button|input|select|textarea|summary)$/.test(tag);
+  if (e.key === 'Escape') { if (S.onConsent) S.onConsent('no'); else if ($('.sheet.open')) closeSheets(); else if (/looking|speaking/.test(app.dataset.phase)) bigClick(); }
+  if (app.dataset.screen !== 'home' || $('.sheet.open')) return;
+  if (e.key === ' ' && free) { e.preventDefault(); bigClick(); }
+  if (e.key === 'ArrowRight' && S.onGuide) S.onGuide('next'); if (e.key === 'ArrowLeft' && S.onGuide) S.onGuide('again'); });
+window.addEventListener('resize', renderStatus);
+
+/* ---------- start ---------- */
+const H = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+if (H.fast) S.fast = true; if (H.voice === '0') S.voice = false; if (H.theme) html.dataset.theme = H.theme; if (H.size) S.size = +H.size;
+if (H.view) { stage.dataset.view = H.view; $('#pView').value = H.view; }
+if (H.device) { S.device = H.device; $('#pDevice').value = H.device; }
+if (H.learned) S.learned = true; if (H.consent) S.consent = true;
+fillSamples(); setScene('drain'); setPhase('ready'); syncSettings(); renderStatus();
+jump(H.s || 'welcome');
+})();
+</script>
+</body>
+</html>

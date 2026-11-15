@@ -55,6 +55,15 @@ export async function deviceModelStatus(): Promise<string> {
 
 let deviceModel: GenerativeModel | undefined;
 let cloudModel: GenerativeModel | undefined;
+let cloudModelName = CLOUD_MODEL;
+
+/** Switch the cloud model (from Remote Config or an evaluation run). */
+export function setCloudModel(name: string) {
+  if (name && name !== cloudModelName) {
+    cloudModelName = name;
+    cloudModel = undefined;
+  }
+}
 
 function model(where: Where): GenerativeModel {
   if (where === 'device') {
@@ -70,7 +79,7 @@ function model(where: Where): GenerativeModel {
   cloudModel ??= getGenerativeModel(ai, {
     mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: {
-      model: CLOUD_MODEL,
+      model: cloudModelName,
       generationConfig: {
         responseMimeType: 'application/json',
         responseJsonSchema: understandingJsonSchema,
