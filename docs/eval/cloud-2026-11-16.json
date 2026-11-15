@@ -1,0 +1,314 @@
+{
+ "date": "2026-11-16",
+ "where": "cloud",
+ "model": "gemini-3.5-flash-lite",
+ "plan": "Gemini Developer API free tier (Spark)",
+ "cases": 50,
+ "correct": 50,
+ "leaked": 0,
+ "median_ms": 19787,
+ "p90_ms": 28571,
+ "max_ms": 71234,
+ "rows": [
+  {
+   "id": "quote-000",
+   "ms": 26734,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-001",
+   "ms": 24646,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-002",
+   "ms": 25773,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-003",
+   "ms": 26915,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-004",
+   "ms": 22665,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-005",
+   "ms": 37526,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-006",
+   "ms": 22945,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-007",
+   "ms": 28179,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-008",
+   "ms": 27795,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-009",
+   "ms": 26957,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-010",
+   "ms": 15492,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-011",
+   "ms": 17261,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-012",
+   "ms": 28571,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-013",
+   "ms": 16736,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-014",
+   "ms": 21221,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-015",
+   "ms": 19935,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-016",
+   "ms": 19639,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-017",
+   "ms": 28178,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-018",
+   "ms": 13183,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-019",
+   "ms": 9073,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-020",
+   "ms": 46932,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-021",
+   "ms": 13574,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-022",
+   "ms": 18848,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-023",
+   "ms": 20561,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-024",
+   "ms": 19988,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-000",
+   "ms": 71234,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-001",
+   "ms": 22255,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-002",
+   "ms": 16607,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-003",
+   "ms": 30011,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-004",
+   "ms": 18824,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-005",
+   "ms": 21510,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-006",
+   "ms": 19349,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-007",
+   "ms": 10850,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-008",
+   "ms": 10111,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-009",
+   "ms": 10576,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-010",
+   "ms": 15122,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-011",
+   "ms": 13702,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-012",
+   "ms": 7554,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-013",
+   "ms": 9287,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-014",
+   "ms": 8083,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-015",
+   "ms": 12294,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-016",
+   "ms": 15438,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-017",
+   "ms": 15323,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-018",
+   "ms": 15916,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-019",
+   "ms": 17411,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-020",
+   "ms": 24530,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-021",
+   "ms": 47079,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-022",
+   "ms": 25253,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-023",
+   "ms": 20220,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-024",
+   "ms": 12390,
+   "ok": true,
+   "leaked": false
+  }
+ ]
+}

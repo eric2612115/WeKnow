@@ -208,8 +208,10 @@ h1,h2,h3,p,ul{margin:0;padding:0}
 .sh-h{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
 .sheet h2{font:700 1.625rem/1.15 var(--font);letter-spacing:-.01em;text-wrap:balance}
 .sheet h2 svg{width:2rem;height:2rem;vertical-align:-.35rem;margin-right:.35rem;color:var(--net)}
+.sheet h2.plain svg{color:var(--ink)}
+[hidden]{display:none!important}
 .sheet p{font:500 1.25rem/1.35 var(--font)}
-.sheet .small{font-size:1.0625rem;color:var(--ink-2)}
+.sheet .small{font-size:1.0625rem;color:var(--ink-2);margin-top:.35rem}
 .x{flex:none;min-height:3rem;padding:0 1rem;border-radius:.8rem;border:2px solid var(--line);background:var(--surface);font:700 1.0625rem/1 var(--font)}
 .parcel{display:flex;flex-direction:column;gap:.4rem;margin:.7rem 0;padding:.8rem .9rem;border:2px dashed var(--net);border-radius:.9rem;background:var(--net-bg);color:var(--ink);font:700 1.25rem/1.25 var(--font)}
 .parcel .pthumb{display:block;width:7rem;aspect-ratio:4/3;border-radius:.5rem;overflow:hidden;border:1px solid var(--line)}
@@ -718,7 +720,8 @@ const where = () => S.device === 'cloud' ? 'cloud' : S.device === 'offline' ? 'o
 function openSheet(id) { $$('.sheet.open').forEach(s => s.classList.remove('open')); $('#sh-' + id).classList.add('open'); el.scrim.classList.add('on'); }
 function closeSheets() { $$('.sheet.open').forEach(s => s.classList.remove('open')); el.scrim.classList.remove('on'); }
 async function consent(t, c) { alive(t);
-  $('#cTitle').innerHTML = I.net + '<span></span>'; $('#cTitle').lastChild.textContent = c.title; $('#cBody').textContent = c.body;
+  $('#cTitle').innerHTML = (c.icon || I.net) + '<span></span>'; $('#cTitle').classList.toggle('plain', !!c.icon); $('#cTitle').lastChild.textContent = c.title; $('#cBody').textContent = c.body;
+  $('#cParcel').hidden = !c.parcel.length;
   $('#cParcel').innerHTML = c.parcel.map(x => x === '@pic' ? `<span class="pthumb">${sceneSVG(S.scene)}</span>` : `<span>${x}</span>`).join('');
   $('#cNot').textContent = c.not; $('#cYes').textContent = c.yes; $('#cNo').textContent = c.no;
   setPhase('waiting'); openSheet('consent');
@@ -764,11 +767,12 @@ async function firstNote(t, w) { if (S.told) return; S.told = true;
   if (w === 'offline') await say(t, `There is no internet, so I worked it out right here, on this ${dev()}.`); }
 
 async function offer(t) { if (S.offered || S.device !== 'cloud' || S.dl != null) return; S.offered = true;
-  setPhase('speaking'); head('plain', 'Work without the internet?', devIcon()); clearLines();
-  await say(t, 'I can get ready to work without the internet. It takes about 20 minutes. You can keep using me.');
-  const c = await choice(t, [['yes', 'Get ready'], ['no', 'Not now']]); setPhase('speaking');
-  if (c === 'yes') { startDownload(); await say(t, 'I have started. I will tell you when I am ready.'); } else await say(t, 'All right. You can do it later, under Help.');
-  settle(); }
+  const had = !!el.head.textContent;
+  const yes = await consent(t, { icon: devIcon(), title: 'Shall I get ready to work without the internet?', body: 'It takes about 20 minutes. You can keep using me while I do.', parcel: [],
+    not: 'One time only. Best on home Wi-Fi.', yes: 'Get ready', no: 'Not now', speak: ['I can get ready to work without the internet.', 'It takes about 20 minutes. You can keep using me while I do.'] });
+  setPhase('speaking');
+  if (yes) { startDownload(); await say(t, 'I have started. I will tell you when I am ready.'); } else await say(t, 'All right. You can do it later, under Help.');
+  el.lines.classList.add('done'); setPhase(had ? 'settled' : 'ready'); }
 
 async function drainFlow(t) { await hear(t, Q.drain); if (!(await gate(t, 'thing'))) return;
   setPhase('looking'); freeze(); await say(t, 'Let me look.'); await wait(800, t); clearLines(); await drainAnswer(t); }
