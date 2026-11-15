@@ -1,0 +1,21 @@
+{
+ "schema": 1,
+ "packs": [
+  {
+   "id": "us-home",
+   "region": "US",
+   "language": "en",
+   "currency": "USD",
+   "version": "2026-11-16.ebe69ea4",
+   "dataAsOf": "2026-11-16",
+   "root": "us-home/root.f9e486b4ee1b1b2a.json",
+   "bytes": 466797,
+   "counts": {
+    "prices": 162,
+    "guides": 80,
+    "shards": 17,
+    "blocks": 32
+   }
+  }
+ ]
+}

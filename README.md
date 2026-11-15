@@ -18,7 +18,8 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
 1. **Read on the device when possible.** Chrome's Gemini Nano (web) or Apple's on-device model (iOS) reads the photo
    into a fixed form. Without a local model, WeKnow asks before the cloud reads it, and says where it ran.
 2. **Answer only from a sourced knowledge pack.** The model may point at pack items; it never sets a price.
-   Every number comes from a pack entry with a source. Packs live in Firestore's offline cache.
+   Every number comes from a pack entry with a source. Packs are layered (a tiny root, then small shards fetched on
+   demand, then item data), content-hashed and cached on the device, so they work offline. See docs/knowledge-layer.md.
 3. **Plain code decides.** Price verdicts and bill warnings are rules, not model output. Text hidden in a document can
    raise a warning but can never clear one.
 4. **Only a masked line item may leave the device** for a price lookup, and the database refuses anything else.

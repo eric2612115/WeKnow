@@ -1,0 +1,627 @@
+// The knowledge layer on the device. A question walks the levels and loads only what it needs:
+//   open       -> catalog (level 0) + pack root (level 1): which shards hold which words
+//   candidates -> the few level-2 shards the root's Bloom filters point at; BM25+ inside each
+//   resolve    -> the level-3 blocks that hold the items finally chosen, with their sources
+// Network and storage are injected, so the same code runs in the browser (fetch + Cache Storage),
+// in Node scripts (files) and in tests (an in-memory map). No UI, no Firebase.
+
+import { bloomOpen, type Bloom } from './bloom.ts';
+import { LEXICON_EN } from './lexicon.ts';
+import {
+  byteLength,
+  hashInName,
+  HASH_HEX,
+  PACK_SCHEMA,
+  sha256Hex,
+  type BlockFile,
+  type Catalog,
+  type CatalogEntry,
+  type ItemKind,
+  type PackRoot,
+  type ProLocation,
+  type ShardFile,
+  type ShardMeta,
+} from './packFormat.ts';
+import type { Guide, Pack, PriceItem } from './packs.ts';
+import { createIndex, loadIndex, searchOptions, SEARCH_ENGINE, type IndexDoc, type MiniSearch } from './searchIndex.ts';
+import { textPipeline, type Expansion, type Lexicon, type TextPipeline } from './text.ts';
+
+export interface Candidate {
+  ref: string;
+  name: string;
+  score: number;
+  kind: ItemKind;
+  shard: string; // "learned" for items added on this device or from the shared learned list
+  learned?: boolean;
+}
+
+export interface CandidateQuery {
+  kind: ItemKind;
+  k?: number;
+}
+
+export interface LoadRecord {
+  path: string;
+  level: 0 | 1 | 2 | 3;
+  bytes: number;
+  from: 'network' | 'cache';
+}
+
+export interface KnowledgeStats {
+  files: LoadRecord[];
+  shards: string[];
+  blocks: string[];
+  unavailable: string[];
+  learned: number;
+}
+
+export interface LearnOptions {
+  /** Keep it on this device across sessions (default true). Shared learned items come from the database instead. */
+  persist?: boolean;
+}
+
+/** What the reader needs from a knowledge pack, whatever its storage. */
+export interface Knowledge {
+  readonly id: string;
+  readonly version: string;
+  readonly region: string;
+  readonly currency: string;
+  candidates(text: string, query: CandidateQuery): Promise<Candidate[]>;
+  /** A small Pack holding only these refs (and the pro prices their guides point to). Unknown refs are skipped. */
+  resolve(refs: Iterable<string>): Promise<Pack>;
+  /** Add a price found by a cloud lookup. Refused unless every source is https. */
+  learn(item: PriceItem, options?: LearnOptions): Promise<void>;
+  stats(): KnowledgeStats;
+}
+
+// ---------- shared ranking ----------
+
+export const DEFAULT_K = 5;
+/** Candidates scoring below this share of the best one are not offered (fewer tokens, less noise). */
+export const MIN_RELATIVE_SCORE = 0.2;
+/** At most this many level-2 shards per query. */
+export const MAX_SHARDS_PER_QUERY = 3;
+
+/** Learned prices offered per question at most; they only cover lines the pack did not know. */
+export const MAX_LEARNED = 2;
+/** A learned price is offered when it matches at least this share of the printed words. */
+export const MIN_LEARNED_COVERAGE = 0.5;
+
+/**
+ * Best first, without duplicates. Learned prices come first when they cover the line well: their tiny
+ * index cannot produce BM25 scores comparable with a shard's, so they are judged by word coverage instead.
+ */
+function rank(results: Candidate[], k: number, learned: Candidate[] = []): Candidate[] {
+  const byScore = (a: Candidate, b: Candidate) => b.score - a.score || (a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0);
+  results.sort(byScore);
+  const seen = new Set<string>();
+  const out: Candidate[] = [];
+  for (const r of [...learned].sort(byScore).slice(0, Math.min(MAX_LEARNED, k))) {
+    seen.add(r.ref);
+    out.push(r);
+  }
+  const floor = (results[0]?.score ?? 0) * MIN_RELATIVE_SCORE;
+  for (const r of results) {
+    if (out.length >= k) break;
+    if (r.score < floor || seen.has(r.ref)) continue;
+    seen.add(r.ref);
+    out.push(r);
+  }
+  return out;
+}
+
+export class LearnRefusedError extends Error {}
+
+/** The rule from packs.ts `learn`, applied to the layered store: every learned price needs https sources. */
+export function assertLearnable(item: PriceItem): void {
+  const ok =
+    item &&
+    typeof item.ref === 'string' &&
+    item.ref.startsWith('learned-') &&
+    typeof item.name === 'string' &&
+    Array.isArray(item.sources) &&
+    item.sources.length > 0 &&
+    item.sources.every((s) => typeof s?.url === 'string' && /^https:\/\//.test(s.url)) &&
+    [item.low, item.typical, item.high].every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0) &&
+    item.low <= item.typical &&
+    item.typical <= item.high;
+  if (!ok) throw new LearnRefusedError(`refused to learn ${String(item?.ref)}: needs a learned- ref, an ordered range and https sources`);
+}
+
+class Overlay {
+  readonly items = new Map<string, PriceItem>();
+  index: MiniSearch<IndexDoc>;
+  constructor(pipe: TextPipeline) {
+    this.index = createIndex(pipe);
+  }
+  add(item: PriceItem) {
+    if (this.items.has(item.ref)) this.index.discard(item.ref);
+    this.items.set(item.ref, item);
+    this.index.add({ ref: item.ref, name: item.name, aliases: item.aliases ?? [] });
+  }
+  rebuild(pipe: TextPipeline) {
+    const items = [...this.items.values()];
+    this.items.clear();
+    this.index = createIndex(pipe);
+    for (const it of items) this.add(it);
+  }
+  search(q: Expansion, kind: ItemKind): Candidate[] {
+    if (kind !== 'price' || !this.items.size) return [];
+    const printed = q.terms.filter((t) => !q.added.has(t));
+    if (!printed.length) return [];
+    return this.index
+      .search(q.text, searchOptions(q.added))
+      .filter((r) => r.queryTerms.filter((t) => printed.includes(t)).length / printed.length >= MIN_LEARNED_COVERAGE)
+      .map((r) => ({ ref: r.id, name: r.name as string, score: r.score, kind, shard: 'learned', learned: true }));
+  }
+}
+
+// ---------- the layered store ----------
+
+/** The part of a fetch Response the store uses, so window.fetch fits as is. */
+export interface FetchedFile {
+  ok: boolean;
+  status: number;
+  text(): Promise<string>;
+}
+export type Fetcher = (url: string) => Promise<FetchedFile>;
+
+/** Where downloaded pack files are kept on the device (Cache Storage in the browser). */
+export interface PackCache {
+  get(key: string): Promise<string | undefined>;
+  put(key: string, body: string): Promise<void>;
+  delete(key: string): Promise<void>;
+  keys(): Promise<string[]>;
+}
+
+export function memoryCache(): PackCache & { map: Map<string, string> } {
+  const map = new Map<string, string>();
+  return {
+    map,
+    get: async (k) => map.get(k),
+    put: async (k, v) => void map.set(k, v),
+    delete: async (k) => void map.delete(k),
+    keys: async () => [...map.keys()],
+  };
+}
+
+export interface OpenOptions {
+  /** URL prefix of the packs directory, e.g. "/packs". */
+  base: string;
+  packId: string;
+  fetch: Fetcher;
+  cache?: PackCache;
+  /** Pin a root path (Remote Config `pack_root`), e.g. for a rollback; otherwise the catalog decides. */
+  root?: string;
+  maxShards?: number;
+}
+
+export class KnowledgeUnavailableError extends Error {}
+export class IncompatiblePackError extends Error {}
+
+type FileProblem = 'offline' | 'missing' | 'mismatch' | 'unreadable';
+
+class FileError extends Error {
+  readonly problem: FileProblem;
+  constructor(path: string, problem: FileProblem) {
+    super(`${path}: ${problem}`);
+    this.problem = problem;
+  }
+}
+
+const learnedKey = (base: string, packId: string) => `${base}/${packId}/learned.json`;
+
+async function readCatalog(o: OpenOptions): Promise<{ catalog: Catalog; from: 'network' | 'cache'; bytes: number }> {
+  const url = `${o.base}/catalog.json`;
+  const parse = (body: string) => {
+    const c = JSON.parse(body) as Catalog;
+    if (c?.schema !== PACK_SCHEMA || !Array.isArray(c.packs)) throw new Error('not a pack catalog');
+    return c;
+  };
+  try {
+    const res = await o.fetch(url);
+    if (res.ok) {
+      const body = await res.text();
+      const catalog = parse(body); // a hosting fallback page is not a catalog
+      await o.cache?.put(url, body).catch(() => undefined);
+      return { catalog, from: 'network', bytes: byteLength(body) };
+    }
+  } catch {
+    /* offline: fall back to the copy on the device */
+  }
+  const cached = await o.cache?.get(url).catch(() => undefined);
+  if (cached === undefined) throw new KnowledgeUnavailableError('the knowledge pack has not been downloaded yet and the device is offline');
+  return { catalog: parse(cached), from: 'cache', bytes: byteLength(cached) };
+}
+
+export class LayeredKnowledge implements Knowledge {
+  private o: OpenOptions;
+  private rootPath = '';
+  private rootData!: PackRoot;
+  private pipe!: TextPipeline;
+  private blooms = new Map<string, Bloom>();
+  private shards = new Map<string, Promise<MiniSearch<IndexDoc> | undefined>>();
+  private blocks = new Map<string, Promise<BlockFile | undefined>>();
+  private overlay!: Overlay;
+  private records: LoadRecord[] = [];
+  private unavailable = new Set<string>();
+  private staleSeen = false;
+
+  constructor(options: OpenOptions) {
+    this.o = options;
+  }
+
+  get root(): PackRoot {
+    return this.rootData;
+  }
+  get id() {
+    return this.rootData.id;
+  }
+  get version() {
+    return this.rootData.version;
+  }
+  get region() {
+    return this.rootData.region;
+  }
+  get currency() {
+    return this.rootData.currency;
+  }
+
+  /** Read the catalog and adopt the newest root. Returns true when the pack version changed. */
+  async refresh(): Promise<boolean> {
+    const { catalog, from, bytes } = await readCatalog(this.o);
+    this.records.push({ path: 'catalog.json', level: 0, bytes, from });
+    const entry: CatalogEntry | undefined = catalog.packs.find((p) => p.id === this.o.packId);
+    if (!entry) throw new KnowledgeUnavailableError(`no pack ${this.o.packId} in the catalog`);
+    // A pinned root (Remote Config) wins while its files are served; if it is gone, follow the catalog.
+    let path = this.o.root || entry.root;
+    let root: PackRoot | undefined;
+    for (const candidate of [...new Set([path, entry.root])]) {
+      if (candidate === this.rootPath) return false;
+      try {
+        root = await this.file<PackRoot>(candidate, 1);
+        path = candidate;
+        break;
+      } catch (e) {
+        if (candidate === entry.root) throw new KnowledgeUnavailableError(`pack root ${candidate} is not available (${(e as Error).message})`);
+      }
+    }
+    if (!root) throw new KnowledgeUnavailableError('no pack root is available');
+    if (root.schema !== PACK_SCHEMA) throw new IncompatiblePackError(`pack schema ${root.schema} needs another app version`);
+    if (root.engine.search !== SEARCH_ENGINE) throw new IncompatiblePackError(`pack built for ${root.engine.search}, this app has ${SEARCH_ENGINE}`);
+    const first = !this.rootPath;
+    this.rootPath = path;
+    this.rootData = root;
+    this.pipe = textPipeline(root.text);
+    this.blooms = new Map(root.shards.map((s) => [s.id, bloomOpen(s.bloom)]));
+    this.shards.clear();
+    this.blocks.clear();
+    this.unavailable.clear();
+    if (first) this.overlay = new Overlay(this.pipe);
+    else this.overlay.rebuild(this.pipe);
+    return !first;
+  }
+
+  /** Restore the prices this device learned earlier. */
+  async restoreLearned(): Promise<void> {
+    const body = await this.o.cache?.get(learnedKey(this.o.base, this.o.packId)).catch(() => undefined);
+    if (!body) return;
+    try {
+      for (const item of JSON.parse(body) as PriceItem[]) {
+        try {
+          assertLearnable(item);
+          this.overlay.add(item);
+        } catch {
+          /* a stored item that no longer passes the rule is dropped */
+        }
+      }
+    } catch {
+      /* unreadable: ignore */
+    }
+  }
+
+  private async file<T>(path: string, level: LoadRecord['level']): Promise<T> {
+    const url = `${this.o.base}/${path.startsWith(`${this.o.packId}/`) ? path : `${this.o.packId}/${path}`}`;
+    const expect = hashInName(path);
+    const cached = await this.o.cache?.get(url).catch(() => undefined);
+    if (cached !== undefined) {
+      try {
+        const parsed = JSON.parse(cached) as T;
+        this.records.push({ path, level, bytes: byteLength(cached), from: 'cache' });
+        return parsed;
+      } catch {
+        await this.o.cache?.delete(url).catch(() => undefined);
+      }
+    }
+    let body: string;
+    try {
+      const res = await this.o.fetch(url);
+      if (!res.ok) throw new FileError(path, res.status === 404 ? 'missing' : 'offline');
+      body = await res.text();
+    } catch (e) {
+      throw e instanceof FileError ? e : new FileError(path, 'offline');
+    }
+    // A file whose bytes do not match its name is a stale or broken copy (for example a hosting fallback page).
+    if (expect && (await sha256Hex(body)).slice(0, HASH_HEX) !== expect) throw new FileError(path, 'mismatch');
+    let parsed: T;
+    try {
+      parsed = JSON.parse(body) as T;
+    } catch {
+      throw new FileError(path, 'unreadable');
+    }
+    await this.o.cache?.put(url, body).catch(() => undefined);
+    this.records.push({ path, level, bytes: byteLength(body), from: 'network' });
+    return parsed;
+  }
+
+  private note(path: string, e: unknown) {
+    this.unavailable.add(path);
+    if (e instanceof FileError && e.problem !== 'offline') this.staleSeen = true;
+  }
+
+  private shard(meta: ShardMeta): Promise<MiniSearch<IndexDoc> | undefined> {
+    let p = this.shards.get(meta.id);
+    if (!p) {
+      p = this.file<ShardFile>(meta.file, 2).then(
+        (f) => loadIndex(this.pipe, f.index),
+        (e) => {
+          this.note(meta.file, e);
+          this.shards.delete(meta.id);
+          return undefined;
+        },
+      );
+      this.shards.set(meta.id, p);
+    }
+    return p;
+  }
+
+  private block(meta: ShardMeta, i: number): Promise<BlockFile | undefined> {
+    const b = meta.blocks[i];
+    if (!b) return Promise.resolve(undefined);
+    let p = this.blocks.get(b.file);
+    if (!p) {
+      p = this.file<BlockFile>(b.file, 3).catch((e) => {
+        this.note(b.file, e);
+        this.blocks.delete(b.file);
+        return undefined;
+      });
+      this.blocks.set(b.file, p);
+    }
+    return p;
+  }
+
+  /** Level 1: which shards of a kind could hold these terms, best first. */
+  route(terms: string[], kind: ItemKind | 'any', added: ReadonlySet<string> = new Set()): ShardMeta[] {
+    const shards = this.rootData.shards.filter((s) => kind === 'any' || s.kind === kind);
+    const hits = shards.map((s) => ({ s, ts: terms.filter((t) => this.blooms.get(s.id)!.has(t)) }));
+    const cf = new Map<string, number>();
+    for (const h of hits) for (const t of h.ts) cf.set(t, (cf.get(t) ?? 0) + 1);
+    const scored = hits
+      .map((h) => ({ s: h.s, score: h.ts.reduce((a, t) => a + Math.log(1 + shards.length / cf.get(t)!) * (added.has(t) ? 0.6 : 1), 0) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || (a.s.id < b.s.id ? -1 : 1));
+    if (!scored.length) return [];
+    const top = scored[0].score;
+    return scored
+      .filter((x) => x.score >= top * 0.5)
+      .slice(0, this.o.maxShards ?? MAX_SHARDS_PER_QUERY)
+      .map((x) => x.s);
+  }
+
+  async candidates(text: string, query: CandidateQuery): Promise<Candidate[]> {
+    const k = query.k ?? DEFAULT_K;
+    const q = this.pipe.expand(text);
+    if (!q.terms.length) return [];
+    const routed = this.route(q.terms, query.kind, q.added);
+    const indexes = await Promise.all(routed.map((s) => this.shard(s)));
+    if (indexes.some((x) => !x) && (await this.recover())) return this.candidates(text, query);
+    const opts = searchOptions(q.added);
+    const results: Candidate[] = [];
+    routed.forEach((s, i) => {
+      for (const r of indexes[i]?.search(q.text, opts) ?? []) {
+        results.push({ ref: r.id, name: r.name as string, score: r.score, kind: s.kind, shard: s.id });
+      }
+    });
+    return rank(results, k, this.overlay.search(q, query.kind));
+  }
+
+  /** After a missing or mismatched file, re-read the catalog once: a newer pack may have replaced this one. */
+  private async recover(): Promise<boolean> {
+    if (!this.staleSeen) return false;
+    this.staleSeen = false;
+    try {
+      return await this.refresh();
+    } catch {
+      return false;
+    }
+  }
+
+  private async locate(ref: string): Promise<{ meta: ShardMeta; b: number; p?: ProLocation[] } | undefined> {
+    const known = this.rootData.shards.filter((s) => this.shards.has(s.id));
+    const routed = this.rootData.shards.filter((s) => !this.shards.has(s.id) && this.blooms.get(s.id)!.has(`ref:${ref}`));
+    for (const meta of [...known, ...routed]) {
+      const ms = await this.shard(meta);
+      const stored = ms?.has(ref) ? (ms.getStoredFields(ref) as { b: number; p?: ProLocation[] }) : undefined;
+      if (stored) return { meta, b: stored.b, p: stored.p };
+    }
+    return undefined;
+  }
+
+  async resolve(refs: Iterable<string>): Promise<Pack> {
+    const prices: PriceItem[] = [];
+    const guides: Guide[] = [];
+    const wanted = [...new Set(refs)];
+    const found = new Set<string>();
+    const pro: ProLocation[] = [];
+    const take = async (meta: ShardMeta, b: number, ref: string) => {
+      const block = await this.block(meta, b);
+      const item = block?.prices.find((x) => x.ref === ref) ?? block?.guides.find((x) => x.ref === ref);
+      if (!item || found.has(ref)) return;
+      found.add(ref);
+      if (meta.kind === 'price') prices.push(item as PriceItem);
+      else guides.push(item as Guide);
+    };
+    await Promise.all(
+      wanted.map(async (ref) => {
+        const learned = this.overlay.items.get(ref);
+        if (learned) {
+          found.add(ref);
+          prices.push(learned);
+          return;
+        }
+        const at = await this.locate(ref);
+        if (!at) return;
+        if (at.p) pro.push(...at.p);
+        await take(at.meta, at.b, ref);
+      }),
+    );
+    // Guides bring the pro prices they point to; their locations are stored with the guide, so no search.
+    await Promise.all(
+      pro.map(async ([ref, shardId, b]) => {
+        const meta = this.rootData.shards.find((s) => s.id === shardId);
+        if (meta && !found.has(ref)) await take(meta, b, ref);
+      }),
+    );
+    if (wanted.some((r) => !found.has(r)) && (await this.recover())) return this.resolve(wanted);
+    const order = (a: { ref: string }, b: { ref: string }) => wanted.indexOf(a.ref) - wanted.indexOf(b.ref);
+    return {
+      id: this.rootData.id,
+      version: this.rootData.version,
+      region: this.rootData.region,
+      currency: this.rootData.currency,
+      prices: prices.sort(order),
+      guides: guides.sort(order),
+    };
+  }
+
+  async learn(item: PriceItem, options: LearnOptions = {}): Promise<void> {
+    assertLearnable(item);
+    this.overlay.add({ ...item, category: 'learned' });
+    if (options.persist === false || !this.o.cache) return;
+    const key = learnedKey(this.o.base, this.o.packId);
+    const mine = await this.o.cache.get(key).catch(() => undefined);
+    const list = (mine ? (JSON.parse(mine) as PriceItem[]) : []).filter((x) => x.ref !== item.ref);
+    list.push({ ...item, category: 'learned' });
+    await this.o.cache.put(key, JSON.stringify(list));
+  }
+
+  /** Download every shard (level 2) and, with `data`, every block (level 3): "keep the whole book offline". */
+  async prefetch(data = false): Promise<number> {
+    const before = this.bytesLoaded('network');
+    await Promise.all(this.rootData.shards.map((s) => this.shard(s)));
+    if (data) await Promise.all(this.rootData.shards.flatMap((s) => s.blocks.map((_, i) => this.block(s, i))));
+    return this.bytesLoaded('network') - before;
+  }
+
+  /** Delete cached files of this pack that the current root no longer uses. Returns how many were removed. */
+  async gc(): Promise<number> {
+    if (!this.o.cache) return 0;
+    const dir = `${this.o.base}/${this.o.packId}/`;
+    const keep = new Set([`${dir}${this.rootPath.replace(`${this.o.packId}/`, '')}`, learnedKey(this.o.base, this.o.packId)]);
+    for (const s of this.rootData.shards) {
+      keep.add(dir + s.file);
+      for (const b of s.blocks) keep.add(dir + b.file);
+    }
+    let n = 0;
+    for (const key of await this.o.cache.keys()) {
+      if (key.startsWith(dir) && !keep.has(key)) {
+        await this.o.cache.delete(key);
+        n++;
+      }
+    }
+    return n;
+  }
+
+  bytesLoaded(from?: 'network' | 'cache', level?: LoadRecord['level']): number {
+    return this.records.filter((r) => (!from || r.from === from) && (level === undefined || r.level === level)).reduce((n, r) => n + r.bytes, 0);
+  }
+
+  stats(): KnowledgeStats {
+    return {
+      files: [...this.records],
+      shards: this.rootData.shards.filter((s) => this.shards.has(s.id)).map((s) => s.id),
+      blocks: [...this.blocks.keys()],
+      unavailable: [...this.unavailable],
+      learned: this.overlay.items.size,
+    };
+  }
+}
+
+/** Open a layered pack: reads the catalog and the root only. */
+export async function openLayeredKnowledge(options: OpenOptions): Promise<LayeredKnowledge> {
+  const kb = new LayeredKnowledge(options);
+  await kb.refresh();
+  await kb.restoreLearned();
+  return kb;
+}
+
+// ---------- a whole pack already in memory (the legacy single-file pack, small tests) ----------
+
+class MemoryKnowledge implements Knowledge {
+  readonly id: string;
+  readonly version: string;
+  readonly region: string;
+  readonly currency: string;
+  private pack: Pack;
+  private pipe: TextPipeline;
+  private indexes: Record<ItemKind, MiniSearch<IndexDoc>>;
+  private overlay: Overlay;
+
+  constructor(pack: Pack, lexicon: Lexicon) {
+    this.pack = pack;
+    this.id = pack.id;
+    this.version = pack.version;
+    this.region = pack.region;
+    this.currency = pack.currency;
+    this.pipe = textPipeline(lexicon);
+    const docs = (xs: Array<PriceItem | Guide>) => xs.map((x) => ({ ref: x.ref, name: x.name, aliases: x.aliases ?? [] }));
+    this.indexes = { price: createIndex(this.pipe, docs(pack.prices)), guide: createIndex(this.pipe, docs(pack.guides)) };
+    this.overlay = new Overlay(this.pipe);
+  }
+
+  async candidates(text: string, query: CandidateQuery): Promise<Candidate[]> {
+    const q = this.pipe.expand(text);
+    if (!q.terms.length) return [];
+    const results: Candidate[] = [];
+    for (const r of this.indexes[query.kind].search(q.text, searchOptions(q.added))) {
+      results.push({ ref: r.id, name: r.name as string, score: r.score, kind: query.kind, shard: 'all' });
+    }
+    return rank(results, query.k ?? DEFAULT_K, this.overlay.search(q, query.kind));
+  }
+
+  async resolve(refs: Iterable<string>): Promise<Pack> {
+    const want = [...new Set(refs)];
+    const guides = want.map((r) => this.pack.guides.find((g) => g.ref === r)).filter((g): g is Guide => !!g);
+    const pro = new Set(guides.flatMap((g) => g.proRefs ?? []));
+    const prices = [
+      ...want.map((r) => this.overlay.items.get(r) ?? this.pack.prices.find((p) => p.ref === r)),
+      ...this.pack.prices.filter((p) => pro.has(p.ref) && !want.includes(p.ref)),
+    ].filter((p): p is PriceItem => !!p);
+    return { id: this.id, version: this.version, region: this.region, currency: this.currency, prices, guides };
+  }
+
+  async learn(item: PriceItem): Promise<void> {
+    assertLearnable(item);
+    this.overlay.add({ ...item, category: 'learned' });
+  }
+
+  stats(): KnowledgeStats {
+    return { files: [], shards: ['all'], blocks: [], unavailable: [], learned: this.overlay.items.size };
+  }
+}
+
+const memo = new WeakMap<Pack, Knowledge>();
+
+/** The same ranking over a pack that is already fully in memory. */
+export function knowledgeFromPack(pack: Pack, lexicon: Lexicon = LEXICON_EN): Knowledge {
+  let k = memo.get(pack);
+  if (!k) {
+    k = new MemoryKnowledge(pack, lexicon);
+    memo.set(pack, k);
+  }
+  return k;
+}
+
+export function isKnowledge(x: Pack | Knowledge): x is Knowledge {
+  return typeof (x as Knowledge).candidates === 'function';
+}

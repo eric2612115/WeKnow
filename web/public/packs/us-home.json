@@ -1,9 +1,9 @@
 {
  "id": "us-home",
- "version": "2026-11-15",
+ "version": "2026-11-16",
  "region": "US",
  "currency": "USD",
- "origin": "Built from the Fair Quote price book and DIY guides (pre-existing work by the same author, disclosed in README).",
+ "origin": "Built from the Fair Quote price book and DIY guides (pre-existing work by the same author, disclosed in README) and hand-researched guides in packs-src/.",
  "prices": [
   {
    "ref": "toilet-unclog",
@@ -7435,6 +7435,2428 @@
      "title": "Rain-X Chipped Windshield Repair - iFixit Repair Guide",
      "quote": "Move the car into direct sunlight and leave for 4-6 hours.",
      "fetched": "2026-11-12"
+    }
+   ]
+  },
+  {
+   "ref": "diy-kitchen-sink-clog",
+   "category": "plumbing",
+   "name": "Clear a clogged or slow kitchen sink",
+   "aliases": [
+    "kitchen sink clogged",
+    "kitchen sink won't drain",
+    "kitchen sink draining slowly",
+    "water standing in the kitchen sink",
+    "grease clogged my sink",
+    "double sink backed up",
+    "kitchen drain is blocked",
+    "kitchen sink stopped up"
+   ],
+   "minutes": [
+    10,
+    45
+   ],
+   "difficulty": 2,
+   "steps": [
+    "Slow but not stopped? Pour hot, soapy water down the drain to cut the grease.",
+    "Have a garbage disposal? Turn it on. If it is stuck or won't start, use the disposal guide.",
+    "Plug the other sink drain, or any overflow hole, with a stopper or rag.",
+    "Make sure about four inches of water covers the clogged drain.",
+    "Set a rubber plunger over the drain opening.",
+    "Push down gently, then pull up sharply. Repeat 20 to 30 times.",
+    "Still blocked? Set a bucket under the U-shaped pipe and unscrew its cleanout plug.",
+    "Pull the clog out with a finger, pencil, or wire. Screw the plug back in.",
+    "Once it drains, run hot, soapy water through the pipe."
+   ],
+   "safety": [
+    "Never put your hand inside the garbage disposal.",
+    "Never pour grease down a drain. It hardens and clogs the pipe.",
+    "Never mix two drain cleaners. It can make deadly fumes."
+   ],
+   "stopIf": [
+    "Chemical drain cleaner is already in the sink. Do not plunge; it can burn you.",
+    "The U-shaped pipe has no cleanout plug, or the clog stays. Call a plumber.",
+    "Several drains back up at once, or sewage comes up. Stop using water; call a plumber."
+   ],
+   "proRefs": [
+    "drain-unclog",
+    "plumber-service-call"
+   ],
+   "sources": [
+    {
+     "url": "https://content.libraries.wsu.edu/digital/api/collection/ext/id/55647/download",
+     "title": "Have a Sparkling Clean Kitchen Sink (EM 4305) | Washington State University Cooperative Extension",
+     "quote": "If water drains out slowly, pour hot, sudsy water through the drain. This cuts the grease.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.insinkerator.com/en-us/support/fixing-a-clogged-garbage-disposal",
+     "title": "Fixing a Clogged Garbage Disposal | InSinkErator US",
+     "quote": "Turn the disposer on. Do you see a whirlpool in the water? If yes, you may have a clogged drain line.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.insinkerator.com/en-us/support/fixing-a-clogged-garbage-disposal",
+     "title": "Fixing a Clogged Garbage Disposal | InSinkErator US",
+     "quote": "If no, and the disposer is running, click here to troubleshoot for a possible jam. If the disposer is not running, click here to troubleshoot for the disposer not starting.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "In a single bowl sink, plug the overflow opening with a washcloth or rag. In a double bowl sink, plug the other drain. Keep these plugs in place.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.insinkerator.com/en-us/support/fixing-a-clogged-garbage-disposal",
+     "title": "Fixing a Clogged Garbage Disposal | InSinkErator US",
+     "quote": "If you have a double sink, place a stopper to block off the other sinkhole opening.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.insinkerator.com/en-us/support/fixing-a-clogged-garbage-disposal",
+     "title": "Fixing a Clogged Garbage Disposal | InSinkErator US",
+     "quote": "Fill the sink with four inches (10cm) of water. Place the plunger over the garbage disposal opening and press down slowly and gently. Then, pull the plunger upwards quickly using your strength.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://content.libraries.wsu.edu/digital/api/collection/ext/id/55647/download",
+     "title": "Have a Sparkling Clean Kitchen Sink (EM 4305) | Washington State University Cooperative Extension",
+     "quote": "If the sink stops up often, get a rubber plunger.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "Place the plunger over the mouth of the drain. Press plunger down smoothly. Then, jerk the plunger up sharply.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "Repeat 20-30 times.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "If the drain is still stopped-up, check to see if the trap has a cleanout plug. (The trap is the U shaped part of the pipe under your sink.)",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "If there is a cleanout plug, place a pan or bucket under the trap.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "Unscrew the cleanout plug with an adjustable wrench.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "Most clogs are in the trap. Use your finger, a pencil, or wire to clean the clog from the trap.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "If this cleans the clog, replace the cleanout plug. Screw it together, then run hot, soapy water through the drain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "If this removes the clog, rinse the drain with hot soapy water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.insinkerator.com/en-us/support/fixing-a-clogged-garbage-disposal",
+     "title": "Fixing a Clogged Garbage Disposal | InSinkErator US",
+     "quote": "Do not stick your hand in the garbage disposal at any time.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "Never pour grease or greasy fluids down a drain. Grease hardens and will clog a drain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "DO NOT mix chemicals—if you use one brand that did not work, DO NOT use another brand or type on top of it—it may produce DEADLY fumes!",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "Caustic and could burn you or damage pipes or fixture finishes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "DO NOT use plunger.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://ufdcimages.uflib.ufl.edu/IR/00/00/13/19/00001/FY80700.pdf",
+     "title": "Making Simple Repairs: Clogged Drains (FCS5234) | University of Florida IFAS Extension",
+     "quote": "If this effort does not remove the clog or the trap does not have a clean out plug, notify your landlord or call a plumber.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.roseville.ca.gov/environmental_utilities/at_your_service/sewer/call_us_first/index.php",
+     "title": "Call Us First | City of Roseville Environmental Utilities",
+     "quote": "Multiple drains backing up at the same time",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.roseville.ca.gov/environmental_utilities/at_your_service/sewer/call_us_first/index.php",
+     "title": "Call Us First | City of Roseville Environmental Utilities",
+     "quote": "Sewage backing up in tubs or showers",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.roseville.ca.gov/environmental_utilities/at_your_service/sewer/call_us_first/index.php",
+     "title": "Call Us First | City of Roseville Environmental Utilities",
+     "quote": "Stop using water immediately. Turn off washing machines, dishwashers, showers, and sinks.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.seattle.gov/utilities/your-services/sewer-and-drainage/side-sewers/backups",
+     "title": "Side Sewer Backups | Seattle Public Utilities",
+     "quote": "Sewer backups happen when sewage and/or dirty water (called wastewater) come up a sink, toilet or drain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.seattle.gov/utilities/your-services/sewer-and-drainage/side-sewers/backups",
+     "title": "Side Sewer Backups | Seattle Public Utilities",
+     "quote": "2. Call a plumber – View our Troubleshooting Your Sewer Problem (pdf) for tips and questions to ask your plumber.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-dishwasher-not-draining",
+   "category": "appliance",
+   "name": "Dishwasher has water left in the bottom",
+   "aliases": [
+    "dishwasher not draining",
+    "dishwasher won't drain",
+    "water in the bottom of the dishwasher",
+    "dishwasher full of dirty water",
+    "dishwasher left water after the cycle",
+    "dirty water sitting in my dishwasher",
+    "dishwasher still has water in it",
+    "dishwasher water won't go down"
+   ],
+   "minutes": [
+    15,
+    45
+   ],
+   "difficulty": 2,
+   "steps": [
+    "Look in the bottom first. A cup or two of clean water there is normal.",
+    "If you have a garbage disposal, run it to clear the drain.",
+    "Make sure the kitchen sink itself drains and is not clogged.",
+    "Pick out any food, paper, or bones sitting in the bottom of the tub.",
+    "Take out the filter and rinse it under warm water.",
+    "Under the sink, find the dishwasher drain hose and straighten any kinks.",
+    "Air gap cap on the sink top? Pull the cap off and clean out the debris.",
+    "Disposal just installed? Make sure its knockout plug was taken out.",
+    "Hold Cancel for 5 to 10 seconds, then start a new cycle to drain."
+   ],
+   "safety": [
+    "Switch off power to the dishwasher before handling the hose; it may hold very hot water.",
+    "Never put your hands into the garbage disposal; you could be badly hurt.",
+    "Do not pour drain cleaner into the dishwasher.",
+    "Use only dishwasher detergent. Hand dish soap makes suds that stop draining."
+   ],
+   "stopIf": [
+    "Water still stands after all these checks. The dishwasher needs service.",
+    "Portable dishwasher hooked to the sink faucet with a coupler? It needs service."
+   ],
+   "proRefs": [
+    "dishwasher-repair"
+   ],
+   "sources": [
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16573",
+     "title": "Dishwasher - Water in the Bottom of the Tub | GE Appliances",
+     "quote": "Some water (standing water), usually one to two cups, remaining in the bottom of the Dishwasher tub is normal.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "On models without an Ultra Fine filter at the bottom of the tub, 1 to 2 cups of clean water covering the bottom of the tub is normal.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Make sure the kitchen sink drain is not clogged. If a disposer is installed, run the disposer to clear the drain system.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Dishwashers/Dishwasher/Operation/Not_Draining%2F%2FWater_Remains/Not_Draining_-_Water_Remain_at_End_of_Cycle_-_Dishwasher",
+     "title": "Not Draining - Water Remain at End of Cycle - Dishwasher | Whirlpool Product Help",
+     "quote": "Check for any food or obstructions caught in the drain or the garbage disposer. Run the disposer to clear the obstruction.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Make sure there is not any paper or large object covering or blocking the sump area in the rear of the tub.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Clear out any large pieces of food from the bottom of the dishwasher like noodles, lettuce, or bones.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "Sometimes food and debris can clog the glass trap and filter. Remove the glass trap and filter and rinse it out with warm water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "remove and check the Fine and Ultra Fine filters in the bottom of the dishwasher",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Check the drain hose where it connects below the sink for a blockage or a kink in the hose.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "A kink in the drain line can cause drain issues or water to pool in the bottom of dishwasher after the cycle is complete.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "Try to unkink and realign the drain hose and start a new cycle for the unit to drain and reset.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.bosch-home.com/ae/en/customer-service/get-support/dishwasher-not-draining",
+     "title": "Why is my dishwasher not draining | Bosch",
+     "quote": "Disconnect the machine from the power supply. Check the drain hose has no kinks or twists. If it does, try to straighten them out.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.bosch-home.com/ae/en/customer-service/get-support/dishwasher-not-draining",
+     "title": "Why is my dishwasher not draining | Bosch",
+     "quote": "There will likely be very hot water in the hose so carefully straighten it out",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "If an air gap is installed with the dishwasher drain plumbing, remove the cap on the air gap and clean out any build-up of debris.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Dishwashers/Dishwasher/Operation/Not_Draining%2F%2FWater_Remains/Not_Draining_-_Water_Remain_at_End_of_Cycle_-_Dishwasher",
+     "title": "Not Draining - Water Remain at End of Cycle - Dishwasher | Whirlpool Product Help",
+     "quote": "The dishwasher air gap fits onto the top of the sink and should not normally do anything other than allow air into the dishwasher for proper draining.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Dishwashers/Dishwasher/Operation/Not_Draining%2F%2FWater_Remains/Not_Draining_-_Water_Remain_at_End_of_Cycle_-_Dishwasher",
+     "title": "Not Draining - Water Remain at End of Cycle - Dishwasher | Whirlpool Product Help",
+     "quote": "If the dishwasher is connected to a garbage disposer, be sure the knockout plug has been removed from the disposer inlet.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "If a disposer was recently installed or replaced, make sure the drain plug inside the disposer was removed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "Verify the knockout plug has been removed to allow proper drainage.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "Press and hold the Cancel button for 5–10 seconds. This will clear the existing cycle.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "Start a new cycle after resetting.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Do not put your hands into the garbage disposer to check it as a serious injury could occur.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Do not use drain cleaner in the dishwasher.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Dishwashers/Dishwasher/Operation/Not_Draining%2F%2FWater_Remains/Not_Draining_-_Water_Remain_at_End_of_Cycle_-_Dishwasher",
+     "title": "Not Draining - Water Remain at End of Cycle - Dishwasher | Whirlpool Product Help",
+     "quote": "Dishwashing detergent does not create suds, but dish soap does.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Dishwashers/Dishwasher/Operation/Not_Draining%2F%2FWater_Remains/Not_Draining_-_Water_Remain_at_End_of_Cycle_-_Dishwasher",
+     "title": "Not Draining - Water Remain at End of Cycle - Dishwasher | Whirlpool Product Help",
+     "quote": "Use only detergent specifically designed for automatic dishwashers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Using the wrong type or too much detergent can cause over-sudsing that can prevent the dishwasher from draining properly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "If the above suggestions do not resolve the draining issue with your built-in or portable dishwasher, service will be needed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/dishwashers-not-draining",
+     "title": "Dishwashers - Not Draining | Frigidaire",
+     "quote": "If the unit continues to have trouble draining or starting, please contact our customer support center for assistance.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16240",
+     "title": "Dishwasher - Not Draining | GE Appliances",
+     "quote": "Portable dishwashers that are not draining and are connected to the kitchen sink using the unicouple will need service.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-frozen-pipe-thaw",
+   "category": "plumbing",
+   "name": "Thaw a frozen water pipe safely",
+   "aliases": [
+    "my pipes are frozen",
+    "frozen water pipe",
+    "faucet only trickles in the cold",
+    "pipe froze overnight",
+    "how do I thaw a pipe",
+    "no water coming out, it's freezing outside",
+    "frozen pipe under the sink",
+    "thaw frozen pipes"
+   ],
+   "minutes": [
+    30,
+    90
+   ],
+   "difficulty": 2,
+   "steps": [
+    "Find your main water shut-off valve first, in case the pipe has already cracked.",
+    "Open the faucet that only trickles, and leave it open.",
+    "Look for the frozen spot along outside walls or where water enters the house.",
+    "Start warming at the faucet end and work toward the frozen part.",
+    "Blow warm air from a hair dryer gently along the pipe.",
+    "Or wrap the pipe with an electric heating pad or towels soaked in hot water.",
+    "Keep warming until full water pressure comes back.",
+    "Then check every other faucet. If one pipe froze, others may have too."
+   ],
+   "safety": [
+    "Never use a torch or open flame. It can crack the pipe or start a fire.",
+    "Never use a kerosene or propane heater or charcoal stove; they give off deadly fumes.",
+    "Keep electric cords from the hair dryer or heating pad out of any water."
+   ],
+   "stopIf": [
+    "The pipe has burst or leaks. Shut off the main water valve and call a plumber.",
+    "You cannot find or reach the frozen spot, or it will not thaw. Call a licensed plumber.",
+    "Water gets in or near electrical outlets or the breaker panel. Call the fire department."
+   ],
+   "proRefs": [
+    "burst-pipe-repair",
+    "plumber-service-call"
+   ],
+   "sources": [
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "Make sure you know where the main water valve is located outside of your home. The frozen pipe may already be broken, and it will leak when the water is thawed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "If you turn on a faucet and only a trickle comes out, suspect a frozen pipe.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "Keep the faucet open. As you treat the frozen pipe and the frozen area begins to melt, water will begin to flow through the frozen area.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "If you suspect that the pipe is frozen; keep the faucet open.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "Likely places for frozen pipes include against exterior walls or where your water service enters your home through the foundation.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redmond.gov/Faq.aspx?QID=163",
+     "title": "How can I thaw frozen pipes? (City Water FAQ) | City of Redmond, WA",
+     "quote": "Use one of the following methods to gradually warm the frozen pipe. Be sure to work from the faucet toward the iced-up area.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redmond.gov/Faq.aspx?QID=163",
+     "title": "How can I thaw frozen pipes? (City Water FAQ) | City of Redmond, WA",
+     "quote": "Use the warm air from a hair dryer to gently defrost the pipe.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "Apply heat to the section of pipe using an electric heating pad wrapped around the pipe, an electric hair dryer, a portable space heater (kept away from flammable materials), or by wrapping pipes with towels soaked in hot water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fairfaxcounty.gov/fire-ems/frozen-water-pipes",
+     "title": "Frozen Water Pipes | Fairfax County Fire and Rescue",
+     "quote": "Never use a torch! It thaws the water too quickly and weakens the pipe, almost guaranteeing the pipe will break. Room temperature heat and careful use of a hair dryer are good methods.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "Apply heat until full water pressure is restored.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "Check all other faucets in your home to find out if you have additional frozen pipes. If one pipe freezes, others may freeze, too.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "Inspect all other faucets in your home to find out if additional pipes are frozen.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "Do not use a blowtorch, kerosene or propane heater, charcoal stove, or other open flame device.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redmond.gov/Faq.aspx?QID=163",
+     "title": "How can I thaw frozen pipes? (City Water FAQ) | City of Redmond, WA",
+     "quote": "Never use an open flame. It can heat the pipe too quickly and break the pipe. There is always risk of fire as well.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "Do not attempt to use a blowtorch, kerosene or propane heater, charcoal stove, or other open flame devices; they present a serious fire hazard as well as release lethal carbon monoxide fumes into the air.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "Make sure that electrical cords do not come into contact with water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fairfaxcounty.gov/fire-ems/frozen-water-pipes",
+     "title": "Frozen Water Pipes | Fairfax County Fire and Rescue",
+     "quote": "If the pipe breaks, quickly shut off the water valve, if you haven't already done so. Then call a plumber.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "If this is the case, you’ll need to turn off the main water valve to your home until the leak is repaired.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/winter-storm/frozen-pipes.html",
+     "title": "Preventing & Thawing Frozen Pipes | American Red Cross",
+     "quote": "If you are unable to locate the frozen area, if the frozen area is not accessible, or if you can not thaw the pipe, call a licensed plumber.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://texashelp.tamu.edu/wp-content/uploads/2016/02/winter-storms-frozen-pipes.pdf",
+     "title": "Winter Storms: Preventing and Thawing Frozen Pipes | Texas A&M AgriLife Extension",
+     "quote": "Call a licensed plumber if you are unable to locate the frozen area, if the frozen area is not within reach, or if you can’t get the pipe to thaw.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fairfaxcounty.gov/fire-ems/frozen-water-pipes",
+     "title": "Frozen Water Pipes | Fairfax County Fire and Rescue",
+     "quote": "Should you call the fire department? Only if the water gets in or near electrical outlets or panels, or if the water threatens a pilot light or power to a water heater or furnace.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-fridge-not-cooling",
+   "category": "appliance",
+   "name": "Fridge is warm or not cold enough",
+   "aliases": [
+    "fridge not cold enough",
+    "my fridge is warm",
+    "refrigerator is warm inside",
+    "milk isn't cold in the fridge",
+    "fridge stopped getting cold",
+    "drinks not cold in the refrigerator",
+    "fridge running but not cold",
+    "food in the fridge feels warm"
+   ],
+   "minutes": [
+    15,
+    30
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Make sure the fridge is turned on; some must be switched back on after a power outage.",
+    "Demo or showroom mode stops cooling; if your fridge is in it, turn it off.",
+    "On a display with degrees, set the fridge to 37 degrees and the freezer to 0 degrees.",
+    "On a numbered dial, turn it one number higher to make it colder.",
+    "Move tall items forward so they do not block the cold air vents.",
+    "Move trays, pizza boxes, or other large items that stop the doors from closing.",
+    "Make sure the door seals are sealing properly when each door is shut.",
+    "Leave at least 1 inch of space at the sides, top, and back of the fridge.",
+    "After any change, wait 24 hours before you check or change it again."
+   ],
+   "safety": [
+    "Unplug the fridge before any cleaning or maintenance, to avoid an electric shock.",
+    "Keep the fridge at 40 degrees or below; check it with an appliance thermometer.",
+    "Do not overpack it; cold air must flow around the food."
+   ],
+   "stopIf": [
+    "Food above 40 degrees for two hours or more, or unsure how long? Throw it out.",
+    "Still warm 24 hours after setting it right? Call for service and leave it plugged in."
+   ],
+   "proRefs": [
+    "refrigerator-repair"
+   ],
+   "sources": [
+    {
+     "url": "https://producthelp.whirlpool.com/Refrigeration/Full-Size_Refrigerators/Top_Freezer_Refrigerator/Operation/Temperature_Concerns/Not_Cooling_-_Top_Freezer_Refrigerator",
+     "title": "Not Cooling - Top Freezer Refrigerator | Whirlpool Product Help",
+     "quote": "If the refrigerator is not cooling correctly, check to make sure it is turned on. Some Refrigerators need to be manually turned back on after a power outage or surge.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Refrigeration/Full-Size_Refrigerators/Top_Freezer_Refrigerator/Operation/Temperature_Concerns/Not_Cooling_-_Top_Freezer_Refrigerator",
+     "title": "Not Cooling - Top Freezer Refrigerator | Whirlpool Product Help",
+     "quote": "Demo or Showroom mode allows you to try the product and explore various features and options on the appliance without turning on the functionality (i.e., cooling).",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Refrigeration/Full-Size_Refrigerators/Top_Freezer_Refrigerator/Operation/Temperature_Concerns/Not_Cooling_-_Top_Freezer_Refrigerator",
+     "title": "Not Cooling - Top Freezer Refrigerator | Whirlpool Product Help",
+     "quote": "If left in that mode from the store, you must turn it \"off\" for normal operation.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=19479",
+     "title": "Refrigerator - Measuring Internal Temperatures | GE Appliances",
+     "quote": "The recommended Refrigerator temperature settings are 37 degrees Fahrenheit in the fresh food and 0 degrees Fahrenheit in the freezer sections.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "For Dial or Digital Readout models, adjust your temperature control by one number higher for a cooler temperature setting.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Refrigeration/Full-Size_Refrigerators/Top_Freezer_Refrigerator/Operation/Temperature_Concerns/Not_Cooling_-_Top_Freezer_Refrigerator",
+     "title": "Not Cooling - Top Freezer Refrigerator | Whirlpool Product Help",
+     "quote": "Adjust the control to the next higher setting to make the Refrigerator colder.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "Large containers in back may block the flow of cold air and adversely affect the temperatures in the refrigerator. Move tall items forward so they don't block the air flow.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Refrigeration/Full-Size_Refrigerators/Top_Freezer_Refrigerator/Operation/Temperature_Concerns/Not_Cooling_-_Top_Freezer_Refrigerator",
+     "title": "Not Cooling - Top Freezer Refrigerator | Whirlpool Product Help",
+     "quote": "Locate the vents in the freezer and refrigerator compartments and ensure nothing is blocking the airflow.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "Check for large items such as trays, platters, food items (like pizza boxes) and ice behind the ice bin that may interfere with door closure.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "Make sure the door gaskets are sealing properly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "In general, at least 1 inch of air clearance is required on each side, top and back of the refrigerator.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=19479",
+     "title": "Refrigerator - Measuring Internal Temperatures | GE Appliances",
+     "quote": "Allow twenty-four (24) hours for the temperature to stabilize whether setting the controls for the first time or after making an adjustment.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Refrigeration/Full-Size_Refrigerators/Top_Freezer_Refrigerator/Operation/Temperature_Concerns/Not_Cooling_-_Top_Freezer_Refrigerator",
+     "title": "Not Cooling - Top Freezer Refrigerator | Whirlpool Product Help",
+     "quote": "If you need to adjust the temperature, wait at least 24 hours between adjustments, and then recheck the temperature.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "To minimize the possibility of electric shock, unplug the appliance before attempting any maintenance or cleaning.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/food/buy-store-serve-safe-food/refrigerator-thermometers-cold-facts-about-food-safety",
+     "title": "Refrigerator Thermometers - Cold Facts about Food Safety | FDA",
+     "quote": "it’s important to keep its temperature at 40 °F or below; the freezer should be at 0 °F.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/food/buy-store-serve-safe-food/refrigerator-thermometers-cold-facts-about-food-safety",
+     "title": "Refrigerator Thermometers - Cold Facts about Food Safety | FDA",
+     "quote": "using an inexpensive freestanding appliance thermometer will allow you to monitor the temperature and adjust the setting of the refrigerator and/or freezer if necessary.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/food/buy-store-serve-safe-food/refrigerator-thermometers-cold-facts-about-food-safety",
+     "title": "Refrigerator Thermometers - Cold Facts about Food Safety | FDA",
+     "quote": "Avoid “Overpacking.” Cold air must circulate around refrigerated foods to keep them properly chilled.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/food/buy-store-serve-safe-food/refrigerator-thermometers-cold-facts-about-food-safety",
+     "title": "Refrigerator Thermometers - Cold Facts about Food Safety | FDA",
+     "quote": "If you’re unsure how long the temperature has been at or above 40 °F, don’t take a chance. Throw the food out.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "If 24 hours have passed and the controls have been set properly but the unit is still warm, you may need to schedule service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=21185",
+     "title": "Refrigerator - Not Cooling Enough | GE Appliances",
+     "quote": "Make sure you leave the unit plugged in until the technician arrives.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/food/food-safety-during-emergencies/power-outages-key-tips-consumers-about-food-safety",
+     "title": "Power Outages: Key Tips for Consumers About Food Safety | FDA",
+     "quote": "Discard any perishable food (such as meat, poultry, fish, eggs or leftovers) that has been above 40° F for two hours or more.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-window-ac-dripping-inside",
+   "category": "appliance",
+   "name": "Window air conditioner drips water into the room",
+   "aliases": [
+    "window ac dripping inside",
+    "air conditioner leaking into the room",
+    "window unit dripping on the floor",
+    "water coming out the front of my window ac",
+    "window air conditioner spitting water",
+    "puddle under the window air conditioner",
+    "ac dripping on the windowsill",
+    "window unit leaking water inside"
+   ],
+   "minutes": [
+    20,
+    45
+   ],
+   "difficulty": 1,
+   "steps": [
+    "First check where it drips; water dripping outside the window is normal.",
+    "Unplug the air conditioner before you look at it or work on it.",
+    "Wipe up any water around the unit so no one slips.",
+    "Check that the unit tilts slightly down toward the outside, about a quarter inch.",
+    "If the unit has drain holes underneath, clear them with a small brush.",
+    "Wash the air filter in warm water; add a little dish soap if very dirty.",
+    "Let the filter dry completely before you put it back.",
+    "If you see ice on the unit's coils, turn it off and let the ice melt.",
+    "Do not run it when it is below 70 degrees outside; the coils can ice up."
+   ],
+   "safety": [
+    "Never drill holes in the bottom of the unit to let the water out.",
+    "Do not run the air conditioner without its filter in place.",
+    "Do not wash the filter in a dishwasher."
+   ],
+   "stopIf": [
+    "The plugged-in unit is wet, or you are standing in water: do not touch it.",
+    "Still dripping inside after these checks? It is likely installed wrong; ask an installer.",
+    "Coils keep freezing? Low refrigerant can cause that; call a professional technician."
+   ],
+   "proRefs": [
+    "appliance-repair"
+   ],
+   "sources": [
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16756",
+     "title": "Air Conditioner - Water Dripping Inside Room | GE Appliances",
+     "quote": "It is normal to see water dripping on the outdoor side of the Air Conditioner.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/1853040-i-have-noticed-water-dripping-outside-of-my-room-air-conditioner-is-this-normal-",
+     "title": "I have noticed water dripping outside of my room air conditioner, is this normal? | Frigidaire",
+     "quote": "Water dripping outside is a normal function of the room air conditioner, especially during periods of excessive humidity.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "Unplug the Unit: Always disconnect the air conditioner from the power source before inspecting or working on it.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "Clean Up Water: If there's water around the unit, clean it up to avoid slipping or electrical hazards.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16756",
+     "title": "Air Conditioner - Water Dripping Inside Room | GE Appliances",
+     "quote": "It should be level or tilted slightly to the outside (about 1/4 inch) so that any excess water will drip outside rather than leak into the room.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "Tilt Angle: Ensure the air conditioner is installed with a slight tilt backward (towards the outside). This helps proper drainage of the condensed water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "Drain Holes: Ensure that the drain holes at the bottom of the unit are not blocked. Use a small brush or a piece of wire to clear any obstructions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16756",
+     "title": "Air Conditioner - Water Dripping Inside Room | GE Appliances",
+     "quote": "A dirty air filter can cause moisture to collect and drip on the floor inside the room.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16736",
+     "title": "Air Conditioner - Cleaning the Filter | GE Appliances",
+     "quote": "You can wash the filter in warm water. If the filter is very dirty, add a little mild dish detergent in the warm water when you clean the filter.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16736",
+     "title": "Air Conditioner - Cleaning the Filter | GE Appliances",
+     "quote": "You should not reinstall a damp filter. Wait for it to dry completely before installing it.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16754",
+     "title": "Air Conditioner - Ice On Indoor Coils | GE Appliances",
+     "quote": "The quickest way to defrost the coils is turn the Air Conditioner off and allow the room air temperature to melt the ice.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "If you notice ice build-up, turn off the unit and let it thaw completely before restarting.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16754",
+     "title": "Air Conditioner - Ice On Indoor Coils | GE Appliances",
+     "quote": "The best way to prevent ice on coils is to not run the appliance if the outdoor temperature is below 70 degrees Fahrenheit.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/1853040-i-have-noticed-water-dripping-outside-of-my-room-air-conditioner-is-this-normal-",
+     "title": "I have noticed water dripping outside of my room air conditioner, is this normal? | Frigidaire",
+     "quote": "Never drill holes into the bottom of the room air conditioner to remove water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16736",
+     "title": "Air Conditioner - Cleaning the Filter | GE Appliances",
+     "quote": "You should not use the Air Conditioner until the filter has been put back in place.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16736",
+     "title": "Air Conditioner - Cleaning the Filter | GE Appliances",
+     "quote": "The filter cannot be cleaned in the Dishwasher.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://firesafety.vermont.gov/sites/firesafety/files/documents/HOT%20TOPICS%20flood-%20ELECTRICAL%20APPLIANCES%20%2023-2.pdf",
+     "title": "Fire Safety Information Sheet: Use Electrical Appliances Safely | Vermont Department of Public Safety",
+     "quote": "Do not touch an energized electrical appliance that is wet or if you are standing in water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://owner.frigidaire.com/support-articles/article/1853040-i-have-noticed-water-dripping-outside-of-my-room-air-conditioner-is-this-normal-",
+     "title": "I have noticed water dripping outside of my room air conditioner, is this normal? | Frigidaire",
+     "quote": "If water is dripping inside the room during the cooling, this is due to improper installation. Please refer to installation instructions or check with your local installer.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "Low refrigerant levels can cause the evaporator coils to freeze. If you suspect a refrigerant issue, contact a professional technician for service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/en_US/troubleshooting-a-leak-in-a-tcl-window-ac-unit",
+     "title": "Troubleshooting a Leak in a TCL Window A/C Unit | TCL Support",
+     "quote": "A dirty air filter can restrict airflow, causing the evaporator coils to freeze and subsequently leak water when they thaw.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16754",
+     "title": "Air Conditioner - Ice On Indoor Coils | GE Appliances",
+     "quote": "Ice on the indoor coils of an Air Conditioner can cause the appliance to stop cooling well. This may even cause the Air Conditioner to spit water or ice out of the front of the appliance.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-microwave-no-heat",
+   "category": "appliance",
+   "name": "Microwave runs but does not heat food",
+   "aliases": [
+    "microwave not heating",
+    "microwave runs but food stays cold",
+    "microwave won't heat food",
+    "microwave spins but doesn't heat",
+    "food still cold after microwaving",
+    "microwave light on but no heat",
+    "microwave stopped heating",
+    "microwave not warming food"
+   ],
+   "minutes": [
+    5,
+    15
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Open the door, then close it firmly so it shuts all the way.",
+    "Wipe the door and its frame with a damp cloth so nothing blocks it.",
+    "Make sure you started a cooking cycle, not just the kitchen timer.",
+    "Check the power level; a low power level takes longer to heat food.",
+    "Timer counting down very fast? That is demo mode; turn it off using the manual.",
+    "Skip the extension cord; plug the microwave straight into its own wall outlet.",
+    "Leave space around the sides, top, and back so it can vent.",
+    "Test it: heat one cup of water on high for 1 minute; it should get warmer."
+   ],
+   "safety": [
+    "Sparks inside? Take out any metal, like foil, twist ties, or metal-trimmed dishes.",
+    "Stop using it at once if the plug gets very hot or it gives a shock."
+   ],
+   "stopIf": [
+    "Never remove the cover or try repairs inside. It can shock you even when unplugged.",
+    "Smoke or a burning smell? Unplug it and stop using it.",
+    "The door is bent, damaged, or will not close firmly: stop using it and call the maker.",
+    "Still not heating after these checks? Have a professional repair it."
+   ],
+   "proRefs": [
+    "appliance-repair"
+   ],
+   "sources": [
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=110",
+     "title": "Microwave - Runs But Does Not Heat | GE Appliances",
+     "quote": "Check to ensure the door is closed securely. Open the door and close it firmly. This confirms the engagement of the door's safety mechanisms.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "Make sure the door closes completely. If the door is not completely shut, the microwave may run but will not heat.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "Use a damp cloth to wipe the door and frame of the microwave; debris could be preventing it from closing properly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=110",
+     "title": "Microwave - Runs But Does Not Heat | GE Appliances",
+     "quote": "Please make sure the “Timer” function was not inadvertently used.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "Make sure that the Kitchen Timer option was not accidentally used instead of a normal cooking cycle.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Cooking/Microwaves/Countertop_Microwave/Operation/Not_Heating/Microwave_is_Not_Heating_-_Countertop_Microwave",
+     "title": "Microwave is Not Heating - Countertop Microwave | Whirlpool Product Help",
+     "quote": "Check to make sure you are using the correct controls for the type of dish you are heating. Heating at a decreased power level may take the food longer to heat.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "An easy way to test for Demo mode is to set a cooking time and start the microwave. In Demo mode, the timer counts down much faster than usual.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "When a microwave is in Demo mode, you can use all the functions of the microwave, but it won't heat anything.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Cooking/Microwaves/Over-the-Range_Microwave/Operation/Not_Heating_or_Operating/Not_Heating_-_Has_Power_-_Over-the-Range_Microwave",
+     "title": "Not Heating - Has Power - Over-the-Range Microwave | Whirlpool Product Help",
+     "quote": "Make sure Demo mode (on some models) is off.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "For any other model, refer to your user manual for instructions on how to exit.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=18836",
+     "title": "Microwave - Use of Extension Cords | GE Appliances",
+     "quote": "We strongly recommend that an extension cord not be used with a Microwave due to potential safety hazards under certain conditions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=18836",
+     "title": "Microwave - Use of Extension Cords | GE Appliances",
+     "quote": "Your Microwave should be plugged into its own properly grounded, dedicated electrical outlet to prevent the flickering of the lights, blowing of a fuse or tripping of a circuit breaker.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Cooking/Microwaves/Countertop_Microwave/Operation/Not_Heating/Microwave_is_Not_Heating_-_Countertop_Microwave",
+     "title": "Microwave is Not Heating - Countertop Microwave | Whirlpool Product Help",
+     "quote": "the power provided might be enough for the lights and the controls, but not the heating source. Plug the unit into a wall outlet and try again.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "Check the clearance to the left, right, above, and behind the microwave.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "If the microwave does not have enough clearance, it will be unable to vent properly. It will either not heat or have weak heat.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Cooking/Microwaves/Countertop_Microwave/Operation/Not_Heating/Microwave_is_Not_Heating_-_Countertop_Microwave",
+     "title": "Microwave is Not Heating - Countertop Microwave | Whirlpool Product Help",
+     "quote": "Place one cup (250 mL) of water on the turntable",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Cooking/Microwaves/Countertop_Microwave/Operation/Not_Heating/Microwave_is_Not_Heating_-_Countertop_Microwave",
+     "title": "Microwave is Not Heating - Countertop Microwave | Whirlpool Product Help",
+     "quote": "Start the microwave oven for 1 minute on the HI setting (100% Power)",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Cooking/Microwaves/Countertop_Microwave/Operation/Not_Heating/Microwave_is_Not_Heating_-_Countertop_Microwave",
+     "title": "Microwave is Not Heating - Countertop Microwave | Whirlpool Product Help",
+     "quote": "If a heat rise is detected, the microwave is heating.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "If arcing occurs, please remove the metal material (skewers, etc.) and/or transfer the food to a nonmetallic container.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "Do not use metal containers or dishes with metallic trim during Microwave or Combination cooking.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "Do not use metal twist ties during Microwave or Combination cooking, Arcing (sparking) may occur.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "When using foil, skewers, racks or utensils made of metal in the oven during Microwave or Combination cooking, please allow at least 2.5 cm (1\") of space between the metal material and interior oven walls.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "Does the AC plug get abnormally hot during operation?",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "Is there any electrical shock if you touch the microwave oven?",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "If answered YES to any of the above we recommend that the microwave is immediately stop using the microwave oven.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=110",
+     "title": "Microwave - Runs But Does Not Heat | GE Appliances",
+     "quote": "For safety reasons, we offer no do-it-yourself repair advice on Microwave Ovens. There is an internal high voltage capacitor which can hold a high voltage charge even after the Microwave has been unplugged.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://help.na.panasonic.com/answers/troubleshooting-questions-for-safe-usage-and-operation-of-microwave-ovens/",
+     "title": "Troubleshooting Questions for Safe Usage and Operation of Microwave Ovens | Panasonic",
+     "quote": "If you experience a fire, smoke or a burning smell, unplug the oven to stop use of the microwave.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/radiation-emitting-products/resources-you-radiation-emitting-products/microwave-ovens",
+     "title": "Microwave Ovens | FDA",
+     "quote": "The FDA recommends looking at your oven carefully, and not using an oven if the door doesn’t close firmly or is bent, warped, or otherwise damaged.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.fda.gov/radiation-emitting-products/resources-you-radiation-emitting-products/microwave-ovens",
+     "title": "Microwave Ovens | FDA",
+     "quote": "Contact your microwave's manufacturer for assistance if your microwave oven has damage to its door hinges, latches, or seals, or if the door does not open or close properly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=110",
+     "title": "Microwave - Runs But Does Not Heat | GE Appliances",
+     "quote": "If the above suggestions do not solve the problem and the Microwave will not heat, we recommend contacting service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007304",
+     "title": "Samsung microwave does not heat | Samsung US",
+     "quote": "If the microwave still doesn't heat, visit the Support Center to request service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.cpsc.gov/s3fs-public/micro.pdf",
+     "title": "Electrocution Hazard with Do-It-Yourself Repairs of Microwave Ovens | U.S. Consumer Product Safety Commission",
+     "quote": "Microwave ovens use high voltage which makes it particularly hazardous for consumers to remove the cover and touch electrical parts.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.cpsc.gov/s3fs-public/micro.pdf",
+     "title": "Electrocution Hazard with Do-It-Yourself Repairs of Microwave Ovens | U.S. Consumer Product Safety Commission",
+     "quote": "The possibility for electrical shock from a microwave oven still exists even after the oven is disconnected from the power source.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.cpsc.gov/s3fs-public/micro.pdf",
+     "title": "Electrocution Hazard with Do-It-Yourself Repairs of Microwave Ovens | U.S. Consumer Product Safety Commission",
+     "quote": "The Commission strongly recommends that consumers have professionals repair microwave ovens",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=16774",
+     "title": "Microwave Do-It-Yourself Repair Recommendations | GE Appliances",
+     "quote": "We urge you NOT to attempt any microwave repairs.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-wifi-router-restart",
+   "category": "device",
+   "name": "Wi-Fi or internet stopped working at home",
+   "aliases": [
+    "wifi not working",
+    "internet is down",
+    "no internet at home",
+    "wifi stopped working",
+    "can't get on the internet",
+    "router not working",
+    "restart my router",
+    "wifi keeps dropping",
+    "modem lights blinking"
+   ],
+   "minutes": [
+    10,
+    25
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Check a second phone or tablet. If only one device is offline, restart that one.",
+    "Make sure the device's Wi-Fi is turned on and joined to your home network.",
+    "Push every cable firmly into the modem, the router and the wall.",
+    "One box only? Unplug its power cord, wait one minute, and plug it back in.",
+    "Two boxes? Unplug the power cords from both the modem and the router.",
+    "Wait two minutes, then plug in only the modem.",
+    "Wait about five minutes, until the modem's lights stay steady.",
+    "Now plug in the router. Give it a few minutes to connect.",
+    "Wi-Fi weak in one room? Move closer to the router and try again."
+   ],
+   "safety": [
+    "Restart only. Do not hold the Reset button; it erases your Wi-Fi name and password.",
+    "If your home phone runs through the modem, it cannot call 911 until the box is back online."
+   ],
+   "stopIf": [
+    "Your internet company's app or website shows an outage. Restarting won't help; wait it out.",
+    "The modem's lights never settle, or a light stays red. Call your internet company.",
+    "Still no internet and no outage reported? Call your internet company."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://www.xfinity.com/support/articles/internet-connectivity-troubleshooting",
+     "title": "Xfinity Internet and WiFi connection troubleshooting | Xfinity",
+     "quote": "Check multiple internet-capable devices to see if the problem is with one or the entire network. Single device issues are often fixed by updating network settings or restarting your personal device.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.xfinity.com/support/articles/internet-connectivity-troubleshooting",
+     "title": "Xfinity Internet and WiFi connection troubleshooting | Xfinity",
+     "quote": "Check the device WiFi settings to ensure WiFi is on, and you're connected to your in-home WiFi network.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.xfinity.com/support/articles/internet-connectivity-troubleshooting",
+     "title": "Xfinity Internet and WiFi connection troubleshooting | Xfinity",
+     "quote": "Confirm equipment cables are plugged in and the coaxial cable is tightened as much as possible to both the wall outlet and your modem/gateway.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.verizon.com/home/internet/guides/what-is-slowing-my-internet-down/",
+     "title": "Why Is My Internet Not Working? | Verizon",
+     "quote": "Loose power cords and Ethernet cables can be a problem, so ensure that they're plugged in and undamaged.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.xfinity.com/support/articles/troubleshooting-your-cable-modem",
+     "title": "How to restart your Xfinity Gateway | Xfinity",
+     "quote": "Unplug the power cable. Wait one minute. Plug the power cable back in.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "To power cycle your home network, you must turn off all of your networking devices and then turn them back on.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.verizon.com/home/internet/guides/what-is-slowing-my-internet-down/",
+     "title": "Why Is My Internet Not Working? | Verizon",
+     "quote": "Restart your router and modem. Unplug them for 30 seconds and then plug them back in.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "Wait 2 minutes before turning on your cable or DSL modem again.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "After 2 minutes, turn on your modem first and let it boot up.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "Wait 5 minutes while your modem establishes a connection with your Internet Service Provider (ISP).",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "In most cases, all of the LED lights on your modem remain stable after your device establishes a connection with your ISP.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "After your cable or DSL modem establishes a connection with your ISP, turn on your router.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/19755/How-do-I-power-cycle-my-home-network",
+     "title": "How do I power cycle my home network? | NETGEAR Support",
+     "quote": "Your router establishes a connection with your modem. This process might take a few minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.xfinity.com/support/articles/internet-connectivity-troubleshooting",
+     "title": "Xfinity Internet and WiFi connection troubleshooting | Xfinity",
+     "quote": "Make sure you are within a reachable WiFi coverage area from the gateway or router.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.att.com/support/article/u-verse-high-speed-internet/KM1010361/",
+     "title": "Restart or Reset Your AT&T All-Fi Hub or Wi-Fi Gateway | AT&T Support",
+     "quote": "Completing a reset on your All-Fi Hub® or Wi-Fi gateway will return it to original factory settings. It will delete any custom settings such as custom Wi-Fi network names and passwords.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.linksys.com/kb/article/332-en/?section_id=161",
+     "title": "Restarting your router using the Linksys app | Linksys Support",
+     "quote": "A restart, on the other hand, is far less disruptive than a factory reset because all settings are maintained.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.xfinity.com/support/articles/troubleshooting-your-cable-modem",
+     "title": "How to restart your Xfinity Gateway | Xfinity",
+     "quote": "If you have Xfinity Voice, you won't be able to make or receive calls, including emergency 911 calls, from your home phone until your gateway is back online.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.verizon.com/home/internet/guides/what-is-slowing-my-internet-down/",
+     "title": "Why Is My Internet Not Working? | Verizon",
+     "quote": "When there's a network outage, the steps for checking your home network—restarting your modem, checking cables, etc.—won't have an impact because the connection to the network outside your home is disrupted.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.xfinity.com/support/articles/internet-connectivity-troubleshooting",
+     "title": "Xfinity Internet and WiFi connection troubleshooting | Xfinity",
+     "quote": "If you are in an outage, the Support page will alert you of this. While in an outage, you won't be able to troubleshoot.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://eero.com/support/articles/why-is-my-eeros-led-red",
+     "title": "Why does my eero have a red LED? | eero Support",
+     "quote": "A red LED means your eero isn't receiving an internet connection.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/31190/What-should-I-do-if-my-network-is-offline",
+     "title": "What should I do if my network is offline? | NETGEAR Support",
+     "quote": "If you can't access the Internet from your modem: Your Internet service provider (ISP) might be experiencing an outage, or the physical cables that deliver the Internet connection to your home might be damaged.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://kb.netgear.com/31190/What-should-I-do-if-my-network-is-offline",
+     "title": "What should I do if my network is offline? | NETGEAR Support",
+     "quote": "We recommend that you contact your ISP for further assistance.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.verizon.com/home/internet/guides/what-is-slowing-my-internet-down/",
+     "title": "Why Is My Internet Not Working? | Verizon",
+     "quote": "If there's no internet outage reported and your internet's not working after troubleshooting, contact Verizon Support for additional help.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.verizon.com/home/internet/guides/what-is-slowing-my-internet-down/",
+     "title": "Why Is My Internet Not Working? | Verizon",
+     "quote": "You can check for a known internet outage by using Verizon's network status tool",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-phone-not-charging",
+   "category": "device",
+   "name": "Phone won't charge",
+   "aliases": [
+    "phone won't charge",
+    "phone not charging",
+    "my phone is dead and won't charge",
+    "charger not working",
+    "phone won't take a charge",
+    "cell phone won't charge",
+    "iphone won't charge",
+    "lint in charging port",
+    "charging cable not working"
+   ],
+   "minutes": [
+    10,
+    70
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Plug the charger straight into a wall outlet.",
+    "Push the cable firmly into the charger and into the phone.",
+    "Try a different wall outlet. Plug a lamp in to check it works.",
+    "Try a different cable and charger.",
+    "Shine a flashlight into the charging hole and look for lint or dust.",
+    "Point the hole down and tap the phone gently against your hand.",
+    "Phone feels hot? Let it cool down before you charge it again.",
+    "Leave it charging for half an hour, even if the screen stays dark.",
+    "Still dark? Force a restart, then let it charge another half hour."
+   ],
+   "safety": [
+    "Never poke anything into the charging hole, not even a cotton swab.",
+    "Stop using a frayed cable or a charger with bent prongs.",
+    "Never charge a phone under a pillow, blanket or your body.",
+    "Do not plug in or unplug the charger with wet hands."
+   ],
+   "stopIf": [
+    "The phone got wet. Don't charge it until it is completely dry, up to a day.",
+    "The screen is lifting or the battery looks swollen. Stop using the phone.",
+    "It smells of burning, smokes, or is too hot to touch. Stop and contact the maker.",
+    "Still won't charge, or the charging hole looks burned or melted? It needs repair."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "Use a wall power outlet and check for firm connections between your charging cable, USB wall adapter, and wall outlet or AC power cable, or try a different outlet.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/7167687?hl=en",
+     "title": "Fix a Pixel phone that won't charge or turn on | Pixel Phone Help",
+     "quote": "Plug the charger into a wall outlet.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/7167687?hl=en",
+     "title": "Fix a Pixel phone that won't charge or turn on | Pixel Phone Help",
+     "quote": "Check that the cable is securely connected to the adapter and to your phone.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10013245/",
+     "title": "Samsung Galaxy device may appear to be charging slowly or not charging at all | Samsung US",
+     "quote": "Disconnect the charger from the Galaxy device and reconnect the charging cable securely to the charging port.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/7167687?hl=en",
+     "title": "Fix a Pixel phone that won't charge or turn on | Pixel Phone Help",
+     "quote": "Plug in something else, like a lamp.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "Try a different USB cable or charger.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/7167687?hl=en",
+     "title": "Fix a Pixel phone that won't charge or turn on | Pixel Phone Help",
+     "quote": "Try to charge your phone with another cable or power adapter.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10013245/",
+     "title": "Samsung Galaxy device may appear to be charging slowly or not charging at all | Samsung US",
+     "quote": "Try charging the device using another compatible Samsung charger and cable.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10013245/",
+     "title": "Samsung Galaxy device may appear to be charging slowly or not charging at all | Samsung US",
+     "quote": "Turn off the Galaxy device, and then use a flashlight to inspect the charging port.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/7167687?hl=en",
+     "title": "Fix a Pixel phone that won't charge or turn on | Pixel Phone Help",
+     "quote": "Check that there's nothing in the port of your phone, like dust or lint.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/9280079",
+     "title": "Fix \"Unplug charger\" or \"Liquid or debris\" message | Pixel Phone Help",
+     "quote": "To remove the debris, with the USB-C port faced downward, gently tap it against your hand.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10013245/",
+     "title": "Samsung Galaxy device may appear to be charging slowly or not charging at all | Samsung US",
+     "quote": "If the device temperature becomes too high, charging may stop temporarily or charging speed may decrease. Wait for the device to cool down before charging again.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/9280079",
+     "title": "Fix \"Unplug charger\" or \"Liquid or debris\" message | Pixel Phone Help",
+     "quote": "Let your phone sit for a few minutes to cool.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "Your iPhone will charge again when the temperature drops. Try moving your iPhone and charger to a cooler location.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "Let your device charge for half an hour.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/7167687?hl=en",
+     "title": "Fix a Pixel phone that won't charge or turn on | Pixel Phone Help",
+     "quote": "the phone may show no charging icon, no vibration, and no display response for up to 25 minutes when plugged in.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "If your device still won't turn on or if the screen displays a battery icon, force your device to restart",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "Let your device charge for another half hour.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/102643",
+     "title": "If you see a liquid-detection alert on your iPhone | Apple Support",
+     "quote": "Don't insert a foreign object, such as a cotton swab or a paper towel, into the connector.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/9280079",
+     "title": "Fix \"Unplug charger\" or \"Liquid or debris\" message | Pixel Phone Help",
+     "quote": "Check for moisture or debris inside the USB-C port and cable. Do not put anything into them.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10013245/",
+     "title": "Samsung Galaxy device may appear to be charging slowly or not charging at all | Samsung US",
+     "quote": "If dust or debris is visible, carefully remove it without using metal objects or liquids.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "Check your charging cable and USB adapter for signs of damage, like breakage or bent prongs. Don't use damaged accessories.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/guide/iphone/important-safety-information-iph301fc905/ios",
+     "title": "Important safety information for iPhone | Apple Support",
+     "quote": "The charge cable becomes frayed or otherwise damaged.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/guide/iphone/important-safety-information-iph301fc905/ios",
+     "title": "Important safety information for iPhone | Apple Support",
+     "quote": "don't sleep on a device, power adapter, or wireless charger, or place them under a blanket, pillow, or your body, when it's connected to a power source.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/guide/iphone/important-safety-information-iph301fc905/ios",
+     "title": "Important safety information for iPhone | Apple Support",
+     "quote": "don't connect or disconnect the power adapter with wet hands.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/102643",
+     "title": "If you see a liquid-detection alert on your iPhone | Apple Support",
+     "quote": "Don't plug the cable in again until your iPhone and the cable are completely dry.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/102643",
+     "title": "If you see a liquid-detection alert on your iPhone | Apple Support",
+     "quote": "It might take up to 24 hours to fully dry.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10013245/",
+     "title": "Samsung Galaxy device may appear to be charging slowly or not charging at all | Samsung US",
+     "quote": "Even on water-resistant Galaxy devices, the charging port must be completely dry before charging.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/15738128?hl=en",
+     "title": "Understand your Pixel battery | Pixel Phone Help",
+     "quote": "If you experience a swollen battery, to find the repair options available for your device, go to store.google.com/repair.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/15738128?hl=en",
+     "title": "Understand your Pixel battery | Pixel Phone Help",
+     "quote": "However, it can cause the screen to lift, which could allow liquids or dust to enter the device more easily.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/guide/iphone/important-safety-information-iph301fc905/ios",
+     "title": "Important safety information for iPhone | Apple Support",
+     "quote": "If you suspect damage to iPhone or the battery, discontinue use of iPhone, as it may cause overheating or injury.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/answer/ANS10010059/",
+     "title": "Usage Notices | Samsung US Support",
+     "quote": "If the device is damaged, emits smoke, or if you smell something burning, stop using the device immediately and contact Samsung.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/9280079",
+     "title": "Fix \"Unplug charger\" or \"Liquid or debris\" message | Pixel Phone Help",
+     "quote": "If your phone is too hot to touch",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/9280079",
+     "title": "Fix \"Unplug charger\" or \"Liquid or debris\" message | Pixel Phone Help",
+     "quote": "Use a different phone, tablet, or computer to contact us.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.apple.com/en-us/108805",
+     "title": "If your iPhone or iPod touch won't charge | Apple Support",
+     "quote": "If your device still won't turn on or charge, you might need service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.google.com/pixelphone/answer/9280079",
+     "title": "Fix \"Unplug charger\" or \"Liquid or debris\" message | Pixel Phone Help",
+     "quote": "If your phone's USB-C port appears burned, melted, or corroded, learn how to file a warranty claim or find an authorized repair partner.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-door-lock-sticking",
+   "category": "home",
+   "name": "Key is hard to turn or the door lock sticks",
+   "aliases": [
+    "key hard to turn",
+    "key won't turn in the lock",
+    "door lock is stiff",
+    "door lock sticking",
+    "key sticks in the lock",
+    "front door hard to lock",
+    "have to lift the door to lock it",
+    "deadbolt hard to turn",
+    "key gets stuck in the door"
+   ],
+   "minutes": [
+    10,
+    30
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Try the original or a spare key. Copied keys wear out faster.",
+    "Wipe dirt and grime off the front of the lock.",
+    "Puff a small amount of powdered graphite into the keyhole.",
+    "Slide the key in and out several times to spread it.",
+    "With the door open, turn the key to lock and unlock.",
+    "Easy when open but stiff when shut? The bolt is rubbing the metal plate on the frame.",
+    "Have to push, pull or lift the door to lock it? It may be sagging.",
+    "Tighten the hinge screws a little at a time, checking the door as you go.",
+    "Rub chalk or lipstick on the bolt, lock it, and see where it marks."
+   ],
+   "safety": [
+    "Never force a stuck key. It can snap off inside the lock.",
+    "Do not spray oil into the keyhole. Oil collects dust and gums up the lock.",
+    "Use only a little graphite. Too much can jam the small springs inside."
+   ],
+   "stopIf": [
+    "The key is still very stiff after this. Stop and call a locksmith.",
+    "You are locked out. Call a licensed locksmith and ask for the price first.",
+    "Still rubbing after tightening the hinges? The metal plate on the frame must be moved."
+   ],
+   "proRefs": [
+    "locksmith-visit",
+    "house-lockout",
+    "handyman-job"
+   ],
+   "sources": [
+    {
+     "url": "https://www.schlage.com/content/dam/sch-us/documents/pdf/installation-manuals/P513-325.pdf",
+     "title": "Rekeying Quick Start Guide | Schlage",
+     "quote": "Duplicate keys wear faster",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.yalehome.com/au/en/legal/assa-abloy-product-care-and-maintenance-recommendations",
+     "title": "ASSA ABLOY Product Care and Maintenance Recommendations | Yale",
+     "quote": "Remove any dirt, grime and salt deposits on and around the end of the cylinder barrel",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.yalehome.com/au/en/legal/assa-abloy-product-care-and-maintenance-recommendations",
+     "title": "ASSA ABLOY Product Care and Maintenance Recommendations | Yale",
+     "quote": "Key cylinders should be lubricated at least once a year or when there are signs of roughness when inserting or retracting the key.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://commercial.schlage.com/content/dam/allegion-us-2/web-files/schlage/technical-documents/Schlage_A_Series_Service_Manual_106720.pdf",
+     "title": "A-Series Service Manual | Schlage",
+     "quote": "Graphite only should be applied to the cylinder unit by blowing a small quantity into the keyway.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/greenway/2016/02/14/home-maintenance-quick-fix/",
+     "title": "Home Maintenance: Sticky Locks | UGA Cooperative Extension",
+     "quote": "A better choice is a silicone spray, a PTFE (Teflon) spray, or graphite. Spray the lubricant into the keyhole",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://commercial.schlage.com/content/dam/allegion-us-2/web-files/schlage/technical-documents/Schlage_Small_Format_Cores_Service_Manual_108230.pdf",
+     "title": "Small Format Cores Service Manual | Schlage",
+     "quote": "run a key in and out several times to work the lubricant through the core",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.yalehome.com/au/en/legal/assa-abloy-product-care-and-maintenance-recommendations",
+     "title": "ASSA ABLOY Product Care and Maintenance Recommendations | Yale",
+     "quote": "apply a small amount of lubricant to the key blade and insert the key into the lock barrel to maintain a smooth action.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kwikset.com/support/topics/latch-issues",
+     "title": "Support for Latch Issues | Kwikset",
+     "quote": "If it is successful only when the door is open, the latch and strike are not aligned as they should be.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kwikset.com/support/topics/latch-issues",
+     "title": "Support for Latch Issues | Kwikset",
+     "quote": "The latch and strike are misaligned, causing the latch to bind.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.schlage.com/en/blog/product_updates/door-wont-latch.html",
+     "title": "How to fix a door that won't latch | Schlage",
+     "quote": "Do you have to push, pull or lift your door to lock it? How to fix a sagging door.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.schlage.com/en/blog/product_updates/door-wont-latch.html",
+     "title": "How to fix a door that won't latch | Schlage",
+     "quote": "Trouble locking your door can also occur when worn or loose hinges cause your door to sag.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.schlage.com/en/blog/diy_tips/best-hacks-for-fixing-a-noisy-door.html",
+     "title": "Best hacks for fixing a noisy door | Schlage",
+     "quote": "try tightening the screws on the hinges. Tighten them a little bit at a time and test your progress with a level as you go.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.schlage.com/en/blog/product_updates/door-wont-latch.html",
+     "title": "How to fix a door that won't latch | Schlage",
+     "quote": "Put some chalk – lipstick also works – on the bolt before locking and unlocking it. You'll then be able to see a chalk smear on the strike where it is rubbing.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/greenway/2016/02/14/home-maintenance-quick-fix/",
+     "title": "Home Maintenance: Sticky Locks | UGA Cooperative Extension",
+     "quote": "Having broken off a key in the lock several years ago, I knew better than to force it.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/greenway/2016/02/14/home-maintenance-quick-fix/",
+     "title": "Home Maintenance: Sticky Locks | UGA Cooperative Extension",
+     "quote": "a petroleum-based lubricant like WD-40 is not the best choice because an oil-based product attracts dust particles and can gum up the lock.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://commercial.schlage.com/content/dam/allegion-us-2/web-files/schlage/technical-documents/Schlage_A_Series_Service_Manual_106720.pdf",
+     "title": "A-Series Service Manual | Schlage",
+     "quote": "Use only graphite or similar material for cylinder lubrication. Under no circumstances should any other type of material be introduced into the cylinder.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://commercial.schlage.com/content/dam/allegion-us-2/web-files/schlage/technical-documents/Schlage_Small_Format_Cores_Service_Manual_108230.pdf",
+     "title": "Small Format Cores Service Manual | Schlage",
+     "quote": "If using graphite, do not overdo this or the springs will not have room to compress properly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.dca.ca.gov/publications/locksmith_tips.pdf",
+     "title": "Locksmith Consumer Tips | California Bureau of Security and Investigative Services",
+     "quote": "a licensed, professional locksmith can open any lock on a residential door.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.dca.ca.gov/publications/locksmith_tips.pdf",
+     "title": "Locksmith Consumer Tips | California Bureau of Security and Investigative Services",
+     "quote": "When you call for locksmith services, be sure the dispatcher gives you an estimate of the charges.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.schlage.com/en/blog/diy_tips/best-hacks-for-fixing-a-noisy-door.html",
+     "title": "Best hacks for fixing a noisy door | Schlage",
+     "quote": "This may be as simple as unscrewing the strike plate and re-installing it in the proper location.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.assaabloy.com/my/en/product-assets/electromechanical/electric-mortise-lock/aa8600-electric-lock/assets/documents/aa8600-Installation-and-user-manual.pdf",
+     "title": "ASSA ABLOY 8600 Series Electric Mortise Lock: Installation and User Manual | ASSA ABLOY",
+     "quote": "If key insertion or withdrawal feels rough, apply a small amount of graphite powder into the keyway.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.assaabloy.com/my/en/product-assets/electromechanical/electric-mortise-lock/aa8600-electric-lock/assets/documents/aa8600-Installation-and-user-manual.pdf",
+     "title": "ASSA ABLOY 8600 Series Electric Mortise Lock: Installation and User Manual | ASSA ABLOY",
+     "quote": "Avoid using oil-based lubricants, as they can cause internal components to stick and lead to lock failure.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.assaabloy.com/my/en/product-assets/electromechanical/electric-mortise-lock/aa8600-electric-lock/assets/documents/aa8600-Installation-and-user-manual.pdf",
+     "title": "ASSA ABLOY 8600 Series Electric Mortise Lock: Installation and User Manual | ASSA ABLOY",
+     "quote": "If the lock loses function, or key operation or latchbolt movement becomes excessively stiff, contact a professional locksmith or service provider immediately.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-grease-stain-clothes",
+   "category": "cleaning",
+   "name": "Get a grease or oil stain out of clothes",
+   "aliases": [
+    "grease on my shirt",
+    "oil stain on my clothes",
+    "cooking oil on my shirt",
+    "butter stain on my pants",
+    "salad dressing on my shirt",
+    "greasy spot on my blouse",
+    "spilled oil on my clothes",
+    "grease spot won't come out"
+   ],
+   "minutes": [
+    15,
+    40
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Blot up extra oil with a clean paper towel. Do not rub.",
+    "Sprinkle cornstarch or talcum powder on the spot to soak up oil, then brush it off.",
+    "Rub a little dish soap gently into the stain, then rinse it out.",
+    "Rub liquid laundry detergent into the spot and let it sit about 10 minutes.",
+    "Put it in the washer without rinsing the detergent off.",
+    "Wash it in the hottest water the care label allows.",
+    "Check the spot before drying. If you still see it, repeat these steps."
+   ],
+   "safety": [
+    "Test soap and detergent on a hidden seam first; they can change the color.",
+    "Keep it out of the dryer until the stain is gone; drying sets it.",
+    "Treat it soon. Oil stains get darker the longer they sit."
+   ],
+   "stopIf": [
+    "The label says dry clean only. Take it to a dry cleaner instead.",
+    "It is wool or silk. Only blot and use powder, then wash as the label says; no bleach.",
+    "The color changes when you test a hidden seam."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Blot with a clean tissue or paper towel to get rid of any excess.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Use a blotting motion. Work from the inside of the garment or back of the stain to force the stain out rather than into the fabric. Avoid using a rubbing motion.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-grease-automotive-cooling-vaseline/",
+     "title": "Remove Stains From Grease (Automotive, Cooling, Vaseline) | Textiles (UGA Cooperative Extension)",
+     "quote": "Use talcum powder to absorb as much grease as possible. Brush thoroughly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "After blotting to remove the excess oil, sprinkle an absorbent substance like cornstarch onto the stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/grease-stains",
+     "title": "How to Remove Grease Stains: Stain Removal Guide | Tide",
+     "quote": "Gently rub dish soap onto the stain to help loosen it, and then rinse with water. Repeat if necessary.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Rub a bit of dish soap into the stain and rinse out. Repeat as needed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Pre-treat the stain with a soaking solution of Persil ® Advanced Clean Oxi+Odor Power laundry detergent. Let it sit for about ten minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/grease-stains",
+     "title": "How to Remove Grease Stains: Stain Removal Guide | Tide",
+     "quote": "gently apply and rub a detergent, such as Tide Ultra Stain Release Liquid , directly to the grease stain. Saturate the stained area, and let it sit for a few minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-oil-based-foods/",
+     "title": "Remove Stains From Oil-Based Foods | Textiles (UGA Cooperative Extension)",
+     "quote": "Butter, Margarine Treat garment with pre-wash spot and stain remover. Launder. Rub detergent into dampened stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Freely apply liquid detergent or prewash stain remover, work into the stained area, rinse hands and repeat.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/grease-stains",
+     "title": "How to Remove Grease Stains: Stain Removal Guide | Tide",
+     "quote": "Without rinsing off the detergent, place the garment into the washer with other items.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/grease-stains",
+     "title": "How to Remove Grease Stains: Stain Removal Guide | Tide",
+     "quote": "Wash on the usual cycle, on the hottest wash temperature indicated. Always check the instructions on the garment’s care label .",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-grease-automotive-cooling-vaseline/",
+     "title": "Remove Stains From Grease (Automotive, Cooling, Vaseline) | Textiles (UGA Cooperative Extension)",
+     "quote": "Launder in hottest water safe for the fabric, using heavy-duty liquid detergent recommended by detergent manufacturer to wash a normal load of clothes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/grease-stains",
+     "title": "How to Remove Grease Stains: Stain Removal Guide | Tide",
+     "quote": "If the grease stain persists after washing, repeat the previous steps before tossing in the dryer, as drying will set the stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Make sure the stain has come out before you dry the garment . You may need to repeat the stain treatment.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Pretreatments can change a garment’s color. Before using, test it in an inconspicuous area on the garment, such as a hem or seam allowance.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-grease-automotive-cooling-vaseline/",
+     "title": "Remove Stains From Grease (Automotive, Cooling, Vaseline) | Textiles (UGA Cooperative Extension)",
+     "quote": "Always pretest each cleaning agent on an inconspicuous area first to determine colorfastness.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Never dry a stained garment in the dryer, or it may become impossible to remove.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Remember to act fast though, as oil stains tend to darken the longer they’re left on the fabric.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Take “dry-clean only” garments to a professional dry-cleaner.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Wool, silk and other delicate fabrics are more prone to fiber breakage if they are not handled gently.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Brush off the cornstarch and wash the garment according to the care instructions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html",
+     "title": "How to Remove Oil Stains & Grease Stains | Persil®",
+     "quote": "Make sure that none of the materials you use to treat the garment contains bleach, as this will only weaken the fabric fibers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "If no change occurs, the pretreatment should be safe to use.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-ink-stain-clothes",
+   "category": "cleaning",
+   "name": "Get ballpoint pen ink out of clothes",
+   "aliases": [
+    "pen ink on my shirt",
+    "ink stain on my clothes",
+    "pen leaked in my pocket",
+    "ballpoint pen mark on my pants",
+    "pen mark on my blouse",
+    "ink on my shirt pocket",
+    "got ink on my clothes",
+    "pen stain won't come out"
+   ],
+   "minutes": [
+    15,
+    40
+   ],
+   "difficulty": 2,
+   "steps": [
+    "Blot extra ink with a paper towel. Do not rub it in.",
+    "Lay the stain face down on clean paper towels.",
+    "Dab rubbing alcohol onto the back of the stain.",
+    "Keep dabbing, moving to a clean part of the towel as ink comes off.",
+    "Rinse the spot with cold water.",
+    "Rub a little liquid laundry detergent into the spot. Let it sit about 10 minutes.",
+    "Wash it in the hottest water the care label allows.",
+    "Check before drying. If any ink is left, repeat these steps."
+   ],
+   "safety": [
+    "Test rubbing alcohol on a hidden seam first; it can pull out the color.",
+    "Rubbing alcohol can catch fire. Use it away from flames, with fresh air.",
+    "Treat the ink before washing; washing first can set the stain.",
+    "Keep it out of the dryer until the ink is gone; drying sets it."
+   ],
+   "stopIf": [
+    "Color comes off on the paper towel when you test the alcohol.",
+    "It is permanent marker. It may need a special ink remover or a dry cleaner.",
+    "It is silk or dry clean only. Take it to a professional cleaner.",
+    "The label says acetate or acrylic. Rubbing alcohol can damage those fibers."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Blot the excess of the stain gently, being careful not to rub it into the fibers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.clorox.com/learn/how-to-get-dried-ink-out-of-clothes/",
+     "title": "How to Get Pen Ink Stains Out of Clothes | Clorox™",
+     "quote": "If the ink is fresh, blot it with a paper towel first, to remove excess ink.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Place the paper towel underneath the stain, then pour your solvent directly onto the stain. Rinse off with cold water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "Place stain face down on white paper towels. Sponge with rubbing or denatured alcohol (Aerosol hair spray usually works well).",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Work from the inside of the garment or back of the stain to force the stain out rather than into the fabric.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-ink-ballpoint-felt-tip-india-mimeo-stamp-pad/",
+     "title": "Remove Stains From Ink (Ballpoint, Felt Tip, India, Mimeo, Stamp Pad) | Textiles (UGA Cooperative Extension)",
+     "quote": "Apply alcohol and cover with pad dampened with alcohol. Change pad as it picks up stain. Continue as long as stain is being removed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "The goal is that most of the pen stains will transfer off the clothing to the clean cloth.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "pour a tiny amount of liquid laundry detergent directly onto the water-based or ballpoint pen stain, then work it in with your fingers",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "let it sit on the stain for around 10 minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Wash on the usual cycle on the hottest wash temperature indicated. Always check the instructions on the garment’s care label .",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "Pen removal from fabric works best when washed on the hottest temperature allowed by the garment’s care symbols .",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "If the ink stain persists after washing, repeat the previous steps to get the ink out of clothes before tossing in the dryer because drying will set the stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "Check how the pen stain looks before letting the garment dry on a clothesline or placing in the dryer, as this could set the stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "remember to test the stained garment for colorfastness first as they can also attack fabric dyes and cause further damage.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Apply a solvent like rubbing alcohol, hair spray, or hand sanitizer to an inconspicuous area of the garment with a cotton swab and let it sit for 1 to 3 minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Blot with a paper towel, and if no color comes off on the towel, continue to pretreat.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://cameochemicals.noaa.gov/chemical/946",
+     "title": "Isopropanol | CAMEO Chemicals (NOAA)",
+     "quote": "Can be ignited under almost all ambient temperature conditions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://cameochemicals.noaa.gov/chemical/946",
+     "title": "Isopropanol | CAMEO Chemicals (NOAA)",
+     "quote": "Sold in 70% aqueous solution as rubbing alcohol.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-ink-ballpoint-felt-tip-india-mimeo-stamp-pad/",
+     "title": "Remove Stains From Ink (Ballpoint, Felt Tip, India, Mimeo, Stamp Pad) | Textiles (UGA Cooperative Extension)",
+     "quote": "When using caustic, toxic, aromatic or flammable cleaning solutions, be certain to provide for adequate ventilation. Do not have an open flame near flammable cleaning solutions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-ink-ballpoint-felt-tip-india-mimeo-stamp-pad/",
+     "title": "Remove Stains From Ink (Ballpoint, Felt Tip, India, Mimeo, Stamp Pad) | Textiles (UGA Cooperative Extension)",
+     "quote": "NOTE: Treat while fresh. Laundering may set stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Laundering may actually set the ink.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-pen-stains.html",
+     "title": "How to Get Ink Out of Clothes: Pen & Marker Stains | Persil®",
+     "quote": "For permanent ink, you may have to use a dedicated commercial ink remover or ask a professional dry cleaner to get rid of it.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Permanent ink: These are the hardest ink stains to remove, and you often need a special, permanent ink remover to tackle.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/ink-stains",
+     "title": "How to Get Ink Out of Clothes: Stain Removal Guide | Tide",
+     "quote": "Silk is a delicate, easily damaged material, so always consult the garment’s care label before beginning any stain treatment and take to a professional cleaner if necessary.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Take “dry-clean only” garments to a professional dry-cleaner.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-ink-ballpoint-felt-tip-india-mimeo-stamp-pad/",
+     "title": "Remove Stains From Ink (Ballpoint, Felt Tip, India, Mimeo, Stamp Pad) | Textiles (UGA Cooperative Extension)",
+     "quote": "Alcohol will damage acetate, triacetate, modacrylics and acrylic fibers.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-yellow-underarm-stains",
+   "category": "cleaning",
+   "name": "Get yellow underarm stains out of a white shirt",
+   "aliases": [
+    "yellow armpit stains",
+    "yellow sweat stains on my white shirt",
+    "underarm stains on my shirt",
+    "pit stains on my shirt",
+    "yellow deodorant stains",
+    "white shirt turned yellow under the arms",
+    "sweat stains on my undershirt",
+    "yellow marks under the arms"
+   ],
+   "minutes": [
+    45,
+    480
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Check the care label to make sure the shirt can be washed.",
+    "Rub liquid laundry detergent or dish soap into the yellow spots. Wait 5 minutes.",
+    "Mix oxygen bleach into a tub of warm water until it dissolves.",
+    "Soak the shirt at least 30 minutes. Leave old, stubborn stains overnight.",
+    "Wash it in the hottest water the care label allows.",
+    "Check the underarms after washing. If still yellow, soak and wash again.",
+    "Hang it to air dry instead of using the dryer."
+   ],
+   "safety": [
+    "Use oxygen bleach, not chlorine bleach; chlorine bleach can make the yellow worse.",
+    "Do not iron or heat the stained area until the yellow is gone.",
+    "Test the soak on a hidden spot first and follow the care label."
+   ],
+   "stopIf": [
+    "It is silk, wool, leather, or dry clean only. Take it to a dry cleaner.",
+    "The color changes when you test the soak on a hidden spot.",
+    "Still yellow after repeating? Antiperspirant residue may be impossible to remove."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-sweat-stains.html",
+     "title": "How to Remove Sweat Stains | Persil®",
+     "quote": "Check the garment’s care instructions and make sure it’s washable.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/rewards/laundrytips/how-to-remove-armpit-stains",
+     "title": "How to Remove Armpit Sweat Stains Easily | Tide",
+     "quote": "The first step in removing armpit stains out from white shirts is by checking the shirt’s fabric care label to understand any specific cleaning instructions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.clorox.com/learn/how-to-get-sweat-stains-out-of-armpits/",
+     "title": "How to Get Sweat Stains Out of Armpits | Clorox™",
+     "quote": "Rub in a bit of liquid laundry detergent to pre-treat. Wait 5 minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-antiperspirant-deodorant/",
+     "title": "Remove Stains From Antiperspirant, Deodorant | Textiles (UGA Cooperative Extension)",
+     "quote": "Rub in undiluted, hand dishwashing liquid detergent. Launder.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Apply liquid detergent. Massage into fabric. Rinse. Wash in warm water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/rewards/laundrytips/how-to-remove-armpit-stains",
+     "title": "How to Remove Armpit Sweat Stains Easily | Tide",
+     "quote": "We’re not talking about chlorine bleach but oxygen bleach. It’s effective and color-safe and won’t cause yellowing and potential damage over time like chlorine bleach.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/rewards/laundrytips/how-to-remove-armpit-stains",
+     "title": "How to Remove Armpit Sweat Stains Easily | Tide",
+     "quote": "soak the white shirt at least 30 minutes to overnight in a solution of water and oxygen bleach-containing detergent",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-perspiration/",
+     "title": "Remove Stains From Perspiration | Textiles (UGA Cooperative Extension)",
+     "quote": "Soak in warm water and sodium perborate bleach for 15 to 30 minutes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.oxiclean.com/en/stain-solutions/how-to-remove-sweat-stains-odors-from-clothing",
+     "title": "How to Remove Sweat Stains and Odors from Clothing | OxiClean™",
+     "quote": "Follow the instructions on the package and mix until completely dissolved.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-sweat-stains.html",
+     "title": "How to Remove Sweat Stains | Persil®",
+     "quote": "Lighter and fresher stains can soak for 15 to 30 minutes. If you notice that your stain isn’t fading, it’s likely a more stubborn stain, and should be soaked overnight.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-sweat-stains.html",
+     "title": "How to Remove Sweat Stains | Persil®",
+     "quote": "Wash at the highest possible temperature safe for the fabric (check the care label).",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.clorox.com/learn/how-to-get-sweat-stains-out-of-armpits/",
+     "title": "How to Get Sweat Stains Out of Armpits | Clorox™",
+     "quote": "Wash on the hottest recommended water setting along with your favorite detergent.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-perspiration/",
+     "title": "Remove Stains From Perspiration | Textiles (UGA Cooperative Extension)",
+     "quote": "Launder garment, using hottest water and bleach safe for garment.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-sweat-stains.html",
+     "title": "How to Remove Sweat Stains | Persil®",
+     "quote": "Check the stain after washing. If it is still visible, repeat the stain treatment process.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/rewards/laundrytips/how-to-remove-armpit-stains",
+     "title": "How to Remove Armpit Sweat Stains Easily | Tide",
+     "quote": "Let the item air dry rather than machine drying, which can further set in stains.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.clorox.com/learn/how-to-get-sweat-stains-out-of-armpits/",
+     "title": "How to Get Sweat Stains Out of Armpits | Clorox™",
+     "quote": "Air-dry to help prevent any remaining stain from changing colors.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-sweat-stains.html",
+     "title": "How to Remove Sweat Stains | Persil®",
+     "quote": "Bleach can cause further yellowing on polyester and damage cotton fibers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-antiperspirant-deodorant/",
+     "title": "Remove Stains From Antiperspirant, Deodorant | Textiles (UGA Cooperative Extension)",
+     "quote": "Never iron or apply heat to a material with a deodorant stain. The combination of chemical and heat interaction will ruin most fabrics.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://dlionline.org/is-there-a-way-to-remove-perspiration-stains",
+     "title": "Is there a way to remove perspiration stains? | Dry Cleaning and Laundry Institute International",
+     "quote": "The stain may be invisible at first but with age and the heat of finishing after cleaning will oxidize and turn yellow.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.oxiclean.com/en/stain-solutions/how-to-remove-sweat-stains-odors-from-clothing",
+     "title": "How to Remove Sweat Stains and Odors from Clothing | OxiClean™",
+     "quote": "Always test OxiClean™ Odor Blasters™ Versatile Odor & Stain Remover on an inconspicuous area first and follow the instructions on the garment label.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-perspiration/",
+     "title": "Remove Stains From Perspiration | Textiles (UGA Cooperative Extension)",
+     "quote": "Always pretest each cleaning agent on an inconspicuous area first to determine colorfastness.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.oxiclean.com/en/stain-solutions/how-to-remove-sweat-stains-odors-from-clothing",
+     "title": "How to Remove Sweat Stains and Odors from Clothing | OxiClean™",
+     "quote": "Do not use if your item is silk, a silk blend, wool, a wool blend, leather, or labeled “dry clean only”.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://dlionline.org/is-there-a-way-to-remove-perspiration-stains",
+     "title": "Is there a way to remove perspiration stains? | Dry Cleaning and Laundry Institute International",
+     "quote": "In the case of a drycleanable garment, the remaining stain often contains water-soluble impurities and can usually be removed by your drycleaner.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Residues of aluminum or zinc salts may be impossible to remove, making it impossible to restore original color.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://tide.com/en-us/rewards/laundrytips/how-to-remove-armpit-stains",
+     "title": "How to Remove Armpit Sweat Stains Easily | Tide",
+     "quote": "anti-perspirant contains aluminum zirconium, whose molecules also bind to the sweat components and attach themselves to fabric, cause buildup, and eventually lead to discoloration, aka yellow underarm stains.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.clorox.com/learn/how-to-get-sweat-stains-out-of-armpits/",
+     "title": "How to Get Sweat Stains Out of Armpits | Clorox™",
+     "quote": "Apply a drop of bleach solution to a hidden part of the fabric. After 1 minute, blot dry and look for a color change. No change means you’re good to go.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-antiperspirant-deodorant/",
+     "title": "Remove Stains From Antiperspirant, Deodorant | Textiles (UGA Cooperative Extension)",
+     "quote": "The stain removal procedures found in this program apply only to washable items and not to garments designated as Dryclean Only.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-sweat-stains.html",
+     "title": "How to Remove Sweat Stains | Persil®",
+     "quote": "Once the stain has gone, dry the garment according to care instructions. Doing so before the stain has been removed will set the stain.",
+     "fetched": "2026-11-16"
     }
    ]
   },

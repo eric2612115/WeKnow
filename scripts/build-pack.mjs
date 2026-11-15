@@ -1,23 +1,31 @@
-// Build WeKnow's first knowledge pack from Fair Quote's US price book and DIY guides.
-// Usage: node scripts/build-pack.mjs <fair-quote data dir>
-// Output: web/public/packs/us-home.json. Every price and every guide keeps its sources.
+// Build WeKnow's knowledge pack from Fair Quote's US price book and DIY guides plus packs-src/*.json.
+// Usage: node scripts/build-pack.mjs [fair-quote data dir]   (default: ../fair-quote/product/backend/data)
+// Writes:
+//   web/public/packs/catalog.json         level 0: which packs exist and each one's current root
+//   web/public/packs/us-home/...          levels 1-3 (see web/src/core/packFormat.ts and docs/knowledge-layer.md)
+//   web/public/packs/us-home.json         the same items as one file, kept for the current app shell and eval
+// Refuses to write anything if an item has no https source, a ref repeats, or a guide points at a missing price.
+// The builder logic is plain TypeScript in web/src/core (Node runs it with built-in type stripping).
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
+import { buildLayeredPack, catalogJson, PackValidationError } from '../web/src/core/packBuild.ts';
+import { US_HOME } from '../web/src/core/packSpecs.ts';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const data = process.argv[2];
-if (!data) throw new Error('pass the Fair Quote data directory');
+const data = process.argv[2] ?? join(root, '../fair-quote/product/backend/data');
+if (!existsSync(join(data, 'pricebook/us'))) throw new Error(`no Fair Quote price book under ${data}`);
 
-const CATEGORIES = ['plumbing', 'appliance', 'electrical', 'home', 'device', 'cleaning', 'car-service', 'car-body', 'locksmith'];
+const spec = US_HOME;
 const en = (v) => (typeof v === 'string' ? v : v?.en ?? '');
 const latin = (a) => /^[\x20-\x7e]+$/.test(a);
 const source = (s) => ({ url: s.url, title: s.title, quote: s.quote, fetched: s.fetched_at });
 
 const prices = [];
 const guides = [];
-for (const cat of CATEGORIES) {
+for (const cat of spec.categories) {
   const book = JSON.parse(readFileSync(join(data, 'pricebook/us', `${cat}.json`), 'utf8'));
   for (const it of book.items) {
     prices.push({
@@ -33,13 +41,9 @@ for (const cat of CATEGORIES) {
       sources: (it.sources ?? []).map(source),
     });
   }
-  let diy;
-  try {
-    diy = JSON.parse(readFileSync(join(data, 'diy/us', `${cat}.json`), 'utf8'));
-  } catch {
-    continue;
-  }
-  for (const g of diy.guides) {
+  const diyFile = join(data, 'diy/us', `${cat}.json`);
+  if (!existsSync(diyFile)) continue;
+  for (const g of JSON.parse(readFileSync(diyFile, 'utf8')).guides) {
     guides.push({
       ref: `diy-${g.key}`,
       category: cat,
@@ -56,31 +60,47 @@ for (const cat of CATEGORIES) {
   }
 }
 
-// Hand-researched guides that Fair Quote did not have (packs-src/*.json), each step backed by a fetched quote.
-import { readdirSync } from 'node:fs';
-for (const f of readdirSync(join(root, 'packs-src')).filter((f) => f.endsWith('.json'))) {
+// Hand-researched items that Fair Quote did not have, each backed by a fetched quote. Every packs-src/*.json is read.
+for (const f of readdirSync(join(root, 'packs-src')).filter((f) => f.endsWith('.json')).sort()) {
   const extra = JSON.parse(readFileSync(join(root, 'packs-src', f), 'utf8'));
-  for (const g of extra.guides ?? []) guides.push({ ...g, proRefs: g.proRefs ?? [] });
+  for (const p of extra.prices ?? []) prices.push({ ...p, aliases: p.aliases ?? [] });
+  for (const g of extra.guides ?? []) guides.push({ ...g, aliases: g.aliases ?? [], proRefs: g.proRefs ?? [] });
 }
 
-const refs = new Set();
-for (const x of [...prices, ...guides]) {
-  if (refs.has(x.ref)) throw new Error(`duplicate ref ${x.ref}`);
-  refs.add(x.ref);
-  if (!x.sources.length) throw new Error(`${x.ref} has no source`);
+let built;
+try {
+  built = await buildLayeredPack(spec, prices, guides);
+} catch (e) {
+  if (e instanceof PackValidationError) {
+    console.error(e.message);
+    process.exit(1);
+  }
+  throw e;
 }
-for (const g of guides) for (const r of g.proRefs) if (!prices.some((p) => p.ref === r)) throw new Error(`${g.ref}: unknown pro ref ${r}`);
 
-const pack = {
-  id: 'us-home',
-  version: new Date().toISOString().slice(0, 10),
-  region: 'US',
-  currency: 'USD',
-  origin: 'Built from the Fair Quote price book and DIY guides (pre-existing work by the same author, disclosed in README).',
-  prices,
-  guides,
-};
-const out = join(root, 'web/public/packs/us-home.json');
-mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, JSON.stringify(pack, null, 1) + '\n');
-console.log(`wrote ${out}: ${prices.length} prices, ${guides.length} guides`);
+const packsDir = join(root, 'web/public/packs');
+mkdirSync(packsDir, { recursive: true });
+
+// The single-file pack (legacy shape), now versioned by its data date so rebuilding unchanged data changes nothing.
+const single = { id: spec.id, version: built.root.dataAsOf, region: spec.region, currency: spec.currency, origin: spec.origin, prices, guides };
+writeFileSync(join(packsDir, `${spec.id}.json`), JSON.stringify(single, null, 1) + '\n');
+
+rmSync(join(packsDir, spec.id), { recursive: true, force: true });
+for (const [path, body] of built.files) {
+  mkdirSync(dirname(join(packsDir, path)), { recursive: true });
+  writeFileSync(join(packsDir, path), body);
+}
+writeFileSync(join(packsDir, 'catalog.json'), catalogJson([built.entry]));
+
+const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+const level = (re) => [...built.files].filter(([p]) => re.test(p));
+const sum = (files) => files.reduce((n, [, b]) => n + Buffer.byteLength(b), 0);
+const gz = (files) => files.reduce((n, [, b]) => n + gzipSync(b).length, 0);
+const rows = [
+  ['1 root (index + map)', level(/\/root\./)],
+  ['2 shards (index + map)', level(/\/s\//)],
+  ['3 data blocks', level(/\/d\//)],
+];
+console.log(`pack ${spec.id} ${built.root.version}: ${prices.length} prices, ${guides.length} guides, ${built.root.shards.length} shards`);
+for (const [name, files] of rows) console.log(`  level ${name.padEnd(24)} ${String(files.length).padStart(3)} files  ${kb(sum(files)).padStart(9)}  gzip ${kb(gz(files))}`);
+console.log(`  wrote ${packsDir}/catalog.json, ${spec.id}/, ${spec.id}.json`);

@@ -7,7 +7,17 @@
     },
     "pack_url": {
       "defaultValue": { "value": "/packs/us-home.json" },
-      "description": "Knowledge pack to load; bump to roll out a new pack version",
+      "description": "Single-file knowledge pack (legacy shape, used by the current app shell and eval)",
+      "valueType": "STRING"
+    },
+    "pack_id": {
+      "defaultValue": { "value": "us-home" },
+      "description": "Layered knowledge pack to open from /packs/catalog.json; set per region or language with conditions",
+      "valueType": "STRING"
+    },
+    "pack_root": {
+      "defaultValue": { "value": "" },
+      "description": "Pin a layered pack root (e.g. us-home/root.<hash>.json) to roll back or stage a version; empty follows the catalog",
       "valueType": "STRING"
     },
     "lookup_enabled": {

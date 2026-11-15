@@ -1,0 +1,70 @@
+// English (US) lexicon for the knowledge layer. Language data, not pack data: it never reaches a user.
+// Synonyms are expanded at query time (the approach Elasticsearch recommends for synonyms that change),
+// so editing this list changes only the pack root, never a shard. Keep groups strict: two phrases belong
+// together only if a quote line using one would be priced like the other.
+
+import type { Lexicon } from './text.ts';
+
+export const LEXICON_EN: Lexicon = {
+  language: 'en',
+  stemmer: 'porter-en',
+  rewrite: [
+    ['a/c', 'ac'],
+    ['r&r', 'replace'],
+    ['r & r', 'replace'],
+    ['w/', 'with'],
+    ['sq ft', 'square foot'],
+    ['sq. ft.', 'square foot'],
+  ],
+  stop: [
+    // grammar
+    'a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'on', 'at', 'by', 'with', 'from', 'into', 'per', 'each',
+    'my', 'your', 'our', 'its', 'it', 'is', 'are', 'was', 'were', 'be', 'been', 'this', 'that', 'these', 'those',
+    'i', 'me', 'we', 'you', 'he', 'she', 'they', 'them', 'his', 'her', 'their', 'as', 'so', 'if', 'then', 'than',
+    'do', 'does', 'did', 'can', 'could', 'should', 'would', 'will', 'please', 'how', 'what', 'why', 'when', 'where',
+    'which', 'who', 'there', 'here', 'very', 'just', 'also', 'get', 'got', 'some', 'any', 'all',
+    // words on quotes and questions that say nothing about the job
+    'labor', 'labour', 'parts', 'qty', 'ea', 'item', 'items', 'line', 'total', 'subtotal', 'tax', 'estimate',
+    'est', 'incl', 'included', 'including', 'new', 'fair', 'price', 'cost', 'costs', 'usual', 'normal',
+  ],
+  synonyms: [
+    ['refrigerator', 'fridge'],
+    ['air conditioner', 'air conditioning', 'ac', 'hvac'],
+    ['faucet', 'tap'],
+    ['tire', 'tyre'],
+    ['windshield', 'windscreen'],
+    ['rotor', 'brake disc', 'brake disk'],
+    ['car', 'auto', 'vehicle'],
+    ['front', 'frt'],
+    ['rear', 'rr'],
+    ['garbage disposal', 'waste disposal', 'disposer', 'garburator'],
+    ['washing machine', 'washer'],
+    ['clothes dryer', 'tumble dryer'],
+    ['clogged', 'blocked', 'stopped up'],
+    ['outlet', 'receptacle', 'wall socket', 'power socket'],
+    ['screen', 'display'],
+    ['battery', 'batt'],
+    ['oil change', 'lube oil filter', 'lof'],
+    ['transmission', 'trans'],
+    ['coolant', 'antifreeze'],
+    ['smoke alarm', 'smoke detector', 'fire alarm'],
+    ['cockroach', 'roach'],
+    ['mold', 'mould'],
+    ['color', 'colour'],
+    ['aluminum', 'aluminium'],
+    ['gray', 'grey'],
+    ['tv', 'television'],
+    ['cell phone', 'cellphone', 'mobile phone', 'smartphone'],
+    ['doorknob', 'door knob', 'door handle'],
+    ['drywall', 'sheetrock', 'plasterboard', 'gypsum board'],
+    ['caulk', 'sealant'],
+    ['gfci', 'gfi'],
+    ['dishwasher', 'dish washer'],
+    ['showerhead', 'shower head'],
+    ['deadbolt', 'dead bolt'],
+    ['headlight', 'head light', 'headlamp'],
+    ['exterminator', 'pest control'],
+    ['locksmith', 'lock smith'],
+    ['handyman', 'handy man'],
+  ],
+};

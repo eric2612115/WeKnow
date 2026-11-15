@@ -5,7 +5,12 @@ import { app } from './firebase';
 
 export interface Settings {
   cloudModel: string;
+  /** The single-file pack (legacy shape, used by the current app shell and eval). */
   packUrl: string;
+  /** The layered pack to open from /packs/catalog.json (see docs/knowledge-layer.md). */
+  packId: string;
+  /** Pin a layered pack root, e.g. "us-home/root.<hash>.json", to roll back; empty follows the catalog. */
+  packRoot: string;
   lookupEnabled: boolean;
   urgencyPhrases: string[];
 }
@@ -13,6 +18,8 @@ export interface Settings {
 const DEFAULTS: Settings = {
   cloudModel: 'gemini-3.5-flash-lite',
   packUrl: '/packs/us-home.json',
+  packId: 'us-home',
+  packRoot: '',
   lookupEnabled: false,
   urgencyPhrases: [],
 };
@@ -27,6 +34,8 @@ export function settings(): Promise<Settings> {
       rc.defaultConfig = {
         cloud_model: DEFAULTS.cloudModel,
         pack_url: DEFAULTS.packUrl,
+        pack_id: DEFAULTS.packId,
+        pack_root: DEFAULTS.packRoot,
         lookup_enabled: false,
         urgency_phrases: '[]',
       };
@@ -41,6 +50,8 @@ export function settings(): Promise<Settings> {
       return {
         cloudModel: getValue(rc, 'cloud_model').asString() || DEFAULTS.cloudModel,
         packUrl: getValue(rc, 'pack_url').asString() || DEFAULTS.packUrl,
+        packId: getValue(rc, 'pack_id').asString() || DEFAULTS.packId,
+        packRoot: getValue(rc, 'pack_root').asString(),
         lookupEnabled: getValue(rc, 'lookup_enabled').asBoolean(),
         urgencyPhrases: phrases,
       };
