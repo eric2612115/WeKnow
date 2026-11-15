@@ -31,8 +31,10 @@ export const understandingJsonSchema = {
     problemRef: { type: ['string', 'null'] },
     payee: { type: ['string', 'null'] },
     payTo: { type: ['string', 'null'] },
+    urgent: { type: 'boolean' },
+    addressedToAI: { type: 'boolean' },
   },
-  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo'],
+  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo', 'urgent', 'addressedToAI'],
 };
 
 type LanguageModelGlobal = { availability?: (o?: unknown) => Promise<string> };

@@ -1,0 +1,24 @@
+{
+  "parameters": {
+    "cloud_model": {
+      "defaultValue": { "value": "gemini-3.5-flash-lite" },
+      "description": "Cloud model for reading photos when no on-device model is ready",
+      "valueType": "STRING"
+    },
+    "pack_url": {
+      "defaultValue": { "value": "/packs/us-home.json" },
+      "description": "Knowledge pack to load; bump to roll out a new pack version",
+      "valueType": "STRING"
+    },
+    "lookup_enabled": {
+      "defaultValue": { "value": "false" },
+      "description": "Search-grounded price lookup; needs a billed tier",
+      "valueType": "BOOLEAN"
+    },
+    "urgency_phrases": {
+      "defaultValue": { "value": "[\"urgent\",\"immediately\",\"final notice\",\"act now\",\"within 24 hours\",\"avoid disconnection\",\"gift card\",\"wire today\"]" },
+      "description": "Extra phrases that raise the urgency warning on bills; can only add warnings",
+      "valueType": "JSON"
+    }
+  }
+}

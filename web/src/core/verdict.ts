@@ -43,7 +43,7 @@ const AI_INSTRUCTION =
   /\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))/i;
 
 /**
- * Judge a bill from the model's fixed form plus the raw masked text, using rules only.
+ * Judge a bill from the model's fixed form plus any masked text read on the device, using rules only.
  * Text inside the bill can raise flags; it can never clear one.
  */
 export function billVerdict(u: Understanding, maskedText: string, known: KnownPayee[]): BillVerdict {
@@ -51,7 +51,7 @@ export function billVerdict(u: Understanding, maskedText: string, known: KnownPa
   const match = known.find((k) => u.payee && k.name.toLowerCase() === u.payee.toLowerCase());
   if (!match) flags.push('new-payee');
   else if (!u.payTo || u.payTo !== match.payTo) flags.push('changed-account');
-  if (URGENCY.test(maskedText)) flags.push('urgency');
-  if (AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
+  if (u.urgent || URGENCY.test(maskedText)) flags.push('urgency');
+  if (u.addressedToAI || AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
   return { safe: flags.length === 0, flags };
 }

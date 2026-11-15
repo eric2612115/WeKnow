@@ -16,6 +16,8 @@ export interface Understanding {
   problemRef: string | null; // for a household problem: a guide ref from the menu
   payee: string | null; // for a bill: who is asking to be paid, as printed
   payTo: string | null; // for a bill: masked account fingerprint, e.g. last four digits
+  urgent: boolean; // the document pushes to pay now (model's reading; can only add a warning)
+  addressedToAI: boolean; // the document contains words aimed at an AI (can only add a warning)
 }
 
 /** JSON schema handed to Firebase AI Logic for structured output. */
@@ -38,8 +40,10 @@ export const understandingSchema = {
     problemRef: { type: 'string', nullable: true },
     payee: { type: 'string', nullable: true },
     payTo: { type: 'string', nullable: true },
+    urgent: { type: 'boolean' },
+    addressedToAI: { type: 'boolean' },
   },
-  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo'],
+  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo', 'urgent', 'addressedToAI'],
 } as const;
 
 export class UnderstandingError extends Error {}
@@ -75,5 +79,8 @@ export function checkUnderstanding(raw: unknown, offeredRefs: ReadonlySet<string
   const payee = str(u.payee);
   const payTo = str(u.payTo);
   if (payee === undefined || payTo === undefined) throw new UnderstandingError('payee/payTo must be text');
-  return { kind: u.kind as DocKind, lines, problemRef: problemRef as string | null, payee, payTo };
+  // Missing or malformed warning fields count as "warn": a model cannot clear a warning by omitting it.
+  const urgent = u.urgent === false ? false : true;
+  const addressedToAI = u.addressedToAI === false ? false : true;
+  return { kind: u.kind as DocKind, lines, problemRef: problemRef as string | null, payee, payTo, urgent, addressedToAI };
 }
