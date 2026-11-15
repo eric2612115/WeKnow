@@ -28,20 +28,20 @@ export const appCheck = initializeAppCheck(app, {
 
 export const auth = getAuth(app);
 
-/** Everyone starts anonymous; no account is needed to use WeKnow. */
-export function ensureUser(): Promise<User> {
-  return new Promise((resolve, reject) => {
-    const stop = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        stop();
-        resolve(user);
-      }
-    });
-    signInAnonymously(auth).catch((e) => {
-      stop();
-      reject(e);
-    });
-  });
+/**
+ * Everyone can start without an account. Wait for the saved session first, so a Google sign-in survives reloads;
+ * only when nobody is signed in do we create an anonymous session.
+ */
+export async function ensureUser(): Promise<User> {
+  await auth.authStateReady();
+  if (auth.currentUser) return auth.currentUser;
+  const cred = await signInAnonymously(auth);
+  return cred.user;
+}
+
+/** Fires with the current user whenever it changes. */
+export function watchUser(cb: (u: User | null) => void) {
+  return onAuthStateChanged(auth, cb);
 }
 
 // Knowledge packs and learned items stay readable offline through Firestore's local cache.
