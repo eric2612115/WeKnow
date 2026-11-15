@@ -1,0 +1,10 @@
+{
+  "addAliases": {
+    "oil-change": ["engine oil and filter", "oil and filter", "lube oil filter", "LOF"],
+    "shop-supplies-fee": ["environmental disposal fee", "environmental fee", "hazardous waste disposal"]
+  },
+  "addProRefs": {
+    "diy-wiper-blades": ["wiper-blades"],
+    "diy-engine-air-filter": ["engine-air-filter"]
+  }
+}

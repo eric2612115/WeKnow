@@ -96,6 +96,24 @@ for (const f of readdirSync(join(root, 'packs-src')).filter((f) => f.endsWith('.
   }
   for (const g of extra.guides ?? []) guides.push({ ...g, aliases: g.aliases ?? [], proRefs: g.proRefs ?? [] });
 }
+// Small corrections to existing items without editing their source data: extra aliases (how shops write a line)
+// and pro prices a guide should point to. Only additions; every target ref must exist.
+for (const f of readdirSync(join(root, 'packs-src')).filter((f) => f.endsWith('.json')).sort()) {
+  const extra = JSON.parse(readFileSync(join(root, 'packs-src', f), 'utf8'));
+  for (const [ref, more] of Object.entries(extra.addAliases ?? {})) {
+    const item = [...prices, ...guides].find((x) => x.ref === ref);
+    if (!item) srcProblems.push(`packs-src/${f}: addAliases names unknown ref ${ref}`);
+    else item.aliases = [...new Set([...item.aliases, ...more])];
+  }
+  for (const [ref, refs] of Object.entries(extra.addProRefs ?? {})) {
+    const g = guides.find((x) => x.ref === ref);
+    if (!g) srcProblems.push(`packs-src/${f}: addProRefs names unknown guide ${ref}`);
+    else for (const r of refs) {
+      if (!prices.some((p) => p.ref === r)) srcProblems.push(`packs-src/${f}: addProRefs ${ref} -> unknown price ${r}`);
+      else if (!g.proRefs.includes(r)) g.proRefs = [...g.proRefs, r];
+    }
+  }
+}
 if (srcProblems.length) {
   console.error(`packs-src has ${srcProblems.length} problem(s):\n- ${srcProblems.join('\n- ')}`);
   process.exit(1);

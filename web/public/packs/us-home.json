@@ -3433,7 +3433,11 @@
     "oil and filter change",
     "oil service",
     "conventional oil change",
-    "car oil change"
+    "car oil change",
+    "engine oil and filter",
+    "oil and filter",
+    "lube oil filter",
+    "LOF"
    ],
    "unit": "job",
    "low": 35,
@@ -4587,7 +4591,9 @@
     "environmental fee",
     "environmental charge",
     "hazmat fee",
-    "hazardous materials fee"
+    "hazardous materials fee",
+    "environmental disposal fee",
+    "hazardous waste disposal"
    ],
    "unit": "invoice",
    "low": 5,
@@ -7199,7 +7205,9 @@
    "stopIf": [
     "The wiper arm is bent or the wipers do not move at all (motor or linkage problem)."
    ],
-   "proRefs": [],
+   "proRefs": [
+    "wiper-blades"
+   ],
    "sources": [
     {
      "url": "https://www.ifixit.com/Guide/Car+and+Truck+Wiper+Blades+Replacement/166672",
@@ -7283,7 +7291,9 @@
     "The air box is buried under other parts or needs a sensor unplugged that you are unsure about.",
     "You find oil inside the air box."
    ],
-   "proRefs": [],
+   "proRefs": [
+    "engine-air-filter"
+   ],
    "sources": [
     {
      "url": "https://www.fram.com/vehicle-maintenance-center/post/how-to-change-engine-air-filter",
