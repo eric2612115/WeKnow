@@ -7,6 +7,7 @@ import { guideByRef, proPrice } from './core/packs';
 import { deviceModelStatus, readPhoto, type Reading } from './reader';
 import { quoteVerdicts, billVerdict, type LineVerdict } from './core/verdict';
 import { maskText } from './core/pii';
+import { signInWithGoogle, signOut, watchAccount, type AccountState } from './account';
 
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
@@ -15,6 +16,31 @@ function lineText(v: LineVerdict): string {
   if (v.kind === 'high') return `${v.item.name}: ${money(v.amount)} is ${money(v.over)} above the usual top of ${money(v.item.high)}`;
   if (v.kind === 'low') return `${v.item.name}: ${money(v.amount)} is below the usual ${money(v.item.low)}`;
   return `${v.item.name}: ${money(v.amount)} is a fair price (${money(v.item.low)}–${money(v.item.high)})`;
+}
+
+function AccountBar() {
+  const [acct, setAcct] = useState<AccountState>();
+  const [msg, setMsg] = useState('');
+  useEffect(() => watchAccount(setAcct), []);
+  if (!acct) return null;
+  return (
+    <p>
+      {acct.signedIn ? (
+        <>
+          Signed in as {acct.name ?? acct.email}.{' '}
+          <button onClick={() => signOut().then(() => setMsg('Signed out.'))}>Sign out</button>
+        </>
+      ) : (
+        <>
+          Using WeKnow without an account.{' '}
+          <button onClick={() => signInWithGoogle().then((r) => setMsg(r)).catch((e) => setMsg(String(e)))}>
+            Sign in with Google
+          </button>
+        </>
+      )}{' '}
+      <small>{msg}</small>
+    </p>
+  );
 }
 
 export default function App() {
@@ -55,6 +81,7 @@ export default function App() {
   return (
     <main style={{ maxWidth: 640, margin: '0 auto', padding: 16, fontFamily: 'system-ui', fontSize: 18 }}>
       <h1>WeKnow</h1>
+      <AccountBar />
       <p>On-device model: {device}. Pack: {pack ? `${pack.prices.length} prices, ${pack.guides.length} guides` : 'loading'}</p>
       <input type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0])} />
       <p>
