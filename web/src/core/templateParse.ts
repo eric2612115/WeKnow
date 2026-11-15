@@ -23,8 +23,15 @@ export function lastFour(v: unknown): string | null {
   return digits.length >= 4 ? digits.slice(-4) : null;
 }
 
-/** Retry a cloud call on rate limits and transient server errors: wait 1 s, 2 s, 4 s, then give up. */
-export async function withRetry<T>(fn: () => Promise<T>, waits = [1000, 2000, 4000]): Promise<T> {
+/**
+ * Retry a cloud call on rate limits and transient server errors. When the server says how long to wait
+ * ("Please retry in 8.97s"), wait that long (at most 30 s); otherwise wait 1 s, 2 s, 4 s. Then give up.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  waits = [1000, 2000, 4000],
+  onWait?: (ms: number) => void,
+): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
@@ -32,7 +39,10 @@ export async function withRetry<T>(fn: () => Promise<T>, waits = [1000, 2000, 40
       const msg = String((e as Error)?.message ?? e);
       const transient = /\[(429|500|502|503|504)\b/.test(msg) || /RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded/i.test(msg);
       if (!transient || attempt >= waits.length) throw e;
-      await new Promise((r) => setTimeout(r, waits[attempt]));
+      const asked = msg.match(/retry in ([0-9.]+)s/i);
+      const ms = asked ? Math.min(30000, Math.ceil(Number(asked[1]) * 1000) + 500) : waits[attempt];
+      onWait?.(ms);
+      await new Promise((r) => setTimeout(r, ms));
     }
   }
 }

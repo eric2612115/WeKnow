@@ -39,4 +39,11 @@ describe('plain-code guards around the cloud', () => {
     await expect(withRetry(broken, [1, 1, 1])).rejects.toThrow('400');
     expect(m).toBe(1);
   });
+  it('waits as long as the server asks, capped at 30 s', async () => {
+    const waited: number[] = [];
+    let n = 0;
+    const once = () => (++n < 2 ? Promise.reject(new Error('[429 ] Please retry in 0.01s.')) : Promise.resolve('ok'));
+    await expect(withRetry(once, [5000], (ms) => waited.push(ms))).resolves.toBe('ok');
+    expect(waited[0]).toBeLessThan(1000);
+  });
 });
