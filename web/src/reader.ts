@@ -11,7 +11,7 @@ import type { Pack } from './core/packs';
 import { isKnowledge, knowledgeFromPack, type Candidate, type Knowledge } from './core/knowledge';
 import { BUDGETS, capLines, fitChoices } from './core/budget';
 import { checkUnderstanding, type Understanding } from './core/understanding';
-import { parseChoice, parseLine } from './core/templateParse';
+import { lastFour, parseChoice, parseLine, withRetry } from './core/templateParse';
 
 export type Where = 'device' | 'cloud';
 
@@ -163,10 +163,10 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
   const readText =
     where === 'cloud'
       ? (
-          await templates().generateContent({
+          await withRetry(() => templates().generateContent({
             templateId: TEMPLATES.read,
             templateVariables: { question: asked, photoType: image.type || 'image/jpeg', photoData: data },
-          })
+          }))
         ).response.text()
       : (
           await model(where, READ_SCHEMA, 'read', true).generateContent([
@@ -211,7 +211,7 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
   if (askable.length) {
     let choices: Array<{ i: number; ref: string | null }>;
     if (where === 'cloud') {
-      const c = await templates().generateContent({ templateId: TEMPLATES.choose, templateVariables: { items: itemsText(askable) } });
+      const c = await withRetry(() => templates().generateContent({ templateId: TEMPLATES.choose, templateVariables: { items: itemsText(askable) } }));
       const out = JSON.parse(c.response.text()) as { choices?: unknown[] };
       choices = (out.choices ?? []).map(parseChoice).filter((x): x is { i: number; ref: string | null } => !!x);
     } else {
@@ -235,7 +235,7 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
     lines: read.kind === 'quote' ? lines.map((l, i) => ({ label: l.label, amount: l.amount, ref: chosen.get(i) ?? null })) : [],
     problemRef: read.kind === 'problem' ? chosen.get(0) ?? null : null,
     payee: read.payee ?? null,
-    payTo: read.payTo ?? null,
+    payTo: lastFour(read.payTo),
     urgent: read.urgent,
     addressedToAI: read.addressedToAI,
   };

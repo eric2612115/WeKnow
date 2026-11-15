@@ -16,3 +16,23 @@ export function parseChoice(s: unknown): { i: number; ref: string | null } | nul
   return { i: Number(m[1]), ref: m[2].toLowerCase() === 'none' ? null : m[2] };
 }
 
+
+/** Whatever the model returned for an account, keep only its last four digits (or nothing). Plain code, not trust. */
+export function lastFour(v: unknown): string | null {
+  const digits = String(v ?? '').replace(/\D/g, '');
+  return digits.length >= 4 ? digits.slice(-4) : null;
+}
+
+/** Retry a cloud call on rate limits and transient server errors: wait 1 s, 2 s, 4 s, then give up. */
+export async function withRetry<T>(fn: () => Promise<T>, waits = [1000, 2000, 4000]): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = String((e as Error)?.message ?? e);
+      const transient = /\[(429|500|502|503|504)\b/.test(msg) || /RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded/i.test(msg);
+      if (!transient || attempt >= waits.length) throw e;
+      await new Promise((r) => setTimeout(r, waits[attempt]));
+    }
+  }
+}
