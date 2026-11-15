@@ -67,7 +67,8 @@ the rules also miss. It cannot clear a warning, invent a price, or move money; W
 
 | Run | Cases | Correct | Leaks | Median latency | Source |
 |---|---|---|---|---|---|
-| Cloud, gemini-3.5-flash-lite, free tier, 2026-11-16 | 50 (25 quotes, 25 bills) | 50 | 0 | 19.8 s | `docs/eval/cloud-2026-11-16.json` |
+| Cloud, three-step reader via server prompt templates, free tier, 2026-11-16 | 50 (25 quotes, 25 bills) | 50 | 0 | 2.8 s | `docs/eval/cloud-templates-2026-11-16.json` |
+| On-device, Apple model, iOS Simulator, 2026-11-16 | 2 fixtures (brake quote x4, changed-account bill) | all | 0 | 25–50 s in the simulator | `design/screens/ios/` |
 | On-device, Chrome Gemini Nano | TODO | TODO | TODO | TODO | TODO |
 
 The set is synthetic: fictional quotes built from pack items at fair, high and low prices plus unknown lines, and bills

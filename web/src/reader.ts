@@ -176,6 +176,11 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
         ).response.text();
   const parsed = JSON.parse(readText) as Record<string, unknown>;
   if (Array.isArray(parsed.lines)) parsed.lines = parsed.lines.map((l) => (typeof l === 'string' ? parseLine(l) : l));
+  // The template must fill every field; 'none' (or an empty string) means the photo does not have it.
+  for (const k of ['problem', 'payee', 'payTo'] as const) {
+    const v = parsed[k];
+    if (v === undefined || v === '' || (typeof v === 'string' && /^(none|null|n\/a)$/i.test(v.trim()))) parsed[k] = null;
+  }
   const read = parsed as unknown as {
     kind: string;
     lines: Array<{ label: string; amount: number | null }>;

@@ -1,0 +1,370 @@
+{
+ "date": "2026-11-16",
+ "where": "cloud",
+ "reader": "three-step reader (read template, local candidates from the layered pack, choose template)",
+ "templates": [
+  "weknow-read-photo-v1",
+  "weknow-choose-v1"
+ ],
+ "model": "gemini-3.5-flash-lite",
+ "plan": "Gemini Developer API free tier (Spark), paced to 15 requests/minute",
+ "run_from": "localhost dev server, same code as commit b217e64 plus the 'none' mapping",
+ "cases": 50,
+ "correct": 50,
+ "leaked": 0,
+ "median_ms": 2516,
+ "p90_ms": 3609,
+ "max_ms": 4957,
+ "rows": [
+  {
+   "id": "quote-000",
+   "where": "cloud",
+   "ms": 3517,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-001",
+   "where": "cloud",
+   "ms": 3255,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-002",
+   "where": "cloud",
+   "ms": 3127,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-003",
+   "where": "cloud",
+   "ms": 3191,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-004",
+   "where": "cloud",
+   "ms": 4111,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-005",
+   "where": "cloud",
+   "ms": 3002,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-006",
+   "where": "cloud",
+   "ms": 3245,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-007",
+   "where": "cloud",
+   "ms": 3490,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-008",
+   "where": "cloud",
+   "ms": 3333,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-009",
+   "where": "cloud",
+   "ms": 3247,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-010",
+   "where": "cloud",
+   "ms": 4793,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-011",
+   "where": "cloud",
+   "ms": 3440,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-012",
+   "where": "cloud",
+   "ms": 3062,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-013",
+   "where": "cloud",
+   "ms": 3010,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-014",
+   "where": "cloud",
+   "ms": 2785,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-015",
+   "where": "cloud",
+   "ms": 3100,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-016",
+   "where": "cloud",
+   "ms": 3558,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-017",
+   "where": "cloud",
+   "ms": 3241,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-018",
+   "where": "cloud",
+   "ms": 3131,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-019",
+   "where": "cloud",
+   "ms": 3425,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-020",
+   "where": "cloud",
+   "ms": 3139,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-021",
+   "where": "cloud",
+   "ms": 3846,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-022",
+   "where": "cloud",
+   "ms": 4367,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-023",
+   "where": "cloud",
+   "ms": 4957,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "quote-024",
+   "where": "cloud",
+   "ms": 3609,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-000",
+   "where": "cloud",
+   "ms": 1450,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-001",
+   "where": "cloud",
+   "ms": 1738,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-002",
+   "where": "cloud",
+   "ms": 1790,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-003",
+   "where": "cloud",
+   "ms": 1630,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-004",
+   "where": "cloud",
+   "ms": 2065,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-005",
+   "where": "cloud",
+   "ms": 2247,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-006",
+   "where": "cloud",
+   "ms": 1500,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-007",
+   "where": "cloud",
+   "ms": 2067,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-008",
+   "where": "cloud",
+   "ms": 2021,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-009",
+   "where": "cloud",
+   "ms": 1770,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-010",
+   "where": "cloud",
+   "ms": 2188,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-011",
+   "where": "cloud",
+   "ms": 1537,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-012",
+   "where": "cloud",
+   "ms": 1620,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-013",
+   "where": "cloud",
+   "ms": 1738,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-014",
+   "where": "cloud",
+   "ms": 2013,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-015",
+   "where": "cloud",
+   "ms": 1708,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-016",
+   "where": "cloud",
+   "ms": 1598,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-017",
+   "where": "cloud",
+   "ms": 1812,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-018",
+   "where": "cloud",
+   "ms": 1930,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-019",
+   "where": "cloud",
+   "ms": 1546,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-020",
+   "where": "cloud",
+   "ms": 2017,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-021",
+   "where": "cloud",
+   "ms": 1625,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-022",
+   "where": "cloud",
+   "ms": 1642,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-023",
+   "where": "cloud",
+   "ms": 1824,
+   "ok": true,
+   "leaked": false
+  },
+  {
+   "id": "bill-024",
+   "where": "cloud",
+   "ms": 2081,
+   "ok": true,
+   "leaked": false
+  }
+ ]
+}
