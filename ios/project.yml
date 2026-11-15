@@ -1,0 +1,63 @@
+# XcodeGen spec for the WeKnow iPhone app. `xcodegen generate` in this folder rebuilds WeKnow.xcodeproj.
+# The knowledge pack and the sample pictures are read from the web app's folders, so both apps use the same files.
+name: WeKnow
+options:
+  bundleIdPrefix: dev.weknow
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: "13.2.0"
+targets:
+  WeKnow:
+    type: application
+    platform: iOS
+    sources:
+      - path: WeKnow
+        excludes:
+          - "GoogleService-Info*.plist"
+      - path: ../web/public/packs/us-home.json
+        buildPhase: resources
+      - path: ../web/fixtures/quote-brakes.png
+        buildPhase: resources
+      - path: ../web/fixtures/bill-changed-account.png
+        buildPhase: resources
+    info:
+      path: WeKnow/Info.plist
+      properties:
+        CFBundleDisplayName: WeKnow
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSCameraUsageDescription: WeKnow looks at the paper or the thing you point at. The picture stays on this phone unless you say yes.
+        NSPhotoLibraryUsageDescription: Choose a picture of a quote, a bill or a problem at home for WeKnow to check.
+    # WeKnow/GoogleService-Info.plist is git-ignored. When it is there it is copied into the app; without it the
+    # app still builds and reads on the device, and says the internet path is not set up.
+    postBuildScripts:
+      - name: Copy Firebase config if present
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ -f "${SRCROOT}/WeKnow/GoogleService-Info.plist" ]; then
+            cp "${SRCROOT}/WeKnow/GoogleService-Info.plist" "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/"
+          else
+            echo "warning: no WeKnow/GoogleService-Info.plist; the internet path is off (see GoogleService-Info.example.plist)"
+          fi
+    dependencies:
+      - package: Firebase
+        product: FirebaseAILogic
+      - package: Firebase
+        product: FirebaseAppCheck
+      - package: Firebase
+        product: FirebaseCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.weknow.app
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_USER_SCRIPT_SANDBOXING: NO

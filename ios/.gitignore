@@ -1,0 +1,8 @@
+# Your own Firebase app config (copy WeKnow/GoogleService-Info.example.plist and fill it in, or download it
+# from the Firebase console). It holds only public identifiers, but each builder should use their own project.
+WeKnow/GoogleService-Info.plist
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+.swiftpm/
