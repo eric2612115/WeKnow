@@ -7437,6 +7437,943 @@
      "fetched": "2026-11-12"
     }
    ]
+  },
+  {
+   "ref": "diy-soy-sauce-stain",
+   "category": "cleaning",
+   "name": "Get a soy sauce stain out of clothes (fresh or dried)",
+   "aliases": [
+    "soy sauce on my shirt",
+    "soy sauce stain",
+    "soy sauce on my clothes",
+    "spilled soy sauce on my pants",
+    "dried soy sauce stain",
+    "old soy sauce stain",
+    "brown sauce stain on my shirt",
+    "soy sauce spill on clothing"
+   ],
+   "minutes": [
+    15,
+    45
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Scrape off any extra sauce with a spoon or a blunt knife.",
+    "Blot the spot with a paper towel. Do not rub it.",
+    "Turn the garment inside out and rinse the stain under cold running water.",
+    "Pour a little liquid laundry detergent on the stain and rub it in gently with your fingers.",
+    "Let it sit about 10 minutes, then rinse with cold water.",
+    "Dried or still there? Soak it 15 to 30 minutes in warm water with color-safe bleach.",
+    "Rub a laundry stain remover into the spot and let it sit up to 10 minutes.",
+    "Wash it in the warmest water the care label allows.",
+    "Check the spot before drying. If any stain is left, repeat and wash again."
+   ],
+   "safety": [
+    "Test any cleaner on a hidden seam first; some can change the color.",
+    "Do not mix color-safe bleach with chlorine bleach.",
+    "Never put a stained garment in the dryer; heat can set the stain for good."
+   ],
+   "stopIf": [
+    "The label says dry clean only. Take it to a dry cleaner instead.",
+    "The color bleeds or changes when you test the cleaner."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "First, scrape away any food using a blunt knife or spoon, then blot the excess sauce with a napkin or paper towel to soak up as much of the condiment as possible.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "Avoid rubbing at the stain, as this can force it deeper into the fabric.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "Turn the garment inside out and rinse the back of the affected area with cold running water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "spot treat the soy sauce stain by directly pouring liquid laundry detergent onto the blemished area. Rub the detergent into the stain very gently using your fingers",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "Let it sit on the stain for around 10 minutes and then rinse using cold water before washing.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "Wash the garment according to the hottest temperature written on the label’s care instructions.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "check the soy sauce stain to see if it has completely gone before drying the item on a clothesline or a dryer, as stains can set once dried.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "If the stain is still present, try the same tips as above and repeat the washing process.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/remove-soy-sauce-stains.html",
+     "title": "How to Remove Soy Sauce Stains | Persil®",
+     "quote": "If your garment is dry clean only, then be sure to take the clothing item to a professional for cleaning before performing any stain removal steps yourself.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-sauce-soy-worcestershire-steak/",
+     "title": "Remove Stains From Sauce (Soy, Worcestershire, Steak) | Textiles (UGA Cooperative Extension)",
+     "quote": "Soak in warm water and sodium perborate bleach for 15 – 30 minutes. Apply commercial pre-wash spot and stain remover to stain. Wash with heavy-duty detergent and bleach safe for fabric.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/products/",
+     "title": "Products | Textiles (UGA Cooperative Extension)",
+     "quote": "Safe for virtually all colored washable fabrics. However, testing on colored fabrics is recommended.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/products/",
+     "title": "Products | Textiles (UGA Cooperative Extension)",
+     "quote": "If color does not bleed or there is no color change, the bleach may be used.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/products/",
+     "title": "Products | Textiles (UGA Cooperative Extension)",
+     "quote": "Chlorine bleach stops the bleaching and stain removal action of sodium perborate bleach so do not use in combination.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.oxiclean.com/en/stain-solutions/how-to-remove-soy-sauce-stains",
+     "title": "How to Get Soy Sauce Out of Clothes | OxiClean™",
+     "quote": "Both fresh and set-in soy sauce stains can be removed with a stain remover",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.oxiclean.com/en/stain-solutions/how-to-remove-soy-sauce-stains",
+     "title": "How to Get Soy Sauce Out of Clothes | OxiClean™",
+     "quote": "Rub into fabric and let stand for up to 10 minutes depending on the severity of the soy sauce stain.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Work from the inside of the garment or back of the stain to force the stain out rather than into the fabric.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Pretreatments can change a garment’s color. Before using, test it in an inconspicuous area on the garment, such as a hem or seam allowance.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://agrilifeextension.tamu.edu/wp-content/uploads/2025/04/Quick-Stain-Removal-Guide.pdf",
+     "title": "Quick Stain Removal Guide: Washable fabrics (L-5199) | Texas A&M AgriLife Extension",
+     "quote": "Never dry a stained garment in the dryer, or it may become impossible to remove.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-sneakers-clean",
+   "category": "cleaning",
+   "name": "Clean white canvas or leather sneakers by hand",
+   "aliases": [
+    "dirty white sneakers",
+    "clean my canvas shoes",
+    "white leather sneakers are dirty",
+    "wash sneakers by hand",
+    "clean my tennis shoes",
+    "muddy sneakers",
+    "dirty shoes",
+    "clean white shoes"
+   ],
+   "minutes": [
+    20,
+    40
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Take out the laces and soak them in a bowl of warm, soapy water.",
+    "Stuff the shoes with crumpled newspaper so they keep their shape.",
+    "Brush off loose dirt with a dry, soft brush or an old toothbrush.",
+    "Mix warm water with a small amount of dish soap or mild laundry detergent.",
+    "Dip the brush in the soapy water and scrub the soles.",
+    "Gently brush the canvas or leather tops. Do not scrub hard.",
+    "Rinse the brush in clean warm water and wipe the soap off the shoes.",
+    "Blot the shoes with a dry towel to soak up the water.",
+    "Let shoes and laces air dry at room temperature, out of direct sun."
+   ],
+   "safety": [
+    "Do not put sneakers in the washing machine or the dryer; heat can bend them out of shape.",
+    "Use only a little soap; too much can stain leather or strip its oils.",
+    "Let them dry fully before wearing; it can take 8 hours or more."
+   ],
+   "stopIf": [
+    "The shoes are suede. Water can harm suede, so do not wash them this way.",
+    "They still look dirty after you repeat the steps; it may be time for a new pair."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Remove the shoelaces and apply a small amount of the mild cleaning solution to them. Massage the laces with your hands, rinse, then dab dry with a soft cloth.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "place the shoes in a shoe tree or fill them with crumpled newspapers to help retain their shape during cleaning.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Remove loose dirt from the outsole, midsole and uppers using a dry, soft-bristled shoe brush.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Mix warm water with a small amount of mild laundry detergent or dish soap.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Apply the mild cleaning solution to a soft-bristled brush, toothbrush or washcloth. Clean the outsole and midsole thoroughly",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Apply the mild solution to a soft-bristled brush, toothbrush or damp cloth to clean the uppers. Brush gently to avoid damaging the material.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Avoid scrubbing the shoes too hard, or you could damage the leather.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "use a dry microfiber towel or soft cloth to blot and lift as much soapy moisture and dirt from the surface as possible.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Air dry the sneakers at room temperature. Always allow shoes to dry completely before wearing them for your next workout or activity. For many shoes, it can take at least 8 hours to fully dry.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "Delicate shoe materials can be damaged in the washer, and the heat from the dryer can deform a pair of shoes.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "On certain materials, using a high concentration of dish soap can cause discoloration or strip out natural oils in the material.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.nike.com/a/how-to-clean-shoes",
+     "title": "How to Clean Your Shoes in 6 Easy Steps. Nike.com",
+     "quote": "If shoes still look dirty after following and repeating the recommended cleaning steps, it might be time for a new pair of sneakers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.adidas.com/us/blog/342728-how-to-clean-your-canvas-and-leather-sneakers",
+     "title": "How to Clean Your Canvas and Leather Sneakers | adidas US",
+     "quote": "If the laces are black or pigmented, place them in a bowl with warm water and dish soap.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.adidas.com/us/blog/342728-how-to-clean-your-canvas-and-leather-sneakers",
+     "title": "How to Clean Your Canvas and Leather Sneakers | adidas US",
+     "quote": "don’t scrub too hard, as it may cause fraying or fading. Instead, use a soft brush or cloth to clean the surface gently.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.adidas.com/us/blog/342728-how-to-clean-your-canvas-and-leather-sneakers",
+     "title": "How to Clean Your Canvas and Leather Sneakers | adidas US",
+     "quote": "Pour out the solution and refill the bowl with warm water; dip your brush into this fresh water to wipe away any soapy residue on your shoe.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.adidas.com/us/blog/342728-how-to-clean-your-canvas-and-leather-sneakers",
+     "title": "How to Clean Your Canvas and Leather Sneakers | adidas US",
+     "quote": "After you clean your canvas shoes, place them on a towel away from direct sunlight and allow them to air dry.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.adidas.com/us/blog/342728-how-to-clean-your-canvas-and-leather-sneakers",
+     "title": "How to Clean Your Canvas and Leather Sneakers | adidas US",
+     "quote": "Suede is almost always spot cleaned because water can harm the material.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.adidas.com/us/blog/how-to-clean-shoes",
+     "title": "How To Clean Shoes | adidas US",
+     "quote": "If you don’t have sneaker cleaning solution at home you can use dish soap and warm water instead.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-tv-no-picture",
+   "category": "device",
+   "name": "TV turns on but the screen stays black (safe checks)",
+   "aliases": [
+    "tv screen is black",
+    "tv turns on but no picture",
+    "tv has sound but no picture",
+    "black screen on my tv",
+    "tv says no signal",
+    "television screen stays dark",
+    "blank tv screen",
+    "tv picture went out"
+   ],
+   "minutes": [
+    5,
+    20
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Press Home or Menu on the remote. If a menu shows, the screen works.",
+    "If nothing happens, point the remote at a phone camera and press Power.",
+    "No light on the phone screen? Put fresh batteries in the remote and try again.",
+    "Press Input or Source and choose the input your box is plugged into.",
+    "Make sure the cable box, streaming stick or game console is turned on.",
+    "Unplug each video cable and push it back in firmly, at both ends.",
+    "Turn off the TV and the box, then unplug both from the wall.",
+    "Wait one full minute, plug them back in, and turn them on.",
+    "Still black? Try a different HDMI port on the TV, or a different HDMI cable."
+   ],
+   "safety": [
+    "Never open the back of the TV. There is high voltage inside and nothing you can fix.",
+    "Unplug by pulling the plug, not the cord, and never with wet hands."
+   ],
+   "stopIf": [
+    "You hear strange sounds or smell burning. Unplug it and call for service.",
+    "The screen is cracked or the TV was dropped.",
+    "There is still no picture from any input or device. The TV needs service."
+   ],
+   "proRefs": [],
+   "sources": [
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002233/",
+     "title": "Samsung TV has no picture or shows a black screen",
+     "quote": "Press the Home (Menu) button on the remote. If the menu appears, then the TV is powered on, but it is either not on the correct source or not receiving a signal.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002233/",
+     "title": "Samsung TV has no picture or shows a black screen",
+     "quote": "Your TV may display a black screen if it's connected to a source but the external device is turned off.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002233/",
+     "title": "Samsung TV has no picture or shows a black screen",
+     "quote": "unplug and reconnect the connections one cable at a time, from both ends of each cable. If there's any damage to the cable, it will need to be replaced.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002233/",
+     "title": "Samsung TV has no picture or shows a black screen",
+     "quote": "Try connecting a different device, or using a different source port. If you were unable to test the cable in the previous step, then try swapping the cable as well.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002233/",
+     "title": "Samsung TV has no picture or shows a black screen",
+     "quote": "If there's still no picture on your TV, visit the Support Center to request service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002214/",
+     "title": "Samsung remote is not working",
+     "quote": "Point the remote at the camera, and then press and hold the Power button on the remote. As you hold the button down, look at the camera's screen.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002214/",
+     "title": "Samsung remote is not working",
+     "quote": "If you do not see the IR light, replace the batteries with fresh ones and try again.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10002361/",
+     "title": "Samsung TV takes a while to turn on or has other glitches",
+     "quote": "With the TV turned on, unplug the TV's power cord from the power outlet. Wait 30 seconds. Plug the TV power cord back into the power outlet. Turn the TV on.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/us-tv-troubleshooting/my-tv-is-on-but-there-is-no-picture-or-sound",
+     "title": "TCL — My TV Is On, but There Is No Picture or Sound",
+     "quote": "Press Input or Source on the remote and select the correct input.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/us-tv-troubleshooting/my-tv-is-on-but-there-is-no-picture-or-sound",
+     "title": "TCL — My TV Is On, but There Is No Picture or Sound",
+     "quote": "Make sure your cable box, game console, streaming device, Blu-ray player, or other connected device is turned on.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/us-tv-troubleshooting/my-tv-is-on-but-there-is-no-picture-or-sound",
+     "title": "TCL — My TV Is On, but There Is No Picture or Sound",
+     "quote": "Unplug the TV and connected device from power for 60 seconds, then plug them back in.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/us-tv-troubleshooting/my-tv-is-on-but-there-is-no-picture-or-sound",
+     "title": "TCL — My TV Is On, but There Is No Picture or Sound",
+     "quote": "Try a different HDMI cable.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://support.tcl.com/us-tv-troubleshooting/my-tv-is-on-but-there-is-no-picture-or-sound",
+     "title": "TCL — My TV Is On, but There Is No Picture or Sound",
+     "quote": "Try a different HDMI port on the TV.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/uk/support/basic-product-guide-tv/",
+     "title": "Basic Product Guide: TV | Samsung United Kingdom",
+     "quote": "TO REDUCE THE RISK OF ELECTRIC SHOCK, DO NOT REMOVE COVER (OR BACK). THERE ARE NO USER SERVICEABLE PARTS INSIDE. REFER ALL SERVICING TO QUALIFIED PERSONNEL.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/uk/support/basic-product-guide-tv/",
+     "title": "Basic Product Guide: TV | Samsung United Kingdom",
+     "quote": "When unplugging the power cord from a wall outlet, always pull on the power cord's plug. Never unplug it by pulling on the power cord. Do not touch the power cord with wet hands.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/uk/support/basic-product-guide-tv/",
+     "title": "Basic Product Guide: TV | Samsung United Kingdom",
+     "quote": "if there are any unusual sounds or smells coming from it - unplug it immediately and contact an authorised dealer or Samsung service centre.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/uk/support/basic-product-guide-tv/",
+     "title": "Basic Product Guide: TV | Samsung United Kingdom",
+     "quote": "If the product is damaged, disconnect the power cord and contact a Samsung service centre.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-washer-shaking",
+   "category": "appliance",
+   "name": "Washing machine is loud or shakes during spin",
+   "aliases": [
+    "washing machine shaking",
+    "washer is loud when spinning",
+    "washer walking across the floor",
+    "washing machine banging",
+    "washer vibrates a lot",
+    "new washer shakes violently",
+    "washer off balance",
+    "unbalanced washer"
+   ],
+   "minutes": [
+    10,
+    30
+   ],
+   "difficulty": 2,
+   "steps": [
+    "Stop the cycle and spread the wet laundry evenly around the drum.",
+    "Untangle sheets or blankets; tangled bulky items throw the load off balance.",
+    "If the drum is packed tight, take some items out so clothes move freely.",
+    "Grip the top and rock the washer. All four feet should stay on the floor.",
+    "If a corner wobbles, loosen that leg's lock nut, if it has one, and turn the leg.",
+    "Once it stops rocking, tighten the lock nuts back against the washer.",
+    "New front-loader? Open the door and push the drum. If it feels solid, shipping bolts are still in.",
+    "Remove the bolts from the back with the supplied wrench, then plug the holes with the caps.",
+    "Run a small load to check that the shaking has stopped."
+   ],
+   "safety": [
+    "Slide the washer gently; too much force can damage its feet.",
+    "Keep the shipping bolts in case you move the washer later."
+   ],
+   "stopIf": [
+    "Squealing or grinding keeps happening even with a light load.",
+    "The noise or shaking continues after balancing and leveling.",
+    "You smell burning after the first two washes."
+   ],
+   "proRefs": [
+    "washer-repair"
+   ],
+   "sources": [
+    {
+     "url": "https://producthelp.whirlpool.com/Laundry/Washers/Product_Info/Washer_Product_Assistance/Washer_is_Vibrating,_Walking_or_Moving",
+     "title": "Washer is Vibrating, Walking or Moving - Product Help | Whirlpool",
+     "quote": "When clothes are distributed unevenly in the drum, it can cause the washer to become unstable during the spin cycle, leading to unwanted vibrations.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Laundry/Washers/Product_Info/Washer_Product_Assistance/Washer_is_Vibrating,_Walking_or_Moving",
+     "title": "Washer is Vibrating, Walking or Moving - Product Help | Whirlpool",
+     "quote": "always try to load your washer with a balanced mix of items, placing heavier articles around lighter ones. Avoid tightly packing the load. Clothing should move freely within the washer.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Laundry/Washers/Product_Info/Washer_Product_Assistance/Washer_is_Vibrating,_Walking_or_Moving",
+     "title": "Washer is Vibrating, Walking or Moving - Product Help | Whirlpool",
+     "quote": "Grip the washer from the top and rock back and forth, ensuring all four feet are firmly on the floor. Repeat, rocking the washer from side to side.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Laundry/Washers/Product_Info/Washer_Product_Assistance/Washer_is_Vibrating,_Walking_or_Moving",
+     "title": "Washer is Vibrating, Walking or Moving - Product Help | Whirlpool",
+     "quote": "You can easily adjust the feet by twisting them until the washer is stable and doesn’t rock back and forth.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://producthelp.whirlpool.com/Laundry/Washers/Product_Info/Washer_Product_Assistance/Washer_is_Vibrating,_Walking_or_Moving",
+     "title": "Washer is Vibrating, Walking or Moving - Product Help | Whirlpool",
+     "quote": "shipping bolts are not a permanent part of your washer and must be removed after the washer is installed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "When washing bed sheets, blankets, or other large items that absorb a lot of water, they can become tangled and then cause unbalanced loads. In this case, manually redistribute the load to even out the weight distribution.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Use a flat blade screwdriver to loosen the locking nut of the legs you'll be adjusting.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Turn the adjustable legs clockwise to raise that corner of the washer, and counterclockwise to lower that corner of the washer.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Just like before, use a flat blade screwdriver to tighten the locking nut up against the washer.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "just open the door and push against the drum.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "If the drum feels like it's connected to a rock when you push against it and has almost no give at all, the shipping bolts are not removed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "To remove a bolt, first loosen it with the supplied spanner, slide it and its spacer up, and then finally pull it out of the hole.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Fill the holes with the supplied plastic covers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Run the washer with a small load of laundry to determine that it does not shake or vibrate.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Gently slide the washer into position. Excessive force may damage the leveling feet.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007111/",
+     "title": "Samsung washing machine is shaking too much",
+     "quote": "Keep the shipping bolts and spacers for future use.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007169/",
+     "title": "Samsung washing machine is too noisy",
+     "quote": "If this type of noise occurs, immediately stop the cycle and reduce the weight of the load. In most cases, this noise is due to overloading.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007169/",
+     "title": "Samsung washing machine is too noisy",
+     "quote": "run a cycle with approximately 4 soaking wet bath towels (or a load with similar weight). If the noise occurs during this cycle, visit our Support Center to request service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007169/",
+     "title": "Samsung washing machine is too noisy",
+     "quote": "If the issue continues, visit our Support Center to request service.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.samsung.com/us/support/troubleshoot/TSG10007246/",
+     "title": "Samsung washing machine or laundry smells bad",
+     "quote": "However, if a burning smell occurs after the first two cycles, visit our Support Center to request service.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-carpet-coffee-wine",
+   "category": "cleaning",
+   "name": "Coffee or red wine spilled on carpet",
+   "aliases": [
+    "coffee on the carpet",
+    "spilled coffee on the rug",
+    "red wine on the carpet",
+    "wine stain on the rug",
+    "spilled wine on carpet",
+    "coffee stain on carpet",
+    "drink spilled on the carpet",
+    "dropped my coffee on the rug"
+   ],
+   "minutes": [
+    15,
+    30
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Act fast. Blot up the spill with a dry white cloth or white paper towels.",
+    "Mix a quarter teaspoon of dish soap into one cup of lukewarm water.",
+    "Test it on a hidden bit of carpet first to make sure the color holds.",
+    "Dab a little on the stain with a white cloth, edge to center. Do not rub.",
+    "Leave it a few minutes, then blot. Repeat while the stain keeps lifting.",
+    "If a mark is left, blot with one cup white vinegar mixed into two cups water.",
+    "Rinse with a little cold water and blot until dry.",
+    "Cover with paper towels, weigh them down with a book, and leave a few hours.",
+    "Brush the carpet pile with your hand and let it air dry."
+   ],
+   "safety": [
+    "Use hand dish soap only. Laundry or dishwasher detergent can dye or bleach carpet.",
+    "Never make the soap mix stronger; leftover soap makes the spot get dirty fast.",
+    "Do not soak the carpet. Use small amounts and blot after each rinse."
+   ],
+   "stopIf": [
+    "The test spot changes color. Do not use that mix.",
+    "The stain will not lift after several tries. Call a carpet cleaner."
+   ],
+   "proRefs": [
+    "carpet-cleaning"
+   ],
+   "sources": [
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Act Quickly! Delaying may cause the spill to become a permanent stain. Blot liquids with a dry, white absorbent cloth or white paper towels.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/wine/",
+     "title": "Wine - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Act Quickly! Delaying may cause the spill to become a permanent stain. Blot liquids with a dry, white absorbent cloth or white paper towels.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Detergent Solution – Mix one fourth (1/4) teaspoon of a liquid dish washing detergent per one (1) cup of lukewarm water. NEVER USE A STRONGER CONCENTRATION!",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Pretest any spot removal solution (for color transfer to the cloth or damage to the carpet) in an inconspicuous area. If a change occurs, select another solution.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Apply a small amount of the solution to a white cloth, and work in gently – do not rub — working from the edges of the spill to the center to prevent spreading.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Allow to remain on the spill a few minutes. Be patient. Blot.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Continue to use the first agent as long as there is a transfer of the spill to the cloth. Be patient. Complete removal may require repeating the same step several times.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Vinegar Solution – Mix one (1) cup of WHITE vinegar per two (2) cups of water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "When the spill is completely removed, rinse the area with cold water; blot with a dry cloth until all moisture is removed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Never use a laundry detergent of any type, because laundry detergents may contain optical brighteners (fluorescent dyes) that dye the fiber.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Do not select an automatic dish washing detergent because many contain bleaching agents that destroy dyes and some fibers.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Thorough rinsing is necessary to remove detergent residues that may cause rapid soiling.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "A mist type sprayer is recommended to prevent overwetting. Blot with paper towels and pat dry after each rinse.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://carpet-rug.org/spot-solver/coffee/",
+     "title": "Coffee - The Carpet and Rug Institute (Spot Solver)",
+     "quote": "Professional cleaners have the ability and the equipment to use more aggressive cleaning solutions to remove stubborn spills.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-coffee-tea/",
+     "title": "Remove Stains From Coffee, Tea | Textiles (UGA Cooperative Extension)",
+     "quote": "Mix 1/3 cup of white household vinegar with 2/3 cups of water.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-coffee-tea/",
+     "title": "Remove Stains From Coffee, Tea | Textiles (UGA Cooperative Extension)",
+     "quote": "Place a 1/2 inch layer of dry absorbent material (cloths or paper towels) over the area and weight it down with a book.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-coffee-tea/",
+     "title": "Remove Stains From Coffee, Tea | Textiles (UGA Cooperative Extension)",
+     "quote": "If the absorbent material becomes wet, replace it with dry absorbent material. Leave it for several hours.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-alcoholic-beverages-beer-wine/",
+     "title": "Remove Stains From Alcoholic Beverages, Beer, Wine | Textiles (UGA Cooperative Extension)",
+     "quote": "Always wipe up spilled drinks promptly. Sponge immediately with cool water to dilute the stain, trying to keep the stain from spreading.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://site.extension.uga.edu/textiles/care/stain-removal/remove-stains-from-alcoholic-beverages-beer-wine/",
+     "title": "Remove Stains From Alcoholic Beverages, Beer, Wine | Textiles (UGA Cooperative Extension)",
+     "quote": "Rub hand against carpet nap to restore the pile. Allow to air dry thoroughly.",
+     "fetched": "2026-11-16"
+    }
+   ]
+  },
+  {
+   "ref": "diy-smoke-alarm-chirp",
+   "category": "home",
+   "name": "Smoke alarm chirps every minute",
+   "aliases": [
+    "smoke alarm chirping",
+    "smoke detector beeping every minute",
+    "fire alarm keeps chirping",
+    "smoke alarm low battery",
+    "beeping smoke detector",
+    "chirping noise from the ceiling",
+    "smoke detector won't stop chirping",
+    "change smoke alarm battery"
+   ],
+   "minutes": [
+    5,
+    15
+   ],
+   "difficulty": 1,
+   "steps": [
+    "Listen: one short chirp every 30 to 60 seconds means a low battery.",
+    "Get a step stool with a handle bar. Never stand on a chair.",
+    "Take the alarm off its ceiling bracket, or open its battery door.",
+    "Sealed 10-year alarm? Its battery can't be changed. Replace the whole alarm.",
+    "Put in a new battery of the type the maker recommends.",
+    "Snap the battery in firmly and close the battery door all the way.",
+    "Put the alarm back and press the test button. It should sound loudly.",
+    "Still chirping? Take the battery out, hold the test button 15 seconds, then put it back.",
+    "Check the date on the back. Ten years old or more? Replace the whole alarm."
+   ],
+   "safety": [
+    "On an alarm wired into the house, turn off its circuit breaker before taking it off the bracket.",
+    "Wired-in alarms have a backup battery too; replace it at least once a year."
+   ],
+   "stopIf": [
+    "Three loud beeps and a pause means smoke. Get out and call 911 from outside.",
+    "It does not sound when you press test, even with a new battery. Replace the alarm.",
+    "It still chirps after a new battery and a reset. Replace the alarm.",
+    "A wired-in alarm chirps when another appliance turns on. Have an electrician check it."
+   ],
+   "proRefs": [
+    "electrician-service-call"
+   ],
+   "sources": [
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/consistent-chirping-causes",
+     "title": "What Causes Consistent Chirping? | Kidde",
+     "quote": "Low Battery – The alarm will chirp every 30-40 seconds (every 60 seconds for some alarms) for a minimum of seven days. Replace the battery when this occurs, then test your alarm.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/consistent-chirping-causes",
+     "title": "What Causes Consistent Chirping? | Kidde",
+     "quote": "End of Life Condition (Sealed Battery Models Only) – The alarm will chirp every 30 seconds to indicate it is time to replace the alarm.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/consistent-chirping-causes",
+     "title": "What Causes Consistent Chirping? | Kidde",
+     "quote": "If the alarm does not sound, your unit has a defective battery or other failure.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Check the Battery Type: Ensure you have the recommended type of battery securely installed.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Secure the Battery: Make sure the battery is snapped in completely so it cannot be shaken loose.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Close the Battery Compartment: On units with a front-load battery, ensure the battery compartment door is closed completely.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Turn off the power to the smoke alarm at the circuit breaker. Remove the smoke alarm from the mounting bracket and disconnect the power.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Sometimes, the alarm's processor retains error conditions, such as a weak battery, even after the battery is replaced.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Remove the battery. Press and hold the test button for at least 15 seconds. The unit may chirp or alarm for a few seconds before going silent.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Smoke and heat alarms should be replaced every 10 years, and carbon monoxide and combination alarms every 7 years. Check the date code on the label attached to the back of the unit.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "If none of these conditions apply and the suggestions don't help, it might be time to replace the alarm.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/intermittent-beeping-causes",
+     "title": "What Causes Intermittent Beeping or Chirping? | Kidde",
+     "quote": "Check if the chirping occurs when something else in the house is turned on, like an exhaust fan or heater. If so, move the device to another outlet on a different circuit or have an electrician investigate.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.kidde.com/support/smoke-alarms/nighttime-alarm-chirps",
+     "title": "Why Do Smoke Alarms Always Chirp in the Middle of the Night? | Kidde",
+     "quote": "Kidde recommends replacing all smoke alarms—battery and hardwired—every 10 years. If your alarms are older or you don't know their age, you should replace them.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.firstalert.com/blogs/safety-corner/what-does-the-smoke-alarm-beeps-mean",
+     "title": "Why Is My Smoke Detector Beeping | Fire Alarm Chirping | First Alert",
+     "quote": "If your smoke detector is beeping 3 times, you and your family need to evacuate and call 9-1-1 once safely outside.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.firstalert.com/blogs/safety-corner/what-does-the-smoke-alarm-beeps-mean",
+     "title": "Why Is My Smoke Detector Beeping | Fire Alarm Chirping | First Alert",
+     "quote": "Ten-year sealed battery smoke alarms on the other hand do not require battery replacements, but should still be tested regularly.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.firstalert.com/blogs/safety-corner/what-does-the-smoke-alarm-beeps-mean",
+     "title": "Why Is My Smoke Detector Beeping | Fire Alarm Chirping | First Alert",
+     "quote": "No matter the type of smoke alarm, all alarms should be replaced at least every 10 years from the manufacture date on the back of the alarm.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.usfa.fema.gov/prevention/home-fires/prepare-for-fire/smoke-alarms/",
+     "title": "Smoke Alarms | U.S. Fire Administration",
+     "quote": "Replace the backup battery at least once every year.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.usfa.fema.gov/prevention/home-fires/prepare-for-fire/smoke-alarms/",
+     "title": "Smoke Alarms | U.S. Fire Administration",
+     "quote": "Replace the entire smoke alarm every 10 years.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.usfa.fema.gov/downloads/pdf/publications/fa_221.pdf",
+     "title": "Fire Safety for Older Adults (FA-221) | U.S. Fire Administration",
+     "quote": "Replace the entire smoke alarm every 10 years or sooner if it does not sound when you push the test button.",
+     "fetched": "2026-11-16"
+    },
+    {
+     "url": "https://www.cdc.gov/steadi/pdf/STEADI-Brochure-CheckForSafety-508.pdf",
+     "title": "Check for Safety: A Home Fall Prevention Checklist for Older Adults | CDC STEADI",
+     "quote": "If you must use a step stool, get one with a bar to hold on to. Never use a chair as a step stool.",
+     "fetched": "2026-11-16"
+    }
+   ]
   }
  ]
 }

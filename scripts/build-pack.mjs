@@ -56,6 +56,13 @@ for (const cat of CATEGORIES) {
   }
 }
 
+// Hand-researched guides that Fair Quote did not have (packs-src/*.json), each step backed by a fetched quote.
+import { readdirSync } from 'node:fs';
+for (const f of readdirSync(join(root, 'packs-src')).filter((f) => f.endsWith('.json'))) {
+  const extra = JSON.parse(readFileSync(join(root, 'packs-src', f), 'utf8'));
+  for (const g of extra.guides ?? []) guides.push({ ...g, proRefs: g.proRefs ?? [] });
+}
+
 const refs = new Set();
 for (const x of [...prices, ...guides]) {
   if (refs.has(x.ref)) throw new Error(`duplicate ref ${x.ref}`);
