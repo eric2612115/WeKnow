@@ -121,8 +121,8 @@ Prototype scene: Step by step.
 
 Rules:
 - Words she can say at any step: next, done, again, wait, stop. The three buttons do the same.
-- WeKnow looks when she says "done" or presses Next: one still picture, checked on the device. It does not promise to
-  watch a moving picture. If what it sees does not match ("I can still see the cover"), it says so and repeats the step.
+- WeKnow looks when she says "done" or presses Next: one still picture, checked on the device. If what it sees does
+  not match ("I can still see the cover"), it says so and repeats the step.
 - It never moves on by itself and never says "are you still there?". After a long quiet it says once, "No hurry. I
   will wait."
 - Cautions from the guide are spoken before step 1. "Stop if" signs from the guide (more than one drain is slow, a
@@ -357,15 +357,14 @@ In order, and none of it needs a caption to be understood:
 6. The letter: "Don't pay this yet", and **Call Daniel**.
 7. A laptop without the model doing the same thing, with the panel showing what went over the internet.
 
-## 9. What the design assumes from engineering
+## 9. Build notes
 
-- Sound and the model download both need a press in the browser. A spoken "yes" cannot start a download on the web,
-  so the offer in flow H is pressed, and on the web the voice adds "Press Get ready to start."
-- On a device that cannot read by itself, papers are still read into words on the device (plain text recognition),
-  and personal details are covered before anything is sent. Variant 3 in flow F depends on this. If it cannot be
-  done, that sheet must say that the whole picture is sent.
+- Sound and the model download each start from a press in the browser. The Start button is the press for sound. The
+  offer in flow H is pressed, and on the web the voice adds "Press Get ready to start."
+- On a device that cannot read by itself, papers are read into words on the device (plain text recognition) and
+  personal details are covered there. The asking sheet (flow F, variant 3) shows those covered words, and only they
+  are sent.
 - "City" for prices comes from the quote itself (city and state only) or from a place set once in Help.
-- In step by step, WeKnow looks at one still picture when asked. How often it may also look by itself is decided
-  after measuring speed and heat on real devices.
+- In step by step, WeKnow looks at one still picture each time she says "done" or presses Next.
 - Kept answers hold the words and the picture with details covered. Pictures stay on the device that took them.
 - The yes to using the internet, and the person to call, are stored on the device only.

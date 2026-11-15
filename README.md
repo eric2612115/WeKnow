@@ -3,8 +3,9 @@
 **Point the camera. Ask out loud. Know before you pay.**
 
 WeKnow helps people who find apps hard to use. Hold up a repair quote, a bill, or a household problem and ask a
-question. WeKnow reads it on your device, keeps your name, phone, address and account numbers there, and talks you
-through the answer.
+question. When your device has a built-in model, WeKnow reads the photo right there and your name, phone, address
+and account numbers never leave it. When it does not, WeKnow asks first, then reads the photo in the cloud and
+says so. Either way it talks you through the answer.
 
 - **A repair quote:** "Line 1, rear brake pads, $540, is $146 above the usual top price of $394. The cabin filter is fair."
 - **A bill:** "This bill asks you to pay a new account. Last time you paid one ending in 4821. Don't pay yet; call the number you already have."
@@ -20,7 +21,8 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
    Every number comes from a pack entry with a source. Packs live in Firestore's offline cache.
 3. **Plain code decides.** Price verdicts and bill warnings are rules, not model output. Text hidden in a document can
    raise a warning but can never clear one.
-4. **Only a masked line item may leave the device** for a lookup, and the database refuses anything else.
+4. **Only a masked line item may leave the device** for a price lookup, and the database refuses anything else.
+   (Reading the photo itself in the cloud happens only on devices without a local model, after the person agrees.)
 
 Firebase products used: AI Logic (hybrid inference, structured output), App Check, Authentication (anonymous,
 Google), Firestore (offline cache, deny-by-default rules), Remote Config (cloud model, pack version, warning
