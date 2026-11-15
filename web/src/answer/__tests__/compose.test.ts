@@ -65,6 +65,7 @@ describe('bill answers', () => {
     payTo: '9917',
     urgent: false,
     addressedToAI: false,
+    accountChange: false,
     ...o,
   });
 

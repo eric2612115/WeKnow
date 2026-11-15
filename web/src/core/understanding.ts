@@ -18,6 +18,7 @@ export interface Understanding {
   payTo: string | null; // for a bill: masked account fingerprint, e.g. last four digits
   urgent: boolean; // the document pushes to pay now (model's reading; can only add a warning)
   addressedToAI: boolean; // the document contains words aimed at an AI (can only add a warning)
+  accountChange: boolean; // the document says the bank or account to pay has changed (can only add a warning)
 }
 
 /** JSON schema handed to Firebase AI Logic for structured output. */
@@ -42,8 +43,9 @@ export const understandingSchema = {
     payTo: { type: 'string', nullable: true },
     urgent: { type: 'boolean' },
     addressedToAI: { type: 'boolean' },
+    accountChange: { type: 'boolean' },
   },
-  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo', 'urgent', 'addressedToAI'],
+  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo', 'urgent', 'addressedToAI', 'accountChange'],
 } as const;
 
 export class UnderstandingError extends Error {}
@@ -82,5 +84,6 @@ export function checkUnderstanding(raw: unknown, offeredRefs: ReadonlySet<string
   // Missing or malformed warning fields count as "warn": a model cannot clear a warning by omitting it.
   const urgent = u.urgent === false ? false : true;
   const addressedToAI = u.addressedToAI === false ? false : true;
-  return { kind: u.kind as DocKind, lines, problemRef: problemRef as string | null, payee, payTo, urgent, addressedToAI };
+  const accountChange = u.accountChange === false ? false : true;
+  return { kind: u.kind as DocKind, lines, problemRef: problemRef as string | null, payee, payTo, urgent, addressedToAI, accountChange };
 }

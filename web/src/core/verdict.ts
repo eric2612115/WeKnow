@@ -31,7 +31,7 @@ export interface KnownPayee {
   payTo: string; // fingerprint the user confirmed before, e.g. last four digits
 }
 
-export type BillFlag = 'new-payee' | 'changed-account' | 'urgency' | 'instruction-to-ai';
+export type BillFlag = 'account-change-notice' | 'new-payee' | 'changed-account' | 'urgency' | 'instruction-to-ai';
 
 export interface BillVerdict {
   safe: boolean;
@@ -39,6 +39,7 @@ export interface BillVerdict {
 }
 
 const URGENCY = /\b(urgent|immediately|today only|within 24 hours|final notice|act now|avoid (?:suspension|disconnection|penalt))/i;
+const ACCOUNT_CHANGE = /\b(bank (?:has |have )?changed|new (?:bank|account)(?: details| number)?|changed (?:our )?(?:bank|account)|updated (?:bank|payment) (?:details|information))\b/i;
 const AI_INSTRUCTION =
   /\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))/i;
 
@@ -48,6 +49,8 @@ const AI_INSTRUCTION =
  */
 export function billVerdict(u: Understanding, maskedText: string, known: KnownPayee[]): BillVerdict {
   const flags: BillFlag[] = [];
+  // A letter that says the bank or account changed is the classic payment-redirection trick: always warn first.
+  if (u.accountChange || ACCOUNT_CHANGE.test(maskedText)) flags.push('account-change-notice');
   const match = known.find((k) => u.payee && k.name.toLowerCase() === u.payee.toLowerCase());
   if (!match) flags.push('new-payee');
   else if (!u.payTo || u.payTo !== match.payTo) flags.push('changed-account');
