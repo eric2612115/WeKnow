@@ -25,7 +25,11 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
 4. **Only a masked line item may leave the device** for a price lookup, and the database refuses anything else.
    (Reading the photo itself in the cloud happens only on devices without a local model, after the person agrees.)
 
-Firebase products used: AI Logic (hybrid inference, structured output), App Check, Authentication (anonymous,
+5. **Cloud prompts live on Firebase, not in the app.** Cloud reads go through Firebase AI Logic **server prompt
+   templates** (`templates/`): the instructions and output schemas are stored and locked in Firebase, so nobody can
+   read or rewrite them from the browser, and they change without a redeploy.
+
+Firebase products used: AI Logic (hybrid inference, structured output, server prompt templates), App Check, Authentication (anonymous,
 Google), Firestore (offline cache, deny-by-default rules), Remote Config (cloud model, pack version, warning
 phrases), Hosting.
 
