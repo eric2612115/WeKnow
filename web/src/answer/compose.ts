@@ -1,0 +1,173 @@
+// Turning plain-code verdicts into what WeKnow shows and says. No model is involved here: every number comes
+// from the pack item a line matched (core/verdict.ts), and every sentence is a whole string from strings.ts.
+
+import type { BillFlag, BillVerdict, KnownPayee, LineVerdict } from '../core/verdict';
+import type { Guide, Pack, PriceItem } from '../core/packs';
+import { t, words, money, longDate } from '../strings';
+import type { LineItem, Receipt, SourceRow, Verdict, WhereRan } from './types';
+
+// ---------- quotes ----------
+
+/** One row per printed line: the label as printed, the amount as printed, the verdict from the pack. */
+export function lineItems(verdicts: LineVerdict[], labels: string[]): LineItem[] {
+  return verdicts.map((v, i) => {
+    const n = i + 1;
+    if (v.kind === 'unknown') return { n, label: v.label, amount: v.amount, state: 'pending' as const };
+    const base = { n, label: labels[i] ?? v.item.name, amount: v.amount, typical: v.item.typical, name: v.item.name };
+    if (v.kind === 'high') return { ...base, state: 'high' as const, over: v.over };
+    if (v.kind === 'low') return { ...base, state: 'low' as const };
+    return { ...base, state: 'fair' as const };
+  });
+}
+
+const lower = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+export function listNames(names: string[]): string {
+  const ns = names.map(lower);
+  if (ns.length <= 1) return ns[0] ?? '';
+  return `${ns.slice(0, -1).join(', ')} and ${ns[ns.length - 1]}`;
+}
+
+/** "I know seven lines. One I do not: brake fluid flush." */
+export function knownSentences(items: LineItem[]): string[] {
+  const pending = items.filter((i) => i.state === 'pending');
+  const known = items.length - pending.length;
+  if (!pending.length) return [items.length === 1 ? t('quote.know.all.1') : t('quote.know.all', { n: words(items.length) })];
+  const first = known === 0 ? t('quote.know.0') : known === 1 ? t('quote.know.1') : t('quote.know.n', { n: words(known) });
+  if (known === 0) return [first];
+  const names = listNames(pending.map((p) => p.label));
+  const second = pending.length === 1 ? t('quote.dont.1', { names }) : t('quote.dont.n', { n: words(pending.length, true), names });
+  return [first, second];
+}
+
+const isKnown = (i: LineItem) => i.state !== 'pending';
+
+export interface QuoteSummary {
+  verdict: Verdict;
+  sentences: string[];
+  /** The line to talk about with the shop: the one furthest above the usual top. */
+  worst?: LineItem;
+}
+
+export function quoteSummary(items: LineItem[]): QuoteSummary {
+  if (!items.length) return { verdict: { tone: 'plain', text: t('quote.small.title') }, sentences: [t('quote.small')] };
+  const highs = items.filter((i) => i.state === 'high').sort((a, b) => (b.over ?? 0) - (a.over ?? 0));
+  const fair = items.filter((i) => i.state === 'fair' || i.state === 'found' || i.state === 'low').length;
+  const pending = items.filter((i) => i.state === 'pending').length;
+  if (!items.some(isKnown)) return { verdict: { tone: 'plain', text: t('quote.none.title') }, sentences: [t('quote.none.line')] };
+
+  const fairSentence = fair === 1 ? t('quote.fair.1') : t('quote.fair.n', { n: words(fair, true) });
+  const pendingSentence = pending === 1 ? t('quote.pending.1') : t('quote.pending.n', { n: words(pending, true) });
+  const lows = items.filter((i) => i.state === 'low').slice(0, 1).map((l) => t('quote.low', { n: l.n, label: lower(l.label) }));
+
+  if (highs.length) {
+    const worst = highs[0];
+    const sentences = highs.slice(0, 2).map((h) => t('quote.high.1', { n: h.n, label: lower(h.label), over: money(h.over ?? 0) }));
+    const typical = t('quote.typical', { typical: money(worst.typical ?? 0) });
+    if (!pending && fair === items.length - highs.length && fair > 0) sentences.push(t('quote.high.2', { typical: money(worst.typical ?? 0) }));
+    else sentences.push([typical, fair ? fairSentence : '', pending ? pendingSentence : ''].filter(Boolean).join(' '));
+    return {
+      verdict: { tone: 'warn', text: highs.length === 1 ? t('quote.high.title') : t('quote.highs.title', { n: words(highs.length, true) }) },
+      sentences: [...sentences, ...lows],
+      worst,
+    };
+  }
+  const sentences = pending ? [`${fairSentence} ${pendingSentence}`] : [t('quote.fair.all')];
+  return { verdict: { tone: 'ok', text: t('quote.fair.title') }, sentences: [...sentences, ...lows] };
+}
+
+export function sayToShop(worst: LineItem): string {
+  return t('quote.say.line', { label: lower(worst.label), typical: money(worst.typical ?? 0) });
+}
+
+export function quoteTitle(items: LineItem[], shop: string | null): string {
+  const total = items.reduce((s, i) => s + (i.amount ?? 0), 0);
+  const name = shop && !/\[/.test(shop) ? `${shop} quote` : 'Repair quote';
+  return total > 0 ? `${name}, ${money(total)}` : name;
+}
+
+// ---------- bills ----------
+
+export interface BillAnswer {
+  verdict: Verdict;
+  /** Numbered reasons ("One. ..."), one may come from a note. */
+  reasons: Array<{ text: string; fromNote?: boolean }>;
+  doLine?: string;
+}
+
+const ORDER: BillFlag[] = ['changed-account', 'instruction-to-ai', 'new-payee', 'urgency'];
+
+export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPayee[]): BillAnswer {
+  const match = known.find((k) => payee && k.name.toLowerCase() === payee.toLowerCase());
+  const raw: Array<{ text: string; fromNote?: boolean }> = [];
+  for (const f of ORDER.filter((x) => v.flags.includes(x))) {
+    if (f === 'changed-account') raw.push(match ? { text: t('note.payee', { old: match.payTo }), fromNote: true } : { text: t('letter.sign.changed') });
+    if (f === 'instruction-to-ai') raw.push({ text: t('letter.sign.ai') });
+    if (f === 'new-payee') raw.push({ text: payee ? t('letter.sign.newpayee', { payee }) : t('letter.sign.nopayee') });
+    if (f === 'urgency') raw.push({ text: t('letter.sign.rush') });
+  }
+  if (v.safe) return { verdict: { tone: 'ok', text: t('letter.fine.title') }, reasons: [{ text: t('letter.fine') }] };
+  const stop = v.flags.includes('changed-account') || v.flags.includes('instruction-to-ai');
+  const reasons = raw.map((r, i) => ({ ...r, text: `${words(i + 1, true)}. ${r.text}` }));
+  return {
+    verdict: { tone: stop ? 'stop' : 'warn', text: stop ? t('letter.stop.title') : t('letter.check.title') },
+    reasons,
+    doLine: t('letter.do'),
+  };
+}
+
+// ---------- guides ----------
+
+export function minutesText(g: Guide): string {
+  const [lo, hi] = g.minutes;
+  return lo === hi ? String(lo) : t('fix.minutes', { low: lo, high: hi });
+}
+
+export function proLine(pack: Pack, g: Guide, pro: { low: number; high: number } | undefined): string | null {
+  if (!pro) return null;
+  const items = (g.proRefs ?? []).map((r) => pack.prices.find((p) => p.ref === r)).filter((p): p is PriceItem => !!p);
+  const typical = items.length ? Math.round(items.reduce((s, i) => s + i.typical, 0) / items.length) : Math.round((pro.low + pro.high) / 2);
+  return t('guide.pro.line', { low: money(pro.low), high: money(pro.high), typical: money(typical) });
+}
+
+// ---------- where it ran ----------
+
+export function whereRan(o: { where: 'device' | 'cloud'; online: boolean; sent: number; pending: number }): WhereRan {
+  if (o.where === 'cloud') return 'cloud';
+  if (o.pending > 0) return 'pending';
+  if (o.sent > 0) return 'mixed';
+  if (!o.online) return 'offline';
+  return 'local';
+}
+
+export function tagText(r: Pick<Receipt, 'w' | 'n'>, device: string): string {
+  switch (r.w) {
+    case 'local':
+      return t('tag.local', { device });
+    case 'mixed':
+      return r.n === 1 ? t('tag.mixed', { n: 1 }) : t('tag.mixed.many', { n: r.n });
+    case 'cloud':
+      return t('tag.cloud');
+    case 'offline':
+      return t('tag.offline', { device });
+    case 'pending':
+      return r.n === 1 ? t('tag.pending', { n: 1 }) : t('tag.pending.many', { n: r.n });
+  }
+}
+
+/** Sources named by kind and date; the addresses go inside Technical details. */
+export function priceSources(items: PriceItem[]): SourceRow[] {
+  return items.slice(0, 6).map((p) => {
+    const fetched = p.sources.map((s) => s.fetched).filter(Boolean).sort().pop();
+    return {
+      label: t('where.src.price', { name: p.name }),
+      date: fetched ? t('where.checked', { date: longDate(fetched) }) : '',
+      url: p.sources[0]?.url,
+      title: p.sources[0]?.title,
+    };
+  });
+}
+
+export function guideSources(g: Guide): SourceRow[] {
+  const fetched = g.sources.map((s) => s.fetched).filter(Boolean).sort().pop();
+  return [{ label: t('where.src.guide', { name: g.name }), date: fetched ? t('where.checked', { date: longDate(fetched) }) : '', url: g.sources[0]?.url, title: g.sources[0]?.title }];
+}
