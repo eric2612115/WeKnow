@@ -4,13 +4,16 @@ import type { ComponentType } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
 import Shell from './Shell';
 import Home from '../pages/Home';
+import RouteError from './RouteError';
+import { loadFresh } from './staleBuild';
 
-const page = (load: () => Promise<{ default: ComponentType }>) => async () => ({ Component: (await load()).default });
+const page = (load: () => Promise<{ default: ComponentType }>) => async () => ({ Component: (await loadFresh(load)).default });
 
 const router = createBrowserRouter([
   {
     path: '/',
     Component: Shell,
+    ErrorBoundary: RouteError,
     children: [
       { index: true, Component: Home },
       { path: 'checks', lazy: page(() => import('../pages/Checks')) },
