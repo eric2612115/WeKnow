@@ -149,8 +149,9 @@ describe('a picture answer in the conversation', () => {
     expect(C.view().lines.map((l) => l.text)).toContain(
       'One. The numbers on this bill don’t add up: the last bill of $84.20, minus $84.20 paid, plus $96.15 in new charges is $96.15, but it asks for $312.40.',
     );
-    // A stop is never offered a payment reminder; the new payee is still said (nothing was cleared).
-    expect(nextLabels()).toEqual(['Which numbers?', 'What should I do now?']);
+    // A stop is never offered a payment reminder; the new payee is still said (nothing was cleared). A new company with
+    // warnings may still be remembered, behind two Yes-or-No pop-ups.
+    expect(nextLabels()).toEqual(['Which numbers?', 'What should I do now?', 'I know this company, remember it']);
     expect(C.view().lines.map((l) => l.text).some((x) => /no note of paying Riverbend/.test(x))).toBe(true);
     press('Which numbers?');
     await vi.waitFor(() => expect(C.view().head?.text).toBe('The numbers I added up'));
@@ -162,7 +163,7 @@ describe('a picture answer in the conversation', () => {
       'Added up, that is $96.15, not $312.40.',
       'Ask the company to explain the numbers before you pay. Use the phone number on an older bill.',
     ]);
-    expect(nextLabels()).toEqual(['What should I do now?']);
+    expect(nextLabels()).toEqual(['What should I do now?', 'I know this company, remember it']);
   });
 
   it('a bill with partial numbers raises no number warning', async () => {

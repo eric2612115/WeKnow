@@ -165,7 +165,7 @@ const ACCOUNT = new RegExp(
 /** A label alone on its line ("ACCOUNT NUMBER"), its number on the next line. */
 const ACCOUNT_ALONE = /^\s*(?:your\s+)?(?:account|acct|customer)\s*(?:number|no\.?|num|#|id)?\s*:?\s*$/i;
 /** An account that is not the customer's: where money is sent, or the company's own. */
-const PAY_TO = /\b(?:new|old|bank|banking|routing|remit|remittance|send|sent|transfer|deposit|wire|iban|our|their|pay(?:ing)?\s+to|payable\s+to|billing\s+account\s+of)\b[^.]{0,25}$/i;
+const PAY_TO = /\b(?:new|old|bank|banking|routing|remit|remittance|send|sent|transfer|deposit|wire|iban|our|their|payment|pay(?:ing)?\s+to|payable\s+to|billing\s+account\s+of)\b[^.]{0,25}$/i;
 
 const lastFourOf = (raw: string): string | null => {
   const digits = fixDigits(raw).replace(/\D/g, '');
@@ -180,7 +180,11 @@ export function findAccounts(lines: string[]): string[] {
   };
   lines.forEach((line, i) => {
     for (const m of line.matchAll(ACCOUNT)) {
-      if (PAY_TO.test(line.slice(0, m.index ?? 0)) || (m[1].match(/\d/g)?.length ?? 0) < 3) continue;
+      // A line that starts with it may carry on the line above ("Postal remittance" / "acct 84109804").
+      const carried = (m.index ?? 0) < 2 && /\b(?:remittance|remit|deposit|transfer|payment|pay\s+to|payable\s+to)\s*$/i.test(lines[i - 1] ?? '');
+      // A bare "acct 84109804" in running text (a remittance or lockbox account) is not labelled as the customer's.
+      const bare = /^(?:acct|a\/c)\.?\s+[0-9OoIl]/i.test(m[0]);
+      if (carried || bare || PAY_TO.test(line.slice(0, m.index ?? 0)) || (m[1].match(/\d/g)?.length ?? 0) < 3) continue;
       add(lastFourOf(m[1]));
     }
     if (ACCOUNT_ALONE.test(line)) {
@@ -189,6 +193,28 @@ export function findAccounts(lines: string[]): string[] {
     }
   });
   return seen;
+}
+
+/**
+ * The accounts the paper asks you to pay into, last four digits, in the order printed ("Payment account 3305 7719
+ * 4821", "pay to our new account ending 7730"). A member or customer number is not one of them. Same rule as
+ * BillMath.payToEndings on the iPhone.
+ */
+export function payToEndings(lines: string[]): string[] {
+  const out: string[] = [];
+  const text = lines.join(' ');
+  const re = new RegExp(String.raw`\b(?:payment|pay to|pay into|remit to|deposit to|transfer to|new)\s+(?:account\s+)?(?:number\s+)?(?:ending\s+(?:in\s+)?)?[:#]?\s*(${D}[${D.slice(1, -1)}\s-]{2,}${D})`, 'gi');
+  for (const m of text.matchAll(re)) {
+    const four = lastFourOf(m[1]);
+    if (four && !out.includes(four)) out.push(four);
+  }
+  return out;
+}
+
+/** Which of them the bill means: one other than the account paid last time (the change to see), else the first. */
+export function payToOf(lines: string[], lastTime?: string | null): string | null {
+  const all = payToEndings(lines);
+  return (lastTime ? all.find((x) => x !== lastTime) : undefined) ?? all[0] ?? null;
 }
 
 // ---------- both ----------

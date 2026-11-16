@@ -12,7 +12,7 @@ import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts, withBillMath } from '../core/verdict';
-import { billMath, type BillMath } from '../core/billMath';
+import { billMath, payToOf, type BillMath } from '../core/billMath';
 import { guideByRef, priceByRef, proPrice } from '../core/packs';
 import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, terms, type ItemKind, type Scored } from './words';
 import { afterConsent, gate, route, type Reason } from './router';
@@ -1795,6 +1795,13 @@ async function billFlow(c: Ctx) {
   const words = await paperWords(c);
   alive(t);
   const masked = maskText([u.payee ?? '', ...u.lines.map((l) => l.label), ...(words ?? [])].join(' '));
+  // Which account to pay into is printed next to "payment account": plain code takes it from the paper's own words, so
+  // a member number the model copied by mistake never stands in for it (same as the iPhone).
+  if (words?.length) {
+    const lastTime = known.find((k) => u.payee && k.name.toLowerCase() === nameOf(u.payee)?.toLowerCase())?.payTo;
+    const to = payToOf(words, lastTime);
+    if (to) u.payTo = to;
+  }
   let v = billVerdict(u, masked, known);
   // Remote Config phrases can only add the urgency warning, never clear one.
   const { matchesPhrase } = await import('../config');
@@ -1886,6 +1893,10 @@ async function billFlow(c: Ctx) {
   const digits = (u.payTo ?? '').replace(/\D/g, '');
   const onlyNew = v.flags.length === 1 && v.flags[0] === 'new-payee';
   let canRemember = !!payee && digits.length >= 4 && onlyNew && getPrefs().offerNotes;
+  // A new company whose first bill raised warnings can still be remembered, after two confirmations (never after the
+  // web found its charges are a known scam).
+  let canRememberCareful = !!payee && digits.length >= 4 && !onlyNew && v.flags.includes('new-payee') && found?.finding !== 'known-scam-pattern' && getPrefs().offerNotes;
+  const warnWords = v.flags.filter((f) => f !== 'new-payee').map((f) => tr(`careful.why.${f}`));
   if (v.safe && match) {
     const old = mem.find((m): m is PayeeMemory => m.kind === 'payee' && m.name === match.name);
     if (old) await putMemory({ ...old, date: today() });
@@ -1925,6 +1936,13 @@ async function billFlow(c: Ctx) {
     void narrate(t2, [tr('accts.line', { a: a ?? '', b: b ?? '' }), tr('accts.do')]);
     offerNext(billNext('accounts'));
   };
+  // The answer says what was pressed, since the pop-ups are gone from the screen.
+  const notRemembered = (t2: number, sure: boolean) => {
+    setHead('plain', sure ? tr('careful.notyet.title') : tr('careful.not.title'));
+    settle();
+    void narrate(t2, sure ? [tr('careful.notyet.line', { payee: payee! }), tr('careful.notyet.do')] : [tr('careful.not.line', { payee: payee! })]);
+    offerNext(billNext(sure ? undefined : 'remember'));
+  };
   const billNext = (skip?: 'do' | 'remember' | 'remind' | 'sums' | 'accounts'): Next[] => [
     ...(v.flags.includes('numbers-dont-add-up') && math?.misses.length && skip !== 'sums' ? [nextQ(tr('next.sums'), sums)] : []),
     ...(v.flags.includes('two-accounts') && skip !== 'accounts' ? [nextQ(tr('next.accounts'), accounts)] : []),
@@ -1937,6 +1955,38 @@ async function billFlow(c: Ctx) {
             setPrefs({ toldNotes: true });
             alive(t2);
             canRemember = false;
+            setHead('plain', tr('remember.done', { payee: payee!, device: dev() }));
+            settle();
+            void narrate(t2, []);
+            offerNext(billNext('remember'));
+          }),
+        ]
+      : []),
+    ...(canRememberCareful && skip !== 'remember'
+      ? [
+          nextQ(tr('next.careful'), async (t2) => {
+            // Two pop-up questions, Yes or No each: what was wrong and whether the person knows this company and
+            // account; then whether they checked it with the company at a number they already had.
+            const last4 = digits.slice(-4);
+            const sure = await ask(
+              t2,
+              { kind: 'note', title: tr('careful.1.title', { payee: payee! }), body: tr('careful.1.why', { why: listNames(warnWords) }), parcel: [], not: [tr('careful.1.what', { digits: last4 })], yes: tr('careful.1.yes'), no: tr('careful.1.no') },
+              [tr('careful.1.title', { payee: payee! })],
+            );
+            alive(t2);
+            const checked =
+              sure &&
+              (await ask(
+                t2,
+                { kind: 'note', title: tr('careful.2.title'), body: tr('careful.2.line', { payee: payee!, digits: last4 }), parcel: [], not: [], yes: tr('careful.2.yes'), no: tr('careful.no') },
+                [tr('careful.2.title')],
+              ));
+            alive(t2);
+            if (!checked) return notRemembered(t2, sure);
+            await putMemory({ kind: 'payee', id: newId('m'), name: payee!, payTo: last4, date: today() });
+            setPrefs({ toldNotes: true });
+            alive(t2);
+            canRememberCareful = false;
             setHead('plain', tr('remember.done', { payee: payee!, device: dev() }));
             settle();
             void narrate(t2, []);

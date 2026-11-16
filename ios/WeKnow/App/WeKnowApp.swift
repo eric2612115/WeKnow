@@ -44,10 +44,14 @@ struct WeKnowApp: App {
           }
           // `-WeKnowPick "0,0,1"` presses those next-question buttons one after another (simulator tests).
           if let picks = UserDefaults.standard.string(forKey: "WeKnowPick") {
-            for i in picks.split(separator: ",").compactMap({ Int($0) }) {
+            // Each pick is an index or the start of a button's label ("I know").
+            for pick in picks.split(separator: ",").map(String.init) {
               while !(model.phase == .done && !model.choices.isEmpty) { try? await Task.sleep(for: .milliseconds(300)) }
               try? await Task.sleep(for: .milliseconds(700))
-              if model.choices.indices.contains(i) { model.choose(model.choices[i]) }
+              print("[WeKnow] choices: \(model.choices.map(\.label).joined(separator: " | "))")
+              let c = Int(pick).flatMap { model.choices.indices.contains($0) ? model.choices[$0] : nil }
+                ?? model.choices.first { $0.label.hasPrefix(pick) }
+              if let c { model.choose(c) }
             }
           }
           if let t = UserDefaults.standard.string(forKey: "WeKnowTheme"), let c = ThemeChoice(rawValue: t) { themeRaw = c.rawValue }

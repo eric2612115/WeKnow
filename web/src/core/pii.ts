@@ -45,7 +45,8 @@ const PATTERNS: Array<[PIIKind, RegExp]> = [
 ];
 
 /** A name after a title or a greeting: "Mr. Alaric Venn-Hollis", "To: Theodora Quillfeather" (as PII.swift). */
-const TITLED_NAME = /(?:\b(?:Mr|Mrs|Ms|Miss|Mx|Dr)\.?\s+|^(?:[Tt]o|TO|[Dd]ear|DEAR|[Aa]ttn|ATTN)\s*[:,]\s*)([A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3})/gm;
+// One space between the words of a name: two or more spaces are a column gap, and the next column is something else.
+const TITLED_NAME = /(?:\b(?:Mr|Mrs|Ms|Miss|Mx|Dr)\.?\s+|^(?:[Tt]o|TO|[Dd]ear|DEAR|[Aa]ttn|ATTN)\s*[:,]\s*)([A-Z][A-Za-z'’.-]+(?: [A-Z][A-Za-z'’-]+){0,3})/gm;
 /** A signature on a line of its own: an initial and a family name, "A. Venn-Hollis", "#07 D. Marrow". */
 const SIGNATURE = /^[ \t]*(?:#?\d+[ \t]+)?([A-Z]\.[ \t]?[A-Z][a-z'’]+(?:-[A-Z][a-z'’]+)?)[ \t]*$/gm;
 

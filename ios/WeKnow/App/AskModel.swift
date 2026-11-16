@@ -41,6 +41,16 @@ struct Receipt: Sendable {
 }
 
 /// The asking sheet before the masked words go to the cloud (UI-SPEC 7.3, ask.paper.*).
+/// A Yes-or-No pop-up (for example the two checks before remembering a company whose bill raised warnings).
+struct Confirm: Identifiable {
+  let id = UUID()
+  let title: String
+  let message: String
+  let yes: String
+  let no: String
+  let answer: (Bool) -> Void
+}
+
 struct Consent: Identifiable {
   let id = UUID()
   let lines: [String]
@@ -73,6 +83,7 @@ final class AskModel {
   var tag: WhereRan?
   var receipt: Receipt?
   var consent: Consent?
+  var confirm: Confirm?
   var showWhere = false
 
   /// The conversation so far: every finished question and answer, oldest first. The one in progress lives in the
@@ -109,6 +120,8 @@ final class AskModel {
   enum NextAction {
     case diy(String), steps(String, Int), pause(String, Int), fixed(String, Bool), proPrice(String)
     case noneOfThese, sayShop, unchecked, doNow, rememberPayee(String, String), haveQuote, quoteOrBill, broken
+    /// A new company whose bill raised warnings: remembered only after two Yes-or-No pop-ups.
+    case rememberCareful(String, String, [String])
   }
 
   enum Topic {
@@ -312,6 +325,9 @@ final class AskModel {
 
   /// Shows and says one answer: the point first (bold), then the sentences, then the next-question buttons.
   private func answer(_ head: String?, tone: Tone = .plain, _ lines: [String], next: [NextQ] = [], tag where_: WhereRan? = nil) async {
+    #if DEBUG
+    print("[WeKnow] answer: \(head ?? "-") | \(lines.joined(separator: " | "))")
+    #endif
     verdict = head.map { Verdict(tone: tone, text: $0) }
     tag = where_
     answerFrom = sentences.count
@@ -452,6 +468,31 @@ final class AskModel {
     case let .rememberPayee(name, payTo):
       Household.shared.remember(payee: name, payTo: payTo)
       await answer("I will remember \(name).", ["Next time I will check that the account still ends in \(payTo). You can see it in Menu, What WeKnow remembers."])
+
+    case let .rememberCareful(name, payTo, why):
+      // Two pop-ups, Yes or No each: what was wrong and whether the person knows this company and account; then
+      // whether they checked it with the company at a number they already had.
+      let sure = await ask(Confirm(
+        title: "Are you sure you know \(name)?",
+        message: (why.isEmpty ? "This bill raised a warning." : "This bill raised a warning: \(S.list(why)).")
+          + " If I remember it, I will treat the account ending \(payTo) as theirs next time.",
+        yes: "Yes, I know them", no: "No", answer: { _ in }))
+      let checked = sure ? await ask(Confirm(
+        title: "One more check",
+        message: "Did you call \(name) at a number you already had, not the one on this bill, and they said the account ends in \(payTo)?",
+        yes: "Yes, I checked", no: "Not yet", answer: { _ in })) : false
+      // The answer says what was pressed, since the pop-ups are gone from the screen.
+      if checked {
+        Household.shared.remember(payee: name, payTo: payTo)
+        await answer("Saved: \(name)", ["Next time I will check that the account still ends in \(payTo). You can see it in Menu, What WeKnow remembers."])
+      } else if sure {
+        await answer("Not saved yet", [
+          "You have not checked the account with \(name) yet.",
+          "Call them at a number you already have, not the one on this bill. Then press the button again.",
+        ], next: [NextQ(label: "I know this company, remember it", action: .rememberCareful(name, payTo, why))])
+      } else {
+        await answer("Not saved", ["You pressed No, so I did not save \(name)."])
+      }
     }
   }
 
@@ -516,6 +557,21 @@ final class AskModel {
       if yes && mode.isEmpty { UserDefaults.standard.set("auto", forKey: Prefs.internet) }
       return yes
     }
+  }
+
+  /// Shows a Yes-or-No pop-up and waits for the press.
+  private func ask(_ c: Confirm) async -> Bool {
+    // Let a pop-up that is closing finish first, so the next one shows.
+    while confirm != nil { try? await Task.sleep(for: .milliseconds(100)) }
+    try? await Task.sleep(for: .milliseconds(350))
+    // Nothing is loading while the pop-up waits (no "Looking..." line under it).
+    let before = phase
+    phase = .done
+    let yes = await withCheckedContinuation { k in
+      confirm = Confirm(title: c.title, message: c.message, yes: c.yes, no: c.no) { k.resume(returning: $0) }
+    }
+    phase = before
+    return yes
   }
 
   /// A next-question button: shown as the person's message, then answered.
@@ -708,6 +764,7 @@ final class AskModel {
       // Then part by part, on this phone only (Reading/Sections.swift): plain code cuts the page, Apple's model
       // answers three yes/no questions per part in two wordings, and an answer counts only when both agree.
       var foundIn: [String] = []
+      var scamOnline = false
       if reading.where_ == .device {
         let parts = Sections.split(paper.rows)
         let f = await Sections.check(parts) { i in
@@ -743,7 +800,8 @@ final class AskModel {
       let b = Compose.bill(v, payee: u.payee, known: known)
       verdict = b.verdict
       answer = b.reasons + (b.doLine.map { [Sentence(text: $0)] } ?? [])
-      if !foundIn.isEmpty {
+      // Where it was found helps only when it points somewhere: one or two parts, not the whole page.
+      if !foundIn.isEmpty, foundIn.count <= 2 {
         answer.insert(Sentence(text: "I found it in \(S.list(foundIn))."), at: min(b.reasons.count, answer.count))
       }
       // Plain-code checks on the words themselves: numbers that don't add up, two account numbers.
@@ -766,6 +824,7 @@ final class AskModel {
           switch await CloudPick.checkOnline(q) {
           case let .found(c):
             escalated = (c.ms, c.sent)
+            if c.finding == .knownScamPattern { scamOnline = true }
             let said: String = switch c.finding {
             case .knownScamPattern: "I also checked online: charges like these are a known scam."
             case .notFound: "I also checked online: I could not find this company."
@@ -812,8 +871,16 @@ final class AskModel {
         u.payTo.map { to in "Pay to: account ending \(to)" + (Verdicts.knownPayee(u.payee, in: known).map { $0.payTo != to ? " (last time: \($0.payTo))" : " (same as last time)" } ?? "") },
       ].compactMap { $0 }
       topic = .bill(stop: verdict?.tone == .stop, warn: verdict?.tone == .warn)
-      if v.flags == [.newPayee], let name = u.payee, let to = u.payTo {
+      if v.flags == [.newPayee] && math.isEmpty, let name = u.payee, let to = u.payTo {
         next.append(NextQ(label: "Remember this company", action: .rememberPayee(name, to)))
+      } else if v.flags.contains(.newPayee), !scamOnline, let name = u.payee, let to = u.payTo {
+        // A new company whose first bill raised warnings can still be remembered, after two confirmations.
+        var why: [String] = []
+        if v.flags.contains(.urgency) { why.append("it rushes you to pay") }
+        if v.flags.contains(.instructionToAI) { why.append("it has words that try to tell a reader it is safe") }
+        if v.flags.contains(.changedAccount) { why.append("it asks you to pay a new account") }
+        if !math.isEmpty { why.append("its numbers don’t add up") }
+        next.append(NextQ(label: "I know this company, remember it", action: .rememberCareful(name, to, why)))
       }
     case .problem:
       // Never one guess: the guide the model picked (if any) and the next closest ones, for the person to choose.

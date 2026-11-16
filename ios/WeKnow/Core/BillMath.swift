@@ -113,8 +113,9 @@ enum BillMath {
     }
     // Account numbers: masking keeps only the last four ("[account ending 4821]").
     // Only rows that label the customer's own account number count (a "pay to" bank account is something else).
-    let labelled = rows.filter { $0.range(of: #"(?i)(account (number|no\.?|#)|acct\.? ?#?)"#, options: .regularExpression) != nil
-      && $0.range(of: #"(?i)pay(ment)? to|remit to|deposit"#, options: .regularExpression) == nil }
+    // A bare "acct 84109804" (a remittance or lockbox account) is not labelled as the customer's.
+    let labelled = rows.filter { $0.range(of: #"(?i)(account (number|no\.?|#)|acct\.? ?(#|no\.?|number|:))"#, options: .regularExpression) != nil
+      && $0.range(of: #"(?i)pay(ment)? to|payment account|remit|deposit|lockbox"#, options: .regularExpression) == nil }
     let endings = Set(labelled.flatMap { row in
       row.matches(of: /account ending (\d{4})/).map { String($0.1) }
     })
