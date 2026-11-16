@@ -414,14 +414,24 @@ function SetupSheet({ open }: { open: boolean }) {
           </button>
         </Step>
         <Step n={4} title={t('setup.4')}>
-          <label className="flex min-h-11 items-center gap-[0.6rem] font-semibold text-ink">
-            <input type="radio" name="askEvery" className="size-[1.4rem] accent-go" checked={!p.askEvery} onChange={() => setPrefs({ askEvery: false })} />
-            {t('setup.4.once')}
-          </label>
-          <label className="flex min-h-11 items-center gap-[0.6rem] font-semibold text-ink">
-            <input type="radio" name="askEvery" className="size-[1.4rem] accent-go" checked={p.askEvery} onChange={() => setPrefs({ askEvery: true })} />
-            {t('setup.4.every')}
-          </label>
+          {(
+            [
+              ['auto', 'setup.4.once'],
+              ['every', 'setup.4.every'],
+              ['never', 'set.net.never'],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className="flex min-h-11 items-center gap-[0.6rem] font-semibold text-ink">
+              <input
+                type="radio"
+                name="internet"
+                className="size-[1.4rem] accent-go"
+                checked={p.internet === value || (value === 'auto' && p.internet === 'ask-once')}
+                onChange={() => setPrefs({ internet: value })}
+              />
+              {t(label)}
+            </label>
+          ))}
         </Step>
         <Step n={5} ok={!!(p.trustedName && p.trustedNumber)} title={t('setup.5')}>
           <TrustedFields />

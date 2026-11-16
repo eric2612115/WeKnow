@@ -55,6 +55,9 @@ enum CloudPick {
   }
 
   /// Covers, checks twice, then asks Gemini for the one pack item the words are about.
+  /// Items that fit almost anything and so say nothing: never an answer from the cloud step.
+  static let catchAll: Set<String> = ["appliance-repair", "handyman-job", "handyman-hourly", "electrician-service-call", "plumber-service-call"]
+
   static func pick(_ words: String, pack: Pack) async -> Outcome {
     let covered = PII.mask(words).prefix(400).trimmingCharacters(in: .whitespacesAndNewlines)
     if let why = guardText(covered) { return .blocked(why) }
@@ -65,7 +68,7 @@ enum CloudPick {
     let prompt = """
     A person asks or describes: "\(covered)"
     Which ONE item below is it about? Prefer a repair guide when they describe a problem, a price when they ask what \
-    something costs. Copy its ref exactly, or write none.
+    something costs. A general item such as a service call or general repair does not count. Copy its ref exactly, or write none.
     Guides:
     \(guides)
     Prices:
@@ -77,8 +80,12 @@ enum CloudPick {
       let r = try await session.respond(to: prompt, generating: PackPick.self, options: GenerationOptions(temperature: 0))
       let ms = Int(Date().timeIntervalSince(t0) * 1000)
       let ref = r.content.ref.trimmingCharacters(in: .whitespacesAndNewlines)
-      // Only refs that exist in the pack count; anything else is "nothing".
-      if pack.guide(ref) != nil || pack.price(ref) != nil { return .found(ref: ref, ms: ms, sent: String(covered)) }
+      // Only refs that exist in the pack count, of the kind the words lean to (how to fix → a guide, how much →
+      // a price), and never a catch-all; anything else is "nothing", and the web search may try.
+      let lean = WordsAnswer.lean(words)
+      let isGuide = pack.guide(ref) != nil, isPrice = pack.price(ref) != nil
+      let fits = (isGuide && lean != .price) || (isPrice && lean != .guide)
+      if fits && !catchAll.contains(ref) { return .found(ref: ref, ms: ms, sent: String(covered)) }
       return .nothing(ms: ms, sent: String(covered))
     } catch {
       return .failed("\(error)")
@@ -104,7 +111,14 @@ struct WebGuide: Sendable {
 extension CloudPick {
   enum WebOutcome { case found(WebGuide), nothing(ms: Int, sent: String), blocked(String), failed(String) }
 
+  /// The model sometimes answers without searching; one more try in that case.
   static func searchGuide(_ words: String) async -> WebOutcome {
+    let first = await searchGuideOnce(words)
+    if case .nothing = first { return await searchGuideOnce(words) }
+    return first
+  }
+
+  private static func searchGuideOnce(_ words: String) async -> WebOutcome {
     let covered = String(PII.mask(words).prefix(300)).trimmingCharacters(in: .whitespacesAndNewlines)
     if let why = guardText(covered) { return .blocked(why) }
     if await reviewOnDevice(covered) == true { return .blocked("the check on this phone thought a personal detail was left") }

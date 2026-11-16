@@ -69,7 +69,7 @@ vi.mock('../../reader', () => ({
 
 const C = await import('../conversation');
 const F = await import('../flows');
-const { setPrefs } = await import('../../store/prefs');
+const { getPrefs, setPrefs } = await import('../../store/prefs');
 
 beforeEach(() => {
   F.startAgain();
@@ -77,7 +77,7 @@ beforeEach(() => {
   coverFails = false;
   covered.length = 0;
   sentToCloud.length = 0;
-  setPrefs({ offerNotes: true, offeredReady: true, consented: false, askEvery: false });
+  setPrefs({ offerNotes: true, offeredReady: true, internet: 'ask-once' });
 });
 
 describe('the cloud reading path sends only the covered picture', () => {
@@ -91,8 +91,12 @@ describe('the cloud reading path sends only the covered picture', () => {
     expect(sheet.not[0]).toBe('Covered: 2 names, 1 phone number, 1 account number.');
     expect(sheet.not[1]).toBe('Names, numbers, addresses and accounts are covered on this computer before the picture is sent.');
     expect(sentToCloud).toEqual([]); // nothing goes before the yes
+    // The one consent sheet: When it helps / Ask me every time / No.
+    expect(sheet.title).toBe('When this computer can’t answer, may I use the internet?');
+    expect(sheet.middle).toBe('Ask me every time');
     C.answerSheet(true);
     await vi.waitFor(() => expect(C.view().receipt).toBeTruthy());
+    expect(getPrefs().internet).toBe('auto');
     expect(sentToCloud.map((s) => s.image)).toEqual([COVERED]);
     expect(sentToCloud.some((s) => s.image === original || s.image === SMALL)).toBe(false);
     expect(covered).toEqual([SMALL]);
@@ -100,11 +104,39 @@ describe('the cloud reading path sends only the covered picture', () => {
     const r = C.view().receipt!;
     expect(r.stayed.slice(0, 2)).toEqual(['The picture as you took it', 'The details I covered: 2 names, 1 phone number, 1 account number']);
     expect(r.sent.slice(0, 1)).toEqual(['This picture, with your personal details covered in black']);
-    expect(r).toMatchObject({ sentPicture: true, coveredPicture: 'blob:covered' });
+    expect(r).toMatchObject({ sentPicture: true, coveredPicture: 'blob:covered', w: 'cloud' });
+    expect(r.why).toBe('Why the internet: This computer cannot read pictures by itself.');
+  });
+
+  it('with Never, nothing is covered or sent, and the way to change it is offered', async () => {
+    setPrefs({ internet: 'never' });
+    C.attach(new Blob(['original'], { type: 'image/png' }));
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(C.view().next.map((n) => n.label)).toEqual(['Open Settings']));
+    expect(C.view().sheet).toBeNull();
+    expect(covered).toEqual([]);
+    expect(sentToCloud).toEqual([]);
+  });
+
+  it('“Ask me every time” on the consent sheet sends this time and asks again next time', async () => {
+    C.attach(new Blob(['one'], { type: 'image/png' }));
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(C.view().sheet).toBeTruthy());
+    C.answerSheet('middle');
+    await vi.waitFor(() => expect(C.view().receipt).toBeTruthy());
+    expect(getPrefs().internet).toBe('every');
+    expect(sentToCloud).toHaveLength(1);
+    C.attach(new Blob(['two'], { type: 'image/png' }));
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(C.view().sheet).toBeTruthy());
+    expect(C.view().sheet!.middle).toBeUndefined(); // the per-time sheet: yes or no
+    C.answerSheet(false);
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('Nothing was sent'));
+    expect(sentToCloud).toHaveLength(1);
   });
 
   it('after an earlier yes there is no sheet, and still only the covered copy goes', async () => {
-    setPrefs({ consented: true, askEvery: false });
+    setPrefs({ internet: 'auto' });
     const original = new Blob(['another original'], { type: 'image/png' });
     C.attach(original);
     F.send('Should I pay this?');
@@ -114,7 +146,7 @@ describe('the cloud reading path sends only the covered picture', () => {
 
   it('when the words cannot be read in time, nothing is sent and the person is asked again', async () => {
     coverFails = true;
-    setPrefs({ consented: true, askEvery: false });
+    setPrefs({ internet: 'auto' });
     const original = new Blob(['original'], { type: 'image/png' });
     C.attach(original);
     F.send('Should I pay this?');

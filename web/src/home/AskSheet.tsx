@@ -32,7 +32,7 @@ export function AskSheet() {
           {x}
         </p>
       ))}
-      <div className="mt-[1.1rem] grid grid-cols-2 gap-[0.7rem]">
+      <div className={`mt-[1.1rem] grid gap-[0.7rem] ${s.middle ? 'grid-cols-1' : 'grid-cols-2'}`}>
         <button
           type="button"
           className="btn btn-yes"
@@ -43,6 +43,11 @@ export function AskSheet() {
         >
           {s.yes}
         </button>
+        {s.middle && (
+          <button type="button" className="btn" onClick={() => answerSheet('middle')}>
+            {s.middle}
+          </button>
+        )}
         <button type="button" className="btn" onClick={() => answerSheet(false)}>
           {s.no}
         </button>

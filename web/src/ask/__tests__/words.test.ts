@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aboutPicture, lean, matchStrength, pickLexical, priceAnswer, stem, terms } from '../words';
+import { aboutPicture, lean, matchStrength, pickConfident, pickLexical, priceAnswer, stem, terms } from '../words';
 import type { PriceItem } from '../../core/packs';
 
 // Pack items as they are in public/packs/us-home.json (sources trimmed).
@@ -157,5 +157,36 @@ describe('a new thing is a replacement', () => {
   it('prefers replacing over repairing when the question says new', () => {
     const q = 'What does a new water heater cost?';
     expect(matchStrength(q, ['Replace a water heater'])).toBeGreaterThan(matchStrength(q, ['Repair a water heater']));
+  });
+});
+
+describe('jobWords', () => {
+  it('drops personal details and the words that introduce them, keeping the job', async () => {
+    const { jobWords } = await import('../words');
+    expect(jobWords('My phone number is 555-0134, my vacuum won’t pick anything up')).toBe('my vacuum won’t pick anything up');
+    expect(jobWords('Call me at (503) 555-0186 about my clogged sink')).toBe('about my clogged sink');
+    expect(jobWords('My email is ann@mail.com and my tap drips')).toBe('and my tap drips');
+    expect(jobWords('My phone won’t charge')).toBe('My phone won’t charge');
+  });
+});
+
+describe('pickConfident (no model on this device)', () => {
+  const price = { kind: 'price' as const, ref: 'p', strength: 1 };
+  const guide = { kind: 'guide' as const, ref: 'g', strength: 1 };
+  it('takes only a name or alias wholly in the question, of the kind the question leans to (or either)', () => {
+    expect(pickConfident('guide', [price, guide])).toBe(guide);
+    expect(pickConfident('both', [price, { ...guide, strength: 0.67 }])).toBe(price);
+  });
+  it('a partial alias match is not confident', () => {
+    expect(pickConfident('guide', [{ ...guide, strength: 0.67 }])).toBeNull();
+  });
+  it('a cross-lean match is not confident', () => {
+    expect(pickConfident('guide', [price])).toBeNull();
+    expect(pickConfident('price', [guide])).toBeNull();
+  });
+  it('problem words lean to a guide', () => {
+    expect(lean('My dryer takes forever to dry clothes')).toBe('guide');
+    expect(lean('My ceiling fan wobbles')).toBe('guide');
+    expect(lean('The pipe under my sink is dripping')).toBe('guide');
   });
 });

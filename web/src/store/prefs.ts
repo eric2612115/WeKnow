@@ -5,6 +5,14 @@ import { createStore, useStore } from './store';
 
 export type Theme = 'light' | 'dark' | 'system';
 
+/**
+ * When WeKnow may use the internet. 'ask-once': nothing has been asked yet; the first time this device cannot answer
+ * well, one sheet asks. 'auto': when it helps, without asking again (every answer still shows what went). 'every':
+ * ask each time. 'never': answer only from this device.
+ */
+export type Internet = 'ask-once' | 'auto' | 'every' | 'never';
+export const INTERNET: readonly Internet[] = ['ask-once', 'auto', 'every', 'never'];
+
 export interface Prefs {
   /** Welcome and Allow are done. */
   started: boolean;
@@ -14,9 +22,8 @@ export interface Prefs {
   rate: 0 | 1 | 2;
   /** 0, 1, 2 = 100%, 115%, 130% of the root size. */
   size: 0 | 1 | 2;
-  /** The person said yes to using the internet once. */
-  consented: boolean;
-  askEvery: boolean;
+  /** When the internet may be used (see Internet). */
+  internet: Internet;
   /** "I worked that out right here" has been said once. */
   toldLocal: boolean;
   /** The offer to get ready to work without the internet was made (it is made once). */
@@ -40,8 +47,7 @@ export const DEFAULT_PREFS: Prefs = {
   voice: true,
   rate: 1,
   size: 0,
-  consented: false,
-  askEvery: false,
+  internet: 'ask-once',
   toldLocal: false,
   offeredReady: false,
   offerNotes: true,
@@ -52,10 +58,26 @@ export const DEFAULT_PREFS: Prefs = {
   explainLang: 'es',
 };
 
+/** Older saved prefs kept two yes/no answers; they map onto the one choice. */
+interface OldPrefs {
+  consented?: unknown;
+  askEvery?: unknown;
+}
+
+/** Saved prefs (possibly from an older version) as today's Prefs. */
+export function migratePrefs(raw: Partial<Prefs> & OldPrefs): Prefs {
+  const { consented, askEvery, ...rest } = raw;
+  let internet: Internet = INTERNET.includes(rest.internet as Internet) ? (rest.internet as Internet) : 'ask-once';
+  if (rest.internet === undefined) {
+    if (askEvery === true) internet = 'every';
+    else if (consented === true) internet = 'auto';
+  }
+  return { ...DEFAULT_PREFS, ...rest, internet };
+}
+
 function load(): Prefs {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>;
-    return { ...DEFAULT_PREFS, ...raw };
+    return migratePrefs(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Prefs> & OldPrefs);
   } catch {
     return { ...DEFAULT_PREFS };
   }

@@ -72,6 +72,7 @@ export function Lanes({ r, device }: { r: Receipt; device: string }) {
         ) : (
           <p className="text-small">{t('where.nothing')}</p>
         )}
+        {r.why && sent && <p className="mt-1 text-small text-ink-2" data-testid="why">{r.why}</p>}
         {r.waiting && <p className="mt-1 text-small">{r.waiting}</p>}
       </div>
     </>
@@ -111,7 +112,7 @@ export function ReceiptFull({ r, device }: { r: Receipt; device: string }) {
     <div>
       <WhereTag r={r} device={device} className="mb-3" />
       <Lanes r={r} device={device} />
-      {r.w === 'cloud' && <HybridNote device={device} />}
+      {r.w === 'cloud' && r.sentPicture && <HybridNote device={device} />}
       {r.saved && (
         <div className="border-t border-hair py-[0.85rem]">
           <div className={`${laneH} [&_svg]:text-go`}>

@@ -36,6 +36,8 @@ enum PII {
     (.account, re(#"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b"#, false)),
     (.account, re(#"\b\d{8,}\b"#, false)),
     (.phone, re(#"(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b"#, false)),
+    // A local number without the area code, "555-0134" (same as web/src/core/pii.ts).
+    (.phone, re(#"(?<![\d-])\b\d{3}[\s.-]\d{4}\b(?![\d-])"#, false)),
     (.plate, re(#"\b(?:plate|lic(?:ense)?\.?\s*(?:no|#)?)\b[#:\s.-]*[A-Z0-9-]{4,8}\b"#, true)),
     (.street, re(#"\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace)\b\.?"#, false)),
   ]

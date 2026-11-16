@@ -7,6 +7,7 @@
 // The flow that uses these is ask/flows.ts (wordsFlow).
 
 import type { PriceItem } from '../core/packs';
+import { maskText } from '../core/pii';
 import type { Tone } from '../answer/types';
 import { t, money, longDate } from '../strings';
 
@@ -28,9 +29,34 @@ export function aboutPicture(question: string): boolean {
   return POINTING.test(q) || MY_PAPER.test(q) || AMOUNT.test(q);
 }
 
+// "my phone number is 555-0134", "call me at ...", "my email is ...": the detail and the words that introduce it
+// name no job ("phone" would otherwise find the guide for a phone that will not charge).
+const DETAIL_LEADS: RegExp[] = [
+  /\b(?:(?:my|our|the)\s+)?(?:(?:phone|cell|mobile|telephone|home|work|account|card|policy|member)\s+)?(?:number|no\.?|#)\s*(?:is|:)?\s*\[(?:phone|account|card|ssn)\]/gi,
+  /\b(?:(?:my|our)\s+)?e-?mail(?:\s+address)?\s*(?:is|:)?\s*\[email\]/gi,
+  /\b(?:call|text|reach|ring)\s+(?:me|us)\s+(?:at|on)?\s*\[phone\]/gi,
+  /\b(?:i\s+live\s+at|(?:my|our)\s+address\s+is)\s*\[street\]/gi,
+  /\b(?:(?:my|our)\s+)?(?:plate|vin)\s*(?:number|no\.?)?\s*(?:is|:)?\s*\[(?:plate|vin)\]/gi,
+];
+
+/**
+ * The words that name the job, for matching on this device: personal details covered and dropped, with the words
+ * that introduce them. Never sent anywhere; the cloud gets the covered words (ask/escalate.ts coverWords).
+ */
+export function jobWords(question: string): string {
+  let q = maskText(question);
+  for (const re of DETAIL_LEADS) q = q.replace(re, ' ');
+  return q
+    .replace(/\[[a-z]+\]/g, ' ')
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .replace(/^[\s,.;:]+|(?<=[,.;:])[\s,.;:]+(?=[,.;:])/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 const PRICE_CUE = /\b(?:how much|cost|costs|costing|price|prices|pricing|charge|charges|pay for|paying for|expensive|cheap)\b/i;
 const GUIDE_CUE =
-  /\b(?:how (?:do|can|should|would) (?:i|you|we)|how to|fix|fixing|clog|clogs|clogged|unclog|leak|leaks|leaking|leaky|won't|wont|broken|broke|stuck|jammed|not working|doesn't work|does not work|drip|drips|dripping|keeps|smells?|smelly|noisy|noise|squeak\w*)\b/i;
+  /\b(?:how (?:do|can|should|would) (?:i|you|we)|how to|fix|fixing|clog|clogs|clogged|unclog|leak|leaks|leaking|leaky|won't|wont|broken|broke|stuck|jammed|not working|doesn't work|does not work|drip|drips|dripping|keeps|smells?|smelly|noisy|noise|squeak\w*|forever|too long|slow(?:ly)?|stopped|overheat\w*|hums?|humming|rattl\w*|wobbl\w*|tripp\w*|flicker\w*|not (?:heating|cooling|draining|drying|spinning|starting|turning on))\b/i;
 
 /** Which kind of pack item to try first. A price word wins: "how much to fix a leak" is a price question. */
 export function lean(question: string): Lean {
@@ -127,6 +153,19 @@ export function pickLexical(l: Lean, scored: Scored[]): Scored | null {
   }
   const order: ItemKind[] = l === 'guide' ? ['guide', 'price'] : ['price', 'guide'];
   return [...ok].sort((a, b) => b.strength - a.strength || order.indexOf(a.kind) - order.indexOf(b.kind))[0];
+}
+
+/**
+ * The stricter pick used when this device has no model to read the words: a candidate counts only when its name or
+ * one alias is wholly in the question (every one of its job words, strength 1 or more), and the question leans the
+ * same way (a price for "how much", a guide for a problem) or neither. A partial alias or a cross-lean match is not
+ * confident: the router then checks online instead of answering the wrong item.
+ */
+export function pickConfident(l: Lean, scored: Scored[]): Scored | null {
+  return pickLexical(
+    l,
+    scored.filter((s) => s.strength >= 1 && (l === 'both' || s.kind === l)),
+  );
 }
 
 /** Kinds in the order to offer them. */

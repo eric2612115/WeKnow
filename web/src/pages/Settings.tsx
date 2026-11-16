@@ -201,7 +201,7 @@ export default function Settings() {
                 <div className="rounded-btn bg-net-bg px-4 py-[0.9rem]">
                   <h3 className="mb-[0.4rem] flex items-center gap-2 text-body font-bold text-net [&_svg]:size-6 [&_svg]:flex-none">
                     <I.net />
-                    {t('set.privacy.goes')}
+                    {t('set.privacy.goes', { device })}
                   </h3>
                   <ul className="grid gap-1 text-small">
                     <li>{t('set.privacy.goes.1')}</li>
@@ -209,8 +209,21 @@ export default function Settings() {
                   </ul>
                 </div>
               </div>
-              <Row title={t('set.every')}>
-                <Toggle checked={p.askEvery} onChange={(askEvery) => setPrefs({ askEvery })} label={t('set.every')} />
+              <Row
+                title={t('set.net')}
+                fine={t(p.internet === 'auto' ? 'set.net.fine.auto' : p.internet === 'every' ? 'set.net.fine.every' : p.internet === 'never' ? 'set.net.fine.never' : 'set.net.fine.once', { device })}
+                wrap
+              >
+                <Seg<'auto' | 'every' | 'never'>
+                  label={t('set.net')}
+                  value={p.internet === 'ask-once' ? 'auto' : p.internet}
+                  onChange={(internet) => setPrefs({ internet })}
+                  options={[
+                    { value: 'auto', label: t('set.net.auto') },
+                    { value: 'every', label: t('set.net.every') },
+                    { value: 'never', label: t('set.net.never') },
+                  ]}
+                />
               </Row>
               <div className="row flex-col items-stretch">
                 <DeviceRow />

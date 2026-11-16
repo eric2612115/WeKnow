@@ -66,7 +66,7 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
     if (await m.deviceCanExplain(L, withPicture)) return run('device', withPicture);
     if (withPicture && (await m.deviceCanExplain(L, false))) return run('device', false);
     const p = getPrefs();
-    if (x.sentToCloud && p.consented && !p.askEvery) return run('cloud', withPicture);
+    if (x.sentToCloud && p.internet === 'auto') return run('cloud', withPicture);
     setStage({ s: 'ask', withPicture });
   };
 
@@ -128,7 +128,7 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
               type="button"
               className="btn btn-yes"
               onClick={() => {
-                setPrefs({ consented: true });
+                if (getPrefs().internet === 'ask-once') setPrefs({ internet: 'auto' });
                 void run('cloud', stage.withPicture);
               }}
             >

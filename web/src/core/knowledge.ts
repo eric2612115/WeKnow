@@ -38,6 +38,13 @@ export interface Candidate {
   learned?: boolean;
 }
 
+/** One line of the whole pack index: what an item is called and what kind it is, without its data. */
+export interface IndexEntry {
+  ref: string;
+  name: string;
+  kind: ItemKind;
+}
+
 export interface CandidateQuery {
   kind: ItemKind;
   k?: number;
@@ -79,6 +86,8 @@ export interface Knowledge {
   /** Add a price found by a cloud lookup. Refused unless every source is https. */
   learn(item: PriceItem, options?: LearnOptions): Promise<void>;
   stats(): KnowledgeStats;
+  /** Every item's ref, name and kind (the whole pack index). */
+  index?(): Promise<IndexEntry[]>;
 }
 
 // ---------- shared ranking ----------
@@ -267,6 +276,7 @@ export class LayeredKnowledge implements Knowledge {
   private staleSeen = false;
   private widened = 0;
   private rejectedCopies = 0;
+  private entries: Promise<IndexEntry[]> | undefined;
 
   constructor(options: OpenOptions) {
     this.o = options;
@@ -321,6 +331,7 @@ export class LayeredKnowledge implements Knowledge {
     this.kindIndexes.clear();
     this.blocks.clear();
     this.unavailable.clear();
+    this.entries = undefined;
     if (first) this.overlay = new Overlay(this.pipe);
     else this.overlay.rebuild(this.pipe);
     return !first;
@@ -614,6 +625,43 @@ export class LayeredKnowledge implements Knowledge {
     await this.o.cache.put(key, JSON.stringify(list));
   }
 
+  /**
+   * The whole pack index: every item's ref, name and kind, read from the whole-kind indexes (or every shard in packs
+   * without them), plus the prices learned on this device. Names only: the data blocks are not loaded.
+   */
+  async index(): Promise<IndexEntry[]> {
+    this.entries ??= (async () => {
+      const files = this.rootData.kinds?.length
+        ? this.rootData.kinds.map((k) => ({ kind: k.kind, file: k.file }))
+        : this.rootData.shards.map((s) => ({ kind: s.kind, file: s.file }));
+      const loaded = await Promise.all(
+        files.map(async (x) => ({
+          kind: x.kind,
+          f: await this.file<ShardFile>(x.file, 2).catch((e) => {
+            this.note(x.file, e);
+            return undefined;
+          }),
+        })),
+      );
+      const out: IndexEntry[] = [];
+      const seen = new Set<string>();
+      for (const { kind, f } of loaded) {
+        const ix = f?.index as { documentIds?: Record<string, unknown>; storedFields?: Record<string, { name?: unknown }> } | undefined;
+        for (const [id, ref] of Object.entries(ix?.documentIds ?? {})) {
+          const name = ix?.storedFields?.[id]?.name;
+          if (typeof ref !== 'string' || typeof name !== 'string' || seen.has(ref)) continue;
+          seen.add(ref);
+          out.push({ ref, name, kind });
+        }
+      }
+      if (!out.length) this.entries = undefined; // nothing could be read: try again next time
+      return out;
+    })();
+    const base = await this.entries;
+    const learned = [...this.overlay.items.values()].filter((i) => !base.some((b) => b.ref === i.ref)).map((i) => ({ ref: i.ref, name: i.name, kind: 'price' as const }));
+    return [...base, ...learned];
+  }
+
   /** Download every shard and fallback index (level 2) and, with `data`, every block (level 3): "keep it all offline". */
   async prefetch(data = false): Promise<number> {
     const before = this.bytesLoaded('network');
@@ -720,6 +768,14 @@ class MemoryKnowledge implements Knowledge {
   async learn(item: PriceItem): Promise<void> {
     assertLearnable(item);
     this.overlay.add({ ...item, category: 'learned' });
+  }
+
+  async index(): Promise<IndexEntry[]> {
+    return [
+      ...this.pack.guides.map((g) => ({ ref: g.ref, name: g.name, kind: 'guide' as const })),
+      ...this.pack.prices.map((p) => ({ ref: p.ref, name: p.name, kind: 'price' as const })),
+      ...[...this.overlay.items.values()].map((p) => ({ ref: p.ref, name: p.name, kind: 'price' as const })),
+    ];
   }
 
   stats(): KnowledgeStats {

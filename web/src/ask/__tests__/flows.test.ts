@@ -79,7 +79,8 @@ const press = (label: string) => C.view().next.find((n) => n.label === label)!.a
 beforeEach(() => {
   F.startAgain();
   C.detach();
-  setPrefs({ offerNotes: true, offeredReady: true });
+  // The local route only: what the device does by itself (ask/__tests__/route.test.ts covers the cloud step).
+  setPrefs({ offerNotes: true, offeredReady: true, internet: 'never' });
 });
 
 describe('a picture answer in the conversation', () => {

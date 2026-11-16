@@ -33,6 +33,8 @@ export interface SheetRequest {
   picture?: string;
   not: string[];
   yes: string;
+  /** A third answer between yes and no (the consent sheet's "Ask me every time"). */
+  middle?: string;
   no: string;
   /** Runs inside the Yes click itself (the model download needs the press). */
   onYesClick?: () => void;
@@ -153,7 +155,8 @@ export class Cancel extends Error {}
 let token = 0;
 let seq = 0;
 let resolveChoice: ((v: string) => void) | null = null;
-let resolveSheet: ((yes: boolean) => void) | null = null;
+export type SheetAnswer = 'yes' | 'middle' | 'no';
+let resolveSheet: ((a: SheetAnswer) => void) | null = null;
 let resolvePress: ((v: 'next' | 'again' | 'stop') => void) | null = null;
 let stopEar: (() => void) | null = null;
 let ear: Ear | null = null;
@@ -417,10 +420,15 @@ async function listenFor(t: number, options: Choice[], waiting: () => boolean, a
 
 /** The asking sheet, the remember sheet and the offer to get ready. Resolves true for yes. */
 export async function ask(t: number, sheet: SheetRequest, spoken: string[]): Promise<boolean> {
+  return (await askSheet(t, sheet, spoken)) === 'yes';
+}
+
+/** The same sheet, with its third answer when it has one ('middle'). */
+export async function askSheet(t: number, sheet: SheetRequest, spoken: string[]): Promise<SheetAnswer> {
   alive(t);
   if (narrating) cutNarration();
   patch({ phase: 'waiting', sheet });
-  const answer = waitFor<boolean>((resolve) => {
+  const answer = waitFor<SheetAnswer>((resolve) => {
     resolveSheet = resolve;
   });
   void (async () => {
@@ -429,24 +437,24 @@ export async function ask(t: number, sheet: SheetRequest, spoken: string[]): Pro
       await sayAloud(s);
     }
     if (t === token && resolveSheet) {
-      const options = [{ value: 'yes', label: sheet.yes }, { value: 'no', label: sheet.no }];
-      void listenFor(t, options, () => !!resolveSheet, (v) => answerSheet(v === 'yes'));
+      const options = [{ value: 'yes', label: sheet.yes }, { value: 'no', label: sheet.no }, ...(sheet.middle ? [{ value: 'middle', label: sheet.middle }] : [])];
+      void listenFor(t, options, () => !!resolveSheet, (v) => answerSheet(v === 'yes' ? true : v === 'middle' ? 'middle' : false));
     }
   })();
-  const yes = await answer;
+  const a = await answer;
   quiet();
   alive(t);
   patch({ sheet: null });
-  return yes;
+  return a;
 }
 
-export function answerSheet(yes: boolean) {
+export function answerSheet(yes: boolean | 'middle') {
   cutNarration();
   const r = resolveSheet;
   resolveSheet = null;
   stopEar?.();
   stopEar = null;
-  r?.(yes);
+  r?.(yes === 'middle' ? 'middle' : yes ? 'yes' : 'no');
 }
 
 /** Step by step: wait for Next, Again or Stop (button, key or word). */

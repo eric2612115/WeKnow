@@ -35,6 +35,8 @@ export interface Receipt {
   sentPicture?: boolean; // a picture went (shown as a small copy in the box: always the covered copy)
   coveredPicture?: string; // object URL of the covered picture that went; not kept with a saved check
   waiting?: string;
+  /** Why WeKnow moved to the cloud by itself (the router's reason, said plainly). */
+  why?: string;
   saved?: string;
   sources: SourceRow[];
   tech: string[];

@@ -47,11 +47,11 @@ export default function Mail() {
       const words = mailPayload(`${item.subject}\n${item.text}`);
       if (where === 'cloud') {
         const p = getPrefs();
-        if (!p.consented || p.askEvery) {
+        if (p.internet !== 'auto') {
           const yes = await new Promise<boolean>((resolve) => setAsking({ item, words, resolve }));
           setAsking(null);
           if (!yes) return;
-          setPrefs({ consented: true });
+          if (p.internet === 'ask-once') setPrefs({ internet: 'auto' });
         }
       }
       const r = await readMailText(`${item.subject}\n${item.text}`, where, s.cloudModel);

@@ -15,6 +15,8 @@ const PATTERNS: Array<[PIIKind, RegExp]> = [
   ['account', /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g],
   ['account', /\b\d{8,}\b/g],
   ['phone', /(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g],
+  // A local number without its area code, as people type it ("555-0134"): three digits, a separator, four.
+  ['phone', /(?<![\d-])\b\d{3}[\s.-]\d{4}\b(?![\d-])/g],
   ['plate', /\b(?:plate|lic(?:ense)?\.?\s*(?:no|#)?)\b[#:\s.-]*[A-Z0-9-]{4,8}\b/gi],
   [
     'street',

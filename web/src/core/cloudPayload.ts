@@ -31,3 +31,28 @@ export function buildCloudLookup(input: Record<string, unknown>): CloudLookup {
   if (hits.length) throw new CloudPayloadError(`personal data in cloud payload: ${hits.map((h) => h.kind).join(', ')}`);
   return unit === undefined ? { item: item.trim(), region } : { item: item.trim(), region, unit };
 }
+
+// ---------- a question in words, for the cloud to place in the pack index ----------
+
+/** The only shape a question in words may leave the device in: the covered words, nothing else. */
+export interface CloudQuestion {
+  text: string;
+}
+
+const MAX_QUESTION_LENGTH = 300;
+
+/**
+ * The guard on a question before it goes to the cloud: the words must already be covered (maskText); any personal
+ * pattern still in them, or any extra field, refuses the whole payload. Nothing is trimmed away silently.
+ */
+export function buildCloudQuestion(input: Record<string, unknown>): CloudQuestion {
+  for (const key of Object.keys(input)) {
+    if (key !== 'text') throw new CloudPayloadError(`field "${key}" may not leave the device`);
+  }
+  const { text } = input;
+  if (typeof text !== 'string' || !text.trim()) throw new CloudPayloadError('text must be words');
+  if (text.length > MAX_QUESTION_LENGTH) throw new CloudPayloadError('text too long to be one question');
+  const hits = findPII(text);
+  if (hits.length) throw new CloudPayloadError(`personal data in cloud payload: ${hits.map((h) => h.kind).join(', ')}`);
+  return { text: text.trim() };
+}

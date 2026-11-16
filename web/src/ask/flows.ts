@@ -13,7 +13,11 @@ import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts } from '../core/verdict';
 import { guideByRef, priceByRef, proPrice } from '../core/packs';
-import { aboutPicture, followUp, kindOrder, lean, matchStrength, pickLexical, priceAnswer, type ItemKind, type Scored } from './words';
+import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, terms, type ItemKind, type Scored } from './words';
+import { afterConsent, gate, route, type Reason } from './router';
+import { coverWords, escalate } from './escalate';
+import type { PIIKind } from '../core/pii';
+import type { WebAnswer } from '../core/webAnswer';
 import { maskText } from '../core/pii';
 import { buildCloudLookup } from '../core/cloudPayload';
 import {
@@ -43,6 +47,7 @@ import {
   alive,
   archive,
   ask,
+  askSheet,
   attach,
   Cancel,
   choice,
@@ -70,6 +75,7 @@ import {
   type Choice,
   type Next,
   type Said,
+  type SheetRequest,
 } from './conversation';
 
 // ---------- what the page provides ----------
@@ -273,9 +279,21 @@ async function wordsOnly(t: number, question: string) {
   if (r === true) return;
   if (await followTopic(t, question)) return;
   alive(t);
-  if (r && r.guides.length) return maybeGuides(t, r.ctx, r.guides);
+  // The device could not answer: the router says whether the cloud should try, and why.
+  let never = false;
+  if (r && !aboutPicture(question)) {
+    const rt = route({ input: 'words', hit: false, found: r.found, model: deviceStore.get().model === 'available', words: terms(jobWords(question)).length });
+    if (rt.escalate && rt.reason) {
+      const out = await escalateFlow(r.ctx, question, rt.reason, 'words');
+      alive(t);
+      if (out === 'answered') return;
+      if (out !== 'stayed') return notInPacks(t, r.ctx, out);
+      never = getPrefs().internet === 'never';
+    }
+  }
+  if (r && r.guides.length) return maybeGuides(t, r.ctx, r.guides, never);
   if (aboutPicture(question)) return needPicture(t);
-  dontKnow(t);
+  dontKnow(t, never);
 }
 
 interface PictureSrc {
@@ -303,29 +321,28 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   let covered: Covered | undefined;
   if (where === 'cloud') {
     if (!d.online) return noInternet(t);
+    if (getPrefs().internet === 'never') return neverPicture(t);
     covered = await coverFirst(pic.blob);
     alive(t);
     if (!covered) return cannotCover(t, question, pic);
     const list = coveredList(covered.counts);
-    const p = getPrefs();
-    if (!p.consented || p.askEvery) {
-      const yes = await ask(
-        t,
-        {
-          kind: 'net',
-          title: tr('ask.thing.title'),
-          body: tr('ask.thing.body', { device: dev() }),
-          picture: covered.url,
-          parcel: [`“${question}”`],
-          not: [list ? tr('ask.thing.list', { list }) : tr('ask.thing.none'), tr('ask.thing.covered', { device: dev() }), tr('ask.thing.not')],
-          yes: tr('ask.thing.yes'),
-          no: tr('ask.thing.no'),
-        },
-        [list ? tr('ask.thing.say', { device: dev(), list: coveredList(covered.counts, true) }) : tr('ask.thing.say.none', { device: dev() })],
-      );
-      if (!yes) return nothingSent(t);
-      setPrefs({ consented: true });
-    } else saidCloud = true;
+    const auto = getPrefs().internet === 'auto';
+    const go = await mayUseInternet(
+      t,
+      {
+        kind: 'net',
+        title: tr('ask.thing.title'),
+        body: tr('ask.thing.body', { device: dev() }),
+        picture: covered.url,
+        parcel: [`“${question}”`],
+        not: [list ? tr('ask.thing.list', { list }) : tr('ask.thing.none'), tr('ask.thing.covered', { device: dev() }), tr('ask.thing.not')],
+        yes: tr('ask.thing.yes'),
+        no: tr('ask.thing.no'),
+      },
+      [list ? tr('ask.thing.say', { device: dev(), list: coveredList(covered.counts, true) }) : tr('ask.thing.say.none', { device: dev() })],
+    );
+    if (go !== 'go') return nothingSent(t);
+    saidCloud = auto;
   }
 
   // Start reading at once; what WeKnow is doing is said while it reads, never before.
@@ -343,17 +360,40 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   patch({ reading: false });
   lastSent = null;
 
-  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic, covered };
+  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic, covered, ...(where === 'cloud' ? { cloudWhy: 'no-device-model' as const } : {}) };
   const kind = reading.understanding.kind;
   if (kind === 'quote') return quoteFlow(ctx);
   if (kind === 'bill') return billFlow(ctx);
-  if (kind === 'problem') return problemFlow(ctx);
+
+  // Read on this device, but the kind is unknown, or no guide fits: the covered problem words (never the picture)
+  // go to the cloud to be placed in the whole pack index.
+  let none: Escalated | null = null;
+  let never = false;
+  const text = `${reading.problem ?? ''} ${question}`.trim();
+  const rt = route({
+    input: 'picture',
+    ranOn: where,
+    model: d.model === 'available',
+    kind,
+    offered: reading.retrieval.offered,
+    chosen: !!reading.understanding.problemRef && !!guideByRef(reading.pack, reading.understanding.problemRef),
+    words: terms(text).length,
+  });
+  if (rt.escalate && rt.reason) {
+    const out = await escalateFlow(ctx, text, rt.reason, 'picture');
+    alive(t);
+    if (out === 'answered') return;
+    if (out !== 'stayed') none = out;
+    else never = getPrefs().internet === 'never';
+  }
+  if (kind === 'problem') return problemFlow(none ? { ...ctx, escalated: none } : ctx, never);
   // Not sure what the picture is: ask, with buttons, instead of guessing.
   topic = { kind: 'unknown', c: ctx };
   clearLines();
-  setHead('plain', tr('what.title'));
+  setHead('plain', none ? tr('route.none.title') : tr('what.title'));
+  if (none) patch({ receipt: escReceipt({ ...ctx, escalated: none }, []) });
   settle();
-  void narrate(t, [tr('what.line')]);
+  void narrate(t, [...noneLines(none ?? undefined), tr('what.line'), ...(never ? [tr('route.never', { device: dev() })] : [])]);
   offerNext([
     nextQ(tr('next.paper'), (t2) => pictureFlow(t2, tr('q.paper'), pic, false)),
     nextQ(tr('next.thing'), (t2) => pictureFlow(t2, tr('q.thing'), pic, false)),
@@ -451,6 +491,28 @@ interface Ctx {
   src?: PictureSrc;
   /** On the cloud path: the covered copy that was sent, and what was covered on it. */
   covered?: Covered;
+  /** On the cloud path: why the cloud read it (the router's reason). */
+  cloudWhy?: Reason;
+  /** Set when the device could not answer well and the covered words were checked online. */
+  escalated?: Escalated;
+}
+
+/** A check online of covered words: what went, why, and what came back. */
+interface Escalated {
+  reason: Reason;
+  input: 'words' | 'picture';
+  /** The exact words that went. */
+  sent: string;
+  /** What was covered in them before they went. */
+  counts: Partial<Record<PIIKind, number>>;
+  /** Index entries offered (every guide and price name). */
+  offered: number;
+  ms: number;
+  model: string;
+  reviewed: boolean;
+  found: boolean;
+  /** Not in the packs: the same covered words were searched on the web (sources: https pages that came back). */
+  web?: { sent: string; tries: number; ms: number; sources: number; reason?: string };
 }
 
 /**
@@ -601,6 +663,255 @@ async function nothingSent(t: number) {
   settle();
 }
 
+/** A picture, no model on this device, and the person chose never to use the internet: say so, with the way to change it. */
+function neverPicture(t: number) {
+  lastSent = null;
+  patch({ looking: false, reading: false });
+  clearLines();
+  setHead('plain', tr('ask.none.title'));
+  settle();
+  void narrate(t, [tr('route.never.picture', { device: dev() })]);
+  offerNext([{ label: tr('route.settings'), act: () => ui.navigate('/settings#set-privacy') }]);
+}
+
+// ---------- the hybrid route: the cloud when this device cannot answer well (design/HYBRID-ROUTING.md) ----------
+
+/**
+ * May WeKnow use the internet for this step? 'auto': yes, with no sheet. 'ask-once': the one consent sheet (When it
+ * helps / Ask me every time / No), and the answer is kept. 'every': this step's own sheet, yes or no. 'never' or no
+ * connection: no. `sheet` is this step's own sheet: what would go is shown on either sheet.
+ */
+async function mayUseInternet(t: number, sheet: SheetRequest, spoken: string[]): Promise<'go' | 'no' | 'never'> {
+  const pref = getPrefs().internet;
+  const g = gate(pref, deviceStore.get().online);
+  if (g === 'go') return 'go';
+  if (g === 'stay') return pref === 'never' ? 'never' : 'no';
+  if (pref === 'every') return (await ask(t, sheet, spoken)) ? 'go' : 'no';
+  const a = await askSheet(
+    t,
+    { ...sheet, title: tr('consent.title', { device: dev() }), body: tr('consent.body'), yes: tr('consent.yes'), middle: tr('consent.every'), no: tr('consent.no') },
+    [tr('consent.say', { device: dev() })],
+  );
+  const answer = a === 'yes' ? 'yes' : a === 'middle' ? 'every' : 'no';
+  setPrefs({ internet: afterConsent(pref, answer) });
+  return answer === 'no' ? 'no' : 'go';
+}
+
+/** The router's reason, said plainly. */
+function whyText(reason: Reason, input: 'words' | 'picture' | 'quote'): string {
+  if (reason === 'no-device-model' && input !== 'words') return tr('route.why.no-device-model.picture', { device: dev() });
+  return tr(`route.why.${reason}`, { device: dev() });
+}
+
+/**
+ * Check covered words online: cover, guard, review on this device, then the cloud places them in the pack index.
+ * 'answered': an answer (or a "not sent") is on screen. 'stayed': nothing was sent (no, never, offline, no index):
+ * the caller answers from this device. Otherwise the cloud found nothing: what was sent, for the receipt.
+ */
+async function escalateFlow(c: Ctx, words: string, reason: Reason, input: 'words' | 'picture'): Promise<'answered' | 'stayed' | Escalated> {
+  const { t, kb } = c;
+  if (!deviceStore.get().online || getPrefs().internet === 'never') return 'stayed';
+  const cov = coverWords(words);
+  if (!cov.text) return 'stayed';
+  const list = coveredList(cov.counts);
+  // Words with no personal details in them go without a sheet (the receipt still shows exactly what went), unless the
+  // person asked to be asked every time; words that had details covered, and words read from a picture or a paper,
+  // need the consent first.
+  const clean = input === 'words' && !Object.keys(cov.counts).length && getPrefs().internet !== 'every';
+  const sheet: SheetRequest = {
+    kind: 'net',
+    title: tr('ask.words.title'),
+    body: tr('ask.words.body', { device: dev() }),
+    parcel: [`“${cov.text}”`, tr('ask.words.index')],
+    not: [...(list ? [tr('ask.thing.list', { list })] : []), tr('ask.words.not'), tr('ask.thing.not')],
+    yes: tr('ask.words.yes'),
+    no: tr('ask.thing.no'),
+  };
+  const go = clean ? 'go' : await mayUseInternet(t, sheet, [tr('ask.words.say', { device: dev() })]);
+  alive(t);
+  if (go !== 'go') return 'stayed';
+  setPhase('looking');
+  patch({ reading: false });
+  void narrate(t, [tr('route.checking', { device: dev() })]);
+  const model = deviceStore.get().model === 'available';
+  const res = await withWaits(
+    t,
+    withTimeout(
+      escalate(cov.text, {
+        index: () => (kb.index ? kb.index() : Promise.resolve([])),
+        review: model ? async (x) => (await import('../reader')).reviewOnDevice(x) : undefined,
+        cloud: async (x, ix) => {
+          const r = await import('../reader');
+          r.setCloudModel(c.settings.cloudModel);
+          return r.chooseFromIndex(x, ix);
+        },
+      }),
+      READ_TIMEOUT,
+    ),
+  );
+  if (res.kind === 'no-index') return 'stayed';
+  if (res.kind === 'blocked') {
+    notSent(t, res.by, res.found);
+    return 'answered';
+  }
+  const esc: Escalated = { reason, input, sent: res.sent, counts: cov.counts, offered: res.offered, ms: res.ms, model: res.model, reviewed: res.reviewed, found: res.kind === 'found' };
+  // The program decides: a problem described in words is answered with a guide, never a price card. A price the
+  // cloud names for it is not used (the same cross-lean rule as on this device); the web how-to is tried instead.
+  if (res.kind === 'found' && res.entry.kind === 'price' && lean(words) === 'guide') esc.found = false;
+  else if (res.kind === 'found') {
+    const e = res.entry;
+    patch({ still: input === 'words' ? null : view().still, looking: false, reading: false, chip: null });
+    if (e.kind === 'guide') {
+      const gp = await guidePack(kb, e.ref);
+      alive(t);
+      if (gp) {
+        await guideAnswer({ ...c, reading: { ...c.reading, pack: gp.pack }, escalated: esc }, gp.guide);
+        return 'answered';
+      }
+    } else {
+      const pack = await kb.resolve([e.ref]);
+      alive(t);
+      const item = priceByRef(pack, e.ref);
+      if (item) {
+        await wordsPrice({ ...c, reading: { ...c.reading, pack }, escalated: esc }, item);
+        return 'answered';
+      }
+    }
+    // A ref in the index whose data could not be loaded: said as not found.
+    esc.found = false;
+  }
+  // Not in the packs: the same covered words as a web search, with Google Search grounding. Shown only with sources.
+  void narrate(t, [tr('route.web.looking')]);
+  let web: Awaited<ReturnType<typeof import('../webSearch').searchWeb>> | null = null;
+  // The search gets only the words that name the job: "my phone number is [phone]" is left out too.
+  const query = jobWords(esc.sent) || esc.sent;
+  try {
+    const { searchWeb } = await import('../webSearch');
+    web = await withWaits(t, withTimeout(searchWeb(query), READ_TIMEOUT));
+  } catch (e) {
+    if (e instanceof Cancel) throw e;
+    console.warn('[WeKnow] web search failed', e);
+  }
+  alive(t);
+  esc.web = { sent: web?.sent ?? query, tries: web?.tries ?? 1, ms: web?.ms ?? 0, sources: web?.answer?.sources.length ?? 0, reason: web ? web.reason : 'the search failed' };
+  if (web?.answer) {
+    await webAnswerFlow({ ...c, escalated: esc }, web.answer);
+    return 'answered';
+  }
+  return esc;
+}
+
+/** A how-to from the web for a problem the packs do not cover: said as not WeKnow's own guide, with its sources. */
+async function webAnswerFlow(c: Ctx, a: WebAnswer) {
+  const { t } = c;
+  const sources = a.sources.map((src) => ({
+    label: tr('where.src.web', { name: src.title ?? new URL(src.url).hostname }),
+    date: src.fetched ? tr('where.checked', { date: longDate(src.fetched) }) : '',
+    url: src.url,
+    title: src.title,
+  }));
+  const receipt = escReceipt(c, sources);
+  const lines: Said[] = [
+    a.sources.length === 1 ? tr('web.intro.1') : tr('web.intro', { n: a.sources.length }),
+    ...a.steps,
+    ...(a.safety ? [{ text: tr('web.safety', { text: a.safety }), kind: 'warn' as const }] : []),
+    ...(a.callPro ? [tr('web.pro', { text: a.callPro })] : []),
+  ];
+  topic = null;
+  clearLines();
+  setHead('plain', a.title);
+  patch({ receipt, looking: false, reading: false, still: c.picture ? view().still : null });
+  await keep(c, { kind: 'Guide', family: 'problem', title: a.title, tone: 'plain', verdict: a.title, lines, receipt });
+  alive(t);
+  settle();
+  void narrate(t, lines);
+}
+
+/** What WeKnow says when the cloud found nothing either. */
+function noneLines(e: Escalated | undefined): string[] {
+  if (!e) return [];
+  return [e.web ? tr('route.web.none') : tr('route.none')];
+}
+
+/**
+ * The cloud saw every guide and price name and found nothing: say so plainly. The plain-search guesses on this device
+ * are not offered after that.
+ */
+function notInPacks(t: number, c: Ctx, esc: Escalated) {
+  const cc = { ...c, escalated: esc };
+  clearLines();
+  patch({ receipt: escReceipt(cc, []), still: null, looking: false });
+  setHead('plain', tr('route.none.title'));
+  patch({ offerSamples: true });
+  settle();
+  void narrate(t, [...noneLines(esc), tr('words.none.more')]);
+}
+
+/** The guard or the on-device review still saw a personal detail: nothing went. Ask again, or show a picture. */
+function notSent(t: number, by: 'guard' | 'review', found: PIIKind[]) {
+  const counts: Partial<Record<PIIKind, number>> = {};
+  for (const k of found) counts[k] = 1;
+  const list = coveredList(counts);
+  clearLines();
+  setHead('plain', tr('route.blocked.title'));
+  patch({
+    looking: false,
+    reading: false,
+    receipt: {
+      w: whereRan({ where: 'device', online: deviceStore.get().online, sent: 0, pending: 0 }),
+      n: 0,
+      stayed: [tr('where.question.typed')],
+      sent: [],
+      sources: [],
+      tech: [
+        by === 'guard'
+          ? `Held back by the payload guard (plain code) on this ${dev()}: a personal pattern${list ? ` (${list})` : ''} was still in the outgoing words. Requests to the cloud model: 0.`
+          : `Held back by the built-in model on this ${dev()}, which reviewed the covered words and said they still hold a personal detail. Requests to the cloud model: 0.`,
+      ],
+    },
+  });
+  settle();
+  void narrate(t, [tr('route.blocked.line', { what: list ? ` (${list})` : '' }), tr('route.blocked.try')]);
+  offerNext([
+    { label: tr('route.blocked.again'), act: () => focusBox() },
+    { label: tr('route.blocked.photo'), act: () => takePicture() },
+  ]);
+}
+
+/** The receipt of an answer whose words were checked online: what stayed, the exact words that went, and why. */
+function escReceipt(c: Ctx, sources: Receipt['sources']): Receipt {
+  const e = c.escalated!;
+  const list = coveredList(e.counts);
+  return {
+    w: 'cloud',
+    n: 0,
+    stayed: [
+      ...(c.picture ? [tr('where.picture')] : []),
+      tr('where.question.typed'),
+      ...(list ? [tr('where.covered.list', { list })] : []),
+      ...(e.found ? [tr('where.answer.pack', { device: dev() })] : []),
+    ],
+    sent: [tr('where.sent.words', { q: e.sent }), tr('where.sent.index', { n: e.offered }), ...(e.web ? [tr('where.sent.web', { q: e.web.sent })] : [])],
+    why: tr('where.why', { why: whyText(e.reason, e.input) }),
+    sources,
+    tech: tech(c),
+  };
+}
+
+function escTech(c: Ctx): string[] {
+  const e = c.escalated!;
+  return [
+    `Checked online because: ${e.reason}. ${e.model} through Firebase AI Logic (in the cloud only), ${e.ms} ms; requests to the cloud model: ${1 + (e.web?.tries ?? 0)}.`,
+    `Sent: the covered words (${e.sent.length} characters) and the pack index (${e.offered} guide and price names). The cloud may only name a ref from that index; ${e.found ? 'it named one, and the answer is that pack item, shown from this device' : 'it named none that is used (none at all, a ref not in the index, or a price for a described problem)'}.`,
+    ...(e.web
+      ? [
+          `Not in the pack, so the job words of the covered question (personal details and their lead-in words left out) were searched on the web with Google Search grounding through Firebase AI Logic (${e.web.tries === 1 ? 'one request' : 'two requests: the first came back without web sources'}): ${e.web.ms} ms, ${e.web.sources} https ${e.web.sources === 1 ? 'source' : 'sources'}${e.web.reason ? ` (not shown: ${e.web.reason})` : ''}. Money amounts in a web answer are removed; prices come only from the pack.`,
+        ]
+      : []),
+    `Before sending: the payload guard (plain code) found no personal pattern in the outgoing words${e.reviewed ? `; the built-in model on this ${dev()} reviewed them and found none` : `; there is no built-in model on this ${dev()} for a second review`}.`,
+  ];
+}
+
 // ---------- shared pieces of an answer ----------
 
 /** "I worked that out right here", said once ever, after the first answer that stayed on the device. */
@@ -611,6 +922,10 @@ function firstTimeHere(where: Where): string[] {
 }
 
 function tech(c: Ctx, extra: string[] = []): string[] {
+  if (c.escalated) {
+    const read = c.picture ? [`The picture was read by the built-in model on this ${dev()} (Firebase AI Logic, on-device) in ${c.reading.ms} ms; it did not leave.`] : [];
+    return [...read, ...escTech(c), `Pack ${c.kb.id}, version ${c.kb.version}.`, ...extra];
+  }
   if (c.words) return wordsTech(c, extra);
   const r = c.reading;
   const chose = r.retrieval.offered > 0;
@@ -643,12 +958,13 @@ function stayedCovered(c: Ctx): string[] {
 }
 
 /** On the cloud path, what went: the covered copy of the picture (shown as it was sent) and the question. */
-function sentCovered(c: Ctx, more: string[] = []): Pick<Receipt, 'sent' | 'sentPicture' | 'coveredPicture'> {
-  if (c.where !== 'cloud') return { sent: more };
+function sentCovered(c: Ctx, more: string[] = []): Pick<Receipt, 'sent' | 'sentPicture' | 'coveredPicture' | 'why'> {
+  if (c.where !== 'cloud') return { sent: more, ...(more.length ? { why: tr('where.why', { why: whyText('unknown-price', 'quote') }) } : {}) };
   return {
     sent: [tr('where.sent.covered'), tr('where.sent.question', { q: c.question }), ...more],
     sentPicture: !!c.covered,
     coveredPicture: c.covered?.url,
+    ...(c.cloudWhy ? { why: tr('where.why', { why: whyText(c.cloudWhy, 'picture') }) } : {}),
   };
 }
 
@@ -761,9 +1077,13 @@ interface WordsLook {
   hit: WordsHit | null;
   guides: Candidate[];
   offered: number;
+  /** Pack items plain search found for the words. */
+  found: number;
 }
 
-async function lookUpWords(t: number, question: string, kb: LayeredKnowledge): Promise<WordsLook> {
+async function lookUpWords(t: number, asked: string, kb: LayeredKnowledge): Promise<WordsLook> {
+  // Matched on the job words only: personal details (and "my phone number is") never pick a pack item.
+  const question = jobWords(asked) || asked;
   const l = lean(question);
   const order = kindOrder(l);
   const lists = await Promise.all(order.map((kind) => kb.candidates(question, { kind, k: 4 })));
@@ -771,7 +1091,7 @@ async function lookUpWords(t: number, question: string, kb: LayeredKnowledge): P
   const all = lists.flat();
   // Likely guides to offer when no one item is clear (not for a question about a price).
   const guides = l === 'price' ? [] : (lists[order.indexOf('guide')] ?? []).slice(0, 3);
-  if (!all.length) return { hit: null, guides: [], offered: 0 };
+  if (!all.length) return { hit: null, guides: [], offered: 0, found: 0 };
 
   if (deviceStore.get().model === 'available') {
     setPhase('speaking');
@@ -787,7 +1107,7 @@ async function lookUpWords(t: number, question: string, kb: LayeredKnowledge): P
     clearLines();
     if (r) {
       const c = r.ref ? all.find((x) => x.ref === r.ref) : undefined;
-      return { hit: c ? { kind: c.kind, ref: c.ref, by: 'model', offered: r.offered } : null, guides, offered: r.offered };
+      return { hit: c ? { kind: c.kind, ref: c.ref, by: 'model', offered: r.offered } : null, guides, offered: r.offered, found: all.length };
     }
   }
 
@@ -798,8 +1118,8 @@ async function lookUpWords(t: number, question: string, kb: LayeredKnowledge): P
     const item = c.kind === 'price' ? priceByRef(slice, c.ref) : guideByRef(slice, c.ref);
     return { kind: c.kind, ref: c.ref, strength: item ? matchStrength(question, [item.name, ...item.aliases]) : 0 };
   });
-  const hit = pickLexical(l, scored);
-  return { hit: hit ? { kind: hit.kind, ref: hit.ref, by: 'match', offered: tops.length } : null, guides, offered: tops.length };
+  const hit = pickConfident(l, scored);
+  return { hit: hit ? { kind: hit.kind, ref: hit.ref, by: 'match', offered: tops.length } : null, guides, offered: tops.length, found: all.length };
 }
 
 /** A Ctx for an answer from words alone (no picture, nothing sent). */
@@ -837,7 +1157,7 @@ async function guidePack(kb: LayeredKnowledge, ref: string): Promise<{ pack: Pac
  * Answer a question from the pack alone. True when it answered; otherwise what was found to offer instead (likely
  * guides), or false when the lookup itself failed.
  */
-async function wordsFlow(t: number, question: string): Promise<true | false | { ctx: Ctx; guides: Candidate[] }> {
+async function wordsFlow(t: number, question: string): Promise<true | false | { ctx: Ctx; guides: Candidate[]; found: number }> {
   const t0 = performance.now();
   let kb: LayeredKnowledge;
   let settings: Settings;
@@ -856,7 +1176,7 @@ async function wordsFlow(t: number, question: string): Promise<true | false | { 
   const { hit } = look;
   if (!hit) {
     const empty: Pack = { id: kb.id, version: kb.version, region: kb.region, currency: 'USD', prices: [], guides: [] };
-    return { ctx: wordsCtx(t, question, kb, settings, empty, { kind: 'guide', ref: null, by: 'match', offered: look.offered, ms }), guides: look.guides };
+    return { ctx: wordsCtx(t, question, kb, settings, empty, { kind: 'guide', ref: null, by: 'match', offered: look.offered, ms }), guides: look.guides, found: look.found };
   }
   patch({ still: null, looking: false, reading: false, chip: null });
   if (hit.kind === 'guide') {
@@ -915,10 +1235,10 @@ async function chooseGuide(t: number, c: Ctx, gs: Guide[]) {
 }
 
 /** Not sure which problem it is: up to three likely guides from the pack, and None of these. Never a guess. */
-function maybeGuides(t: number, c: Ctx, guides: Candidate[]) {
+function maybeGuides(t: number, c: Ctx, guides: Candidate[], never = false) {
   setHead('plain', tr('maybe.title'));
   settle();
-  void narrate(t, [tr('maybe.line')]);
+  void narrate(t, [tr('maybe.line'), ...(never ? [tr('route.never', { device: dev() })] : [])]);
   offerNext([
     ...guides.slice(0, 3).map((g) =>
       nextQ(g.name, async (t2) => {
@@ -940,15 +1260,17 @@ function maybeGuides(t: number, c: Ctx, guides: Candidate[]) {
 async function wordsPrice(c: Ctx, item: PriceItem) {
   const { t } = c;
   const a = priceAnswer(item);
-  const receipt: Receipt = {
-    w: whereRan({ where: 'device', online: deviceStore.get().online, sent: 0, pending: 0 }),
-    n: 0,
-    stayed: [tr('where.question'), tr('where.answer.words', { device: dev() })],
-    sent: [],
-    sources: priceSources([item]),
-    tech: tech(c),
-  };
-  const lines: Said[] = [...a.lines, ...firstTimeHere('device')];
+  const receipt: Receipt = c.escalated
+    ? escReceipt(c, priceSources([item]))
+    : {
+        w: whereRan({ where: 'device', online: deviceStore.get().online, sent: 0, pending: 0 }),
+        n: 0,
+        stayed: [tr('where.question'), tr('where.answer.words', { device: dev() })],
+        sent: [],
+        sources: priceSources([item]),
+        tech: tech(c),
+      };
+  const lines: Said[] = [...a.lines, ...(c.escalated ? [tr('route.found.price')] : firstTimeHere('device'))];
   clearLines();
   setHead(a.tone, a.head);
   patch({ receipt });
@@ -975,7 +1297,7 @@ function wordsTech(c: Ctx, extra: string[]): string[] {
   const by =
     w.by === 'model'
       ? `Picked by the built-in model on this ${dev()} (Firebase AI Logic, on-device, text only) among ${w.offered} pack ${w.offered === 1 ? 'item' : 'items'} found by plain search.`
-      : `Picked by plain code on this ${dev()}: the top search match, taken because the question holds the job words of its name or an alias (all of a short one; at least half, and two, of a longer one).`;
+      : `Picked by plain code on this ${dev()}: the top search match, taken because every job word of its name or one alias is in the question, and the question leans to this kind of answer (a price or a guide) or neither.`;
   return [
     `Answered from the question alone, without a picture. ${by}`,
     'Requests to the cloud model: 0.',
@@ -985,12 +1307,12 @@ function wordsTech(c: Ctx, extra: string[]): string[] {
 }
 
 /** A question in words that the pack does not know, with no camera to look instead. Never a made-up price. */
-function dontKnow(t: number) {
+function dontKnow(t: number, never = false) {
   clearLines();
   setHead('plain', tr('words.none.title'));
   patch({ offerSamples: true, still: null, looking: false });
   settle();
-  void narrate(t, [tr('words.none.line'), tr('words.none.more')]);
+  void narrate(t, [tr('words.none.line'), tr('words.none.more'), ...(never ? [tr('route.never', { device: dev() })] : [])]);
 }
 
 // ---------- a quote ----------
@@ -1072,7 +1394,7 @@ async function quoteFlow(c: Ctx) {
   const online = deviceStore.get().online;
   const p = getPrefs();
   // On the cloud path the person already said yes to the picture; then WeKnow only says it looks the lines up.
-  const lookNow = unknown.length > 0 && online && p.consented && !p.askEvery;
+  const lookNow = unknown.length > 0 && online && route({ input: 'quote-lines', unknown: unknown.length }).escalate && p.internet === 'auto';
 
   const summary = quoteSummary(items);
   const pending = items.filter((i) => i.state === 'pending').length;
@@ -1183,7 +1505,7 @@ async function quoteFlow(c: Ctx) {
     settle();
     if (unknown.length && online && !looked) {
       // Ask before one line goes over the internet: only the masked line names and the region.
-      const yes = await ask(
+      const go = await mayUseInternet(
         t2,
         {
           kind: 'net',
@@ -1196,12 +1518,11 @@ async function quoteFlow(c: Ctx) {
         },
         [tr('ask.item.say')],
       );
+      const yes = go === 'go';
       looked = true;
       if (yes && c.settings.lookupEnabled) {
-        setPrefs({ consented: true });
         await runLookup(t2);
       } else if (yes) {
-        setPrefs({ consented: true });
         receipt = receiptFor({ sent: parcel, waiting: tr('where.requested', { names: names.join(', ') }) });
         fileRequests(names, kb.region, () => undefined);
         patch({ receipt });
@@ -1209,7 +1530,7 @@ async function quoteFlow(c: Ctx) {
       } else {
         receipt = receiptFor({ sent: [], waiting: tr('where.declined', { names: names.join(', ') }) });
         patch({ receipt });
-        void narrate(t2, [names.length === 1 ? tr('quote.skip') : tr('quote.skip.n')]);
+        void narrate(t2, [names.length === 1 ? tr('quote.skip') : tr('quote.skip.n'), ...(go === 'never' ? [tr('route.never', { device: dev() })] : [])]);
       }
     } else void narrate(t2, []);
     offerNext(quoteNext('unchecked'));
@@ -1400,23 +1721,29 @@ async function proLinks(g: Guide) {
   patch({ links });
 }
 
-async function problemFlow(c: Ctx) {
+async function problemFlow(c: Ctx, never = false) {
   const { t, reading } = c;
   const u = reading.understanding;
-  const guide = u.problemRef ? guideByRef(reading.pack, u.problemRef) : undefined;
+  const guide = !c.escalated && u.problemRef ? guideByRef(reading.pack, u.problemRef) : undefined;
   if (guide) return guideAnswer(c, guide);
   // The reader is not sure which problem it is: offer likely guides from the pack instead of picking one.
   const guides = await c.kb.candidates(c.question, { kind: 'guide', k: 3 }).catch(() => [] as Candidate[]);
   alive(t);
   clearLines();
-  if (guides.length) return maybeGuides(t, c, guides);
-  setHead('plain', tr('new.title'));
+  if (c.escalated) patch({ receipt: escReceipt(c, []) });
+  if (guides.length && !c.escalated) return maybeGuides(t, c, guides, never);
+  setHead('plain', c.escalated ? tr('route.none.title') : tr('new.title'));
   settle();
-  void narrate(t, [tr('new.line'), ...(!deviceStore.get().online ? [tr('new.offline')] : [])]);
+  void narrate(t, [
+    ...(c.escalated ? noneLines(c.escalated) : [tr('new.line')]),
+    ...(!deviceStore.get().online ? [tr('new.offline')] : []),
+    ...(never ? [tr('route.never', { device: dev() })] : []),
+  ]);
 }
 
 function guideReceipt(c: Ctx, guide: Guide): Receipt {
   const { where } = c;
+  if (c.escalated) return escReceipt(c, guideSources(guide));
   return {
     w: whereRan({ where, online: deviceStore.get().online, sent: 0, pending: 0 }),
     n: 0,
@@ -1439,7 +1766,7 @@ async function guideAnswer(c: Ctx, guide: Guide) {
   if (!guide.steps.length) {
     // Needs a professional: never offers steps.
     setHead('stop', tr('danger.title'));
-    const lines: Said[] = [tr('danger.line', { reason: guide.safety?.[0] ?? guide.name }), ...(proSentence ? [proSentence] : []), ...firstTimeHere(where)];
+    const lines: Said[] = [tr('danger.line', { reason: guide.safety?.[0] ?? guide.name }), ...(proSentence ? [proSentence] : []), ...(c.escalated ? [tr('route.found')] : firstTimeHere(where))];
     await keep(c, { kind: 'Guide', family: 'problem', title: guide.name, tone: 'stop', verdict: tr('danger.title'), lines, receipt });
     await proLinks(guide);
     settle();
@@ -1447,7 +1774,7 @@ async function guideAnswer(c: Ctx, guide: Guide) {
     return;
   }
   setHead('plain', tr('fix.what', { guide: guide.name }));
-  const lines: Said[] = [tr('fix.time', { minutes: minutesText(guide) }), ...firstTimeHere(where)];
+  const lines: Said[] = [tr('fix.time', { minutes: minutesText(guide) }), ...(c.escalated ? [tr('route.found')] : firstTimeHere(where))];
   await keep(c, { kind: 'Guide', family: 'problem', title: guide.name, tone: 'ok', verdict: tr('fix.what', { guide: guide.name }), lines, receipt });
   alive(t);
   settle();
