@@ -21,8 +21,8 @@
       "valueType": "STRING"
     },
     "lookup_enabled": {
-      "defaultValue": { "value": "false" },
-      "description": "Search-grounded price lookup; needs a billed tier",
+      "defaultValue": { "value": "true" },
+      "description": "Search-grounded price lookup; needs a billed tier (on since 2026-11-16, Blaze)",
       "valueType": "BOOLEAN"
     },
     "urgency_phrases": {

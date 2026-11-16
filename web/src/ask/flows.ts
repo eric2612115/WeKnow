@@ -919,6 +919,54 @@ function dontKnow(t: number) {
 
 // ---------- a quote ----------
 
+/**
+ * Look the unknown lines up on the web (Google Search grounding through Firebase AI Logic). Only each masked line
+ * name and the region leave the device. A price is used only when it came with https sources; it is then judged by
+ * the same plain code as a pack price, and kept on this device so the same line is known next time.
+ */
+async function lookUpLines(
+  unknown: Array<{ i: LineItem; payload: { item: string; region: string } }>,
+  kb: LayeredKnowledge,
+): Promise<Array<{ i: LineItem; item: PriceItem; ms: number }>> {
+  const { lookupPrice } = await import('../lookup');
+  const found = await Promise.all(
+    unknown.map(async (x) => {
+      try {
+        const r = await lookupPrice(x.payload.item, x.payload.region);
+        return r.item ? { i: x.i, item: r.item, ms: r.ms } : null;
+      } catch (e) {
+        console.warn('[WeKnow] price lookup failed', e);
+        return null;
+      }
+    }),
+  );
+  const ok = found.filter((x): x is NonNullable<typeof x> => !!x);
+  for (const f of ok) await kb.learn(f.item).catch(() => undefined);
+  return ok;
+}
+
+/** Puts looked-up prices on their lines: high when over the found top, otherwise fair (looked up). */
+function applyFound(items: LineItem[], found: Array<{ i: LineItem; item: PriceItem }>): string[] {
+  const said: string[] = [];
+  for (const f of found) {
+    const line = items.find((x) => x.n === f.i.n);
+    if (!line) continue;
+    line.name = f.item.name;
+    line.typical = f.item.typical;
+    line.top = f.item.high;
+    if (line.amount !== null && line.amount > f.item.high) {
+      line.state = 'high';
+      line.over = line.amount - f.item.high;
+      said.push(tr('quote.found.high', { label: line.label, low: money(f.item.low), high: money(f.item.high), over: money(line.over) }));
+    } else {
+      line.state = 'found';
+      said.push(tr('quote.found.fair', { label: line.label, low: money(f.item.low), high: money(f.item.high) }));
+    }
+  }
+  return said;
+}
+
+
 async function quoteFlow(c: Ctx) {
   const { t, reading, kb, where } = c;
   const u = reading.understanding;
@@ -989,13 +1037,36 @@ async function quoteFlow(c: Ctx) {
     waiting: unknown.length && !online ? tr('where.waiting', { names: names.join(', ') }) : lookNow ? tr('where.requested', { names: names.join(', ') }) : undefined,
   });
 
+  /** Looks the unknown lines up online and puts the prices on them (only the masked names and region are sent). */
+  const runLookup = async (tt: number, afterSpeech = false) => {
+    setHead('plain', tr('quote.looking.now'));
+    const found = await lookUpLines(unknown, kb);
+    alive(tt);
+    const said = applyFound(items, found);
+    const missed = unknown.filter((x) => !found.some((f) => f.i.n === x.i.n)).map((x) => x.i.label);
+    if (missed.length) fileRequests(missed, kb.region, () => undefined);
+    const after = quoteSummary(items);
+    setHead(after.verdict.tone, after.verdict.text);
+    receipt = {
+      ...receiptFor({ sent: parcel, waiting: missed.length ? tr('where.requested', { names: missed.join(', ') }) : undefined }),
+      sources: [...priceSources(matched as PriceItem[]), ...priceSources(found.map((f) => f.item)).map((r) => ({ ...r, label: tr('where.src.web', { name: r.label.replace(/^.*?: /, '') }) }))],
+    };
+    receipt.tech = [...receipt.tech, `Looked up online for ${unknown.length} ${unknown.length === 1 ? 'line' : 'lines'} with Google Search grounding through Firebase AI Logic; ${found.length} came back with sources (${found.map((f) => `${f.ms} ms`).join(', ')}). Sent: the masked line names and the region only.`];
+    patch({ items: [...items], receipt });
+    // Every line has a price now: the question about unchecked lines goes.
+    if (!items.some((i) => i.state === 'pending')) offerNext(quoteNext('unchecked'));
+    if (afterSpeech) await narrated();
+    alive(tt);
+    void narrate(tt, [...said, ...(missed.length ? [tr('quote.notfound', { names: listNames(missed) })] : [])]);
+  };
+
   // The answer goes on screen at once; it is read out after.
   const lines: Said[] = [...summary.sentences];
   if (note) lines.push({ text: note.text, noteTag: true });
   lines.push(...firstTimeHere(where));
   if (where === 'device') lines.push(tr('quote.stays', { device: dev() }));
   if (unknown.length && !online) lines.push(names.length === 1 ? tr('quote.wait') : tr('quote.wait.n'));
-  if (lookNow) lines.push(names.length === 1 ? tr('quote.requested') : tr('quote.requested.n'));
+  if (lookNow && !c.settings.lookupEnabled) lines.push(names.length === 1 ? tr('quote.requested') : tr('quote.requested.n'));
   const verdictLines = [...lines];
   const car = matched.some((x) => (x.category ?? '').startsWith('car'));
 
@@ -1014,7 +1085,9 @@ async function quoteFlow(c: Ctx) {
     project: car ? tr('project.car') : undefined,
   });
   alive(t);
-  if (lookNow) {
+  if (lookNow && c.settings.lookupEnabled) {
+    void runLookup(t, true).catch(() => undefined);
+  } else if (lookNow) {
     fileRequests(names, kb.region, (_filed, failed) => {
       if (!failed.length) return;
       receipt = receiptFor({ sent: parcel, waiting: tr('where.waiting', { names: failed.join(', ') }) });
@@ -1049,13 +1122,20 @@ async function quoteFlow(c: Ctx) {
         [tr('ask.item.say')],
       );
       looked = true;
-      if (yes) {
+      if (yes && c.settings.lookupEnabled) {
+        setPrefs({ consented: true });
+        await runLookup(t2);
+      } else if (yes) {
         setPrefs({ consented: true });
         receipt = receiptFor({ sent: parcel, waiting: tr('where.requested', { names: names.join(', ') }) });
         fileRequests(names, kb.region, () => undefined);
-      } else receipt = receiptFor({ sent: [], waiting: tr('where.declined', { names: names.join(', ') }) });
-      patch({ receipt });
-      void narrate(t2, [yes ? (names.length === 1 ? tr('quote.requested') : tr('quote.requested.n')) : names.length === 1 ? tr('quote.skip') : tr('quote.skip.n')]);
+        patch({ receipt });
+        void narrate(t2, [names.length === 1 ? tr('quote.requested') : tr('quote.requested.n')]);
+      } else {
+        receipt = receiptFor({ sent: [], waiting: tr('where.declined', { names: names.join(', ') }) });
+        patch({ receipt });
+        void narrate(t2, [names.length === 1 ? tr('quote.skip') : tr('quote.skip.n')]);
+      }
     } else void narrate(t2, []);
     offerNext(quoteNext('unchecked'));
   };
