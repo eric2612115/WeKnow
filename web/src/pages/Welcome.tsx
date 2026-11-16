@@ -2,6 +2,7 @@
 // sound and opens the system box for the camera and microphone; "Press Allow" points at that box.
 
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Wordmark } from '../ui/controls';
 import { t } from '../strings';
 import { attachSample, SAMPLES, type Sample } from '../samples';
@@ -95,6 +96,9 @@ export default function Welcome() {
           <span>{t('welcome.start')}</span>
         </button>
         <p className="mt-[1.1rem] text-small text-ink-2">{t('welcome.fine')}</p>
+        <Link to="/" className="mt-1 inline-flex min-h-11 items-center text-[0.9375rem] font-medium text-ink-2 underline-offset-4 hover:underline">
+          {t('menu.how')}
+        </Link>
       </div>
     </main>
   );

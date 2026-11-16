@@ -7,10 +7,20 @@ import type { Tone } from '../answer/types';
 import { ToneIcon } from './icons';
 import { t } from '../strings';
 
+/** The WeKnow mark (design/logo/weknow-mark.svg): an eye whose lower lid is a tick. It takes the colour of its text. */
+export function Mark({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="150 70 724 750" className={className} aria-hidden="true">
+      <path d="M222 452 A330 330 0 0 1 802 420 L436 752 L272 600" fill="none" stroke="currentColor" strokeWidth="96" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="500" cy="486" r="92" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-[0.45em] font-semibold tracking-[-0.02em] ${className}`}>
-      <span className="mark-dot" aria-hidden="true" />
+    <span className={`inline-flex items-center gap-[0.38em] font-semibold tracking-[-0.02em] ${className}`}>
+      <Mark className="size-[1.25em] flex-none text-go" />
       WeKnow
     </span>
   );

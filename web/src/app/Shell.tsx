@@ -111,7 +111,7 @@ function NewButton() {
       title={t('bar.new')}
       onClick={() => {
         startAgain();
-        nav('/');
+        nav('/app');
       }}
     >
       <I.compose />
@@ -155,7 +155,7 @@ function Drawer() {
               onClick={() => {
                 setDrawer(false);
                 startAgain();
-                nav('/');
+                nav('/app');
               }}
             >
               <I.compose />
@@ -166,6 +166,7 @@ function Drawer() {
             {row('/packs', <I.book />, t('menu.packs'))}
             {row('/settings', <I.set />, t('menu.settings'))}
             {row('/help', <I.help />, t('menu.help'))}
+            {row('/', <I.how />, t('menu.how'))}
           </nav>
           {recent.length > 0 && (
             <section className="mt-4 min-h-0" aria-label={t('menu.recent')}>
@@ -229,10 +230,10 @@ export default function Shell() {
     if (loc.hash) {
       const el = document.getElementById(loc.hash.slice(1));
       el?.scrollIntoView({ block: 'start' });
-    } else if (loc.pathname !== '/') document.getElementById('page')?.scrollTo({ top: 0 });
+    } else if (loc.pathname !== '/app') document.getElementById('page')?.scrollTo({ top: 0 });
   }, [loc.pathname, loc.hash]);
 
-  if (!p.started && loc.pathname === '/') return <Welcome />;
+  if (!p.started && loc.pathname === '/app') return <Welcome />;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg">
@@ -240,7 +241,7 @@ export default function Shell() {
         <button type="button" className="bar-btn" aria-haspopup="dialog" aria-label={t('menu.button')} title={t('menu.button')} onClick={() => setDrawer(true)}>
           <I.menu />
         </button>
-        <NavLink to="/" className="inline-flex min-h-11 min-w-0 items-center px-1 text-[1.125rem] text-ink no-underline" aria-label="WeKnow, Ask">
+        <NavLink to="/app" className="inline-flex min-h-11 min-w-0 items-center px-1 text-[1.125rem] text-ink no-underline" aria-label="WeKnow, Ask">
           <Wordmark />
         </NavLink>
         <div className="ml-auto flex flex-none items-center gap-1">

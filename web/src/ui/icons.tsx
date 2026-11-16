@@ -18,6 +18,7 @@ import {
   Folder,
   Globe,
   Lamp,
+  Layers,
   Mail,
   Menu,
   MessageSquare,
@@ -145,5 +146,6 @@ export const I = {
   soundOff: () => <VolumeX {...base} />,
   compose: () => <SquarePen {...base} />,
   book: () => <BookOpen {...base} />,
+  how: () => <Layers {...base} />,
   minus: () => <Minus {...base} />,
 };

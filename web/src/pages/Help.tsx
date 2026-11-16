@@ -1,7 +1,7 @@
 // Help: how it works (and hear it), the three sample pictures, the words WeKnow always understands, and setting
 // it up for someone else. At most 52rem wide.
 
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Card, CardTitle, PageTitle } from '../ui/controls';
 import { I } from '../ui/icons';
 import { openSheet } from '../ui/uiStore';
@@ -35,18 +35,22 @@ export default function Help() {
               <I.say />
               {t('help.hear')}
             </button>
+            <Link to="/" className="btn mt-[0.9rem] ml-2">
+              {t('menu.how')}
+              <I.next />
+            </Link>
           </Card>
           <Card>
             <CardTitle>{t('home.samples')}</CardTitle>
             <div className="mt-[0.6rem]">
               <SampleButtons
                 onPick={(id) => {
-                  nav('/');
+                  nav('/app');
                   void attachSample(id);
                 }}
               />
             </div>
-            <ChoosePhoto className="mt-4" onPicked={() => nav('/')} />
+            <ChoosePhoto className="mt-4" onPicked={() => nav('/app')} />
           </Card>
           <Card>
             <CardTitle>{t('help.words.title')}</CardTitle>

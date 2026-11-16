@@ -93,7 +93,7 @@ function CheckSheet({ s }: { s: Extract<SheetState, { type: 'check' }> | null })
               className="btn btn-yes"
               onClick={() => {
                 closeSheet();
-                nav('/');
+                nav('/app');
                 replay(c);
               }}
             >
@@ -294,14 +294,14 @@ function SamplesSheet({ open }: { open: boolean }) {
       <SampleButtons
         onPick={(id) => {
           closeSheet();
-          nav('/');
+          nav('/app');
           void attachSample(id);
         }}
       />
       <ChoosePhoto
         onPicked={() => {
           closeSheet();
-          nav('/');
+          nav('/app');
         }}
         className="mt-4 w-full"
       />
@@ -433,7 +433,7 @@ function SetupSheet({ open }: { open: boolean }) {
         className="btn btn-yes mt-[1.2rem] w-full"
         onClick={() => {
           closeSheet();
-          nav('/');
+          nav('/app');
         }}
       >
         {t('setup.try')}

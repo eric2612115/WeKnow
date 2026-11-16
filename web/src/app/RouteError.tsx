@@ -23,7 +23,7 @@ export default function RouteError() {
             <button type="button" className="btn btn-yes" onClick={() => window.location.reload()}>
               Load again
             </button>
-            <a className="btn" href="/">
+            <a className="btn" href="/app">
               Back to Ask
             </a>
           </div>

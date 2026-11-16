@@ -26,6 +26,7 @@ export const EN = {
   'menu.notes': 'What WeKnow remembers',
   'menu.settings': 'Settings',
   'menu.help': 'Help',
+  'menu.how': 'How WeKnow works', // added: the front page, from the Menu, Help, Welcome and Ask
   'menu.screen': 'Screen',
   'theme.light': 'Light',
   'theme.dark': 'Dark',

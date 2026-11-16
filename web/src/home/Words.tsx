@@ -5,7 +5,7 @@
 // next questions to ask as light pills.
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { pick, pressGuide, useAsk, type AskView, type Line, type MineMsg, type WkMsg } from '../ask/conversation';
 import { setBox } from '../ask/box';
 import { send } from '../ask/flows';
@@ -298,7 +298,10 @@ function SampleCards() {
       <div className="mx-auto grid max-w-[34rem] grid-cols-3 gap-2 md:gap-3">
         {SAMPLES.map((s) => (
           <button key={s.id} type="button" className="sample-card" aria-pressed={v.chosen?.sample === s.id} onClick={() => void attachSample(s.id)}>
-            <img src={s.url} alt="" />
+            {/* a paper is shown from its top-left corner, close enough for its printed lines to be seen */}
+            <div className="overflow-hidden bg-fill-2">
+              <img src={s.url} alt="" className={s.id === 'drain' ? '' : 'origin-[6%_4%] scale-[1.7]'} />
+            </div>
             <span>{t(s.q)}</span>
           </button>
         ))}
@@ -402,6 +405,11 @@ export function Opening() {
         )}
         {!v.offerSamples && <SampleCards />}
         {!v.chosen && !words && <Suggestions />}
+        {!v.chosen && !words && (
+          <Link to="/" className="mx-auto inline-flex min-h-11 items-center text-[0.9375rem] font-medium text-ink-2 underline-offset-4 hover:underline">
+            {t('menu.how')}
+          </Link>
+        )}
       </div>
     </div>
   );
