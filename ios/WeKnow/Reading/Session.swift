@@ -8,6 +8,7 @@ import FirebaseAILogic
 import FirebaseAppCheck
 import FirebaseCore
 import Foundation
+import CoreGraphics
 import FoundationModels
 
 enum Cloud {
@@ -52,6 +53,9 @@ enum Device {
 
   static var canRead: Bool { !forcedCloud && model.availability == .available }
 
+  /// The on-device model can be given the photo itself, not only the words read from it.
+  static var seesPictures: Bool { canRead && model.capabilities.contains(.vision) }
+
   /// Why the phone cannot read by itself, in words for Technical details.
   static var status: String {
     if forcedCloud { return "Treated as unavailable for testing (WeKnowForceCloud)" }
@@ -76,11 +80,11 @@ enum Device {
 
 extension Reader {
   /// Read on this phone, or in the cloud after the person agreed. The caller decides; this never falls back.
-  static func read(_ paper: PaperText, question: String, matcher: Matcher, where place: Where) async throws -> Reading {
+  static func read(_ paper: PaperText, image: CGImage? = nil, question: String, matcher: Matcher, where place: Where) async throws -> Reading {
     switch place {
     case .device:
       return try await read(
-        paper, question: question, matcher: matcher, where: .device, engine: Device.engine,
+        paper, image: Device.seesPictures ? image : nil, question: question, matcher: matcher, where: .device, engine: Device.engine,
         options: GenerationOptions(samplingMode: .greedy), session: Device.session)
     case .cloud:
       return try await read(

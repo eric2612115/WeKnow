@@ -95,6 +95,14 @@ final class Household {
     for c in checks { delete(c) }
   }
 
+  /// "Remember this company": the payee and the last four digits it asks to be paid at, kept on this phone.
+  func remember(payee name: String, payTo: String) {
+    payees.removeAll { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+    let month = Date.now.formatted(.dateTime.month(.wide).year())
+    payees.append(PayeeNote(name: name, payTo: payTo, since: month))
+    save()
+  }
+
   func delete(_ payee: PayeeNote) {
     payees.removeAll { $0.id == payee.id }
     save()

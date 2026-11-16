@@ -417,6 +417,273 @@
     transform: scale(0.96);
   }
 
+  /* ---------- the conversation (Ask) ---------- */
+  /* WeKnow on the left: plain text on the page, no bubble fill, so long answers stay easy to read */
+  .msg-wk {
+    align-self: stretch;
+    max-width: 100%;
+    padding: 0.2rem 0.15rem;
+    animation: var(--animate-rise);
+  }
+  /* the person on the right: their words in a soft bubble, their picture above them */
+  .msg-me {
+    align-self: flex-end;
+    max-width: min(85%, 30rem);
+    display: grid;
+    justify-items: end;
+    gap: 0.4rem;
+    animation: var(--animate-rise);
+  }
+  .msg-me p {
+    padding: 0.6rem 0.95rem;
+    border-radius: 1.3rem 1.3rem 0.4rem 1.3rem;
+    background: var(--card-2);
+    color: var(--ink);
+    font: 500 1.25rem/1.3 var(--font-sans);
+    letter-spacing: -0.01em;
+  }
+  .msg-pic {
+    width: min(15rem, 62vw);
+    aspect-ratio: 4 / 3;
+    border-radius: 1.1rem;
+  }
+  /* the small tag on a warning or a stop: never a band */
+  .ctag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.35rem;
+    padding: 0.15rem 0.6rem 0.15rem 0.45rem;
+    border-radius: 9999px;
+    font: 700 0.95rem/1.3 var(--font-sans);
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+  }
+  .ctag[data-tone="stop"] {
+    background: var(--stop-bg);
+    color: var(--stop);
+  }
+  .ctag svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .ctag[data-tone="stop"] svg {
+    fill: currentColor;
+  }
+  /* a next question: a big, plain button that reads like something to say */
+  .btn-next {
+    justify-content: flex-start;
+    text-align: left;
+    border-color: var(--line);
+    border-radius: 1.2rem;
+    font-weight: 600;
+  }
+
+  /* ---------- the question box (Ask) ---------- */
+  .composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.3rem;
+    padding: 0.35rem;
+    border-radius: 1.6rem;
+    border: 1.5px solid var(--line);
+    background: var(--card);
+    box-shadow: var(--sh-2);
+    transition: border-color 0.14s;
+  }
+  .composer:focus-within,
+  .composer[data-listening] {
+    border-color: var(--go);
+  }
+  /* more than one line: the words take the whole width, the buttons sit in a row under them */
+  .composer[data-tall],
+  .composer[data-pic] {
+    flex-wrap: wrap;
+  }
+  .composer[data-tall] .cfield {
+    order: -1;
+    flex-basis: 100%;
+    padding-inline: 0.6rem;
+  }
+  .composer[data-tall] .cbtn-go {
+    margin-left: auto;
+  }
+  /* the attached picture: a small chip above the words, with an x to take it off */
+  .cchip {
+    order: -2;
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.2rem 0.2rem 0.3rem 0.25rem;
+    font: 600 1.0625rem/1.2 var(--font-sans);
+    color: var(--ink);
+  }
+  .cchip img {
+    flex: none;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 0.8rem;
+    object-fit: cover;
+    background: #232a27;
+    box-shadow: 0 0 0 1px var(--hair);
+  }
+  .cchip span {
+    min-width: 0;
+  }
+  .cchip button {
+    flex: none;
+    margin-left: auto;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    border: 0;
+    background: var(--card-2);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+  }
+  .cchip button svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+  @media (hover: hover) {
+    .cchip button:hover {
+      filter: brightness(0.95);
+    }
+  }
+  .cfield {
+    flex: 1 1 0;
+    min-width: 0;
+    align-self: center;
+    resize: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 500 1.25rem/1.3 var(--font-sans);
+    letter-spacing: -0.01em;
+    padding: 0.55rem 0.35rem;
+    /* about four lines, then it scrolls */
+    max-height: calc(4 * 1.3em + 1.1rem);
+    overflow-y: auto;
+  }
+  .cfield::placeholder {
+    color: var(--ink-2);
+    opacity: 1;
+  }
+  /* the box itself shows the focus; the field inside it does not draw a second ring */
+  .cfield:focus-visible {
+    outline: none;
+  }
+  .composer:has(.cfield:focus-visible) {
+    outline: 3px solid var(--net);
+    outline-offset: 3px;
+  }
+  .cbtn {
+    flex: none;
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 9999px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    display: grid;
+    place-items: center;
+    transition:
+      background 0.14s,
+      transform 0.14s var(--ease-wk);
+  }
+  .cbtn svg {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+  .cbtn-cam {
+    background: var(--go-ring);
+    color: var(--go);
+  }
+  .cbtn-go {
+    background: var(--go);
+    color: var(--on-go);
+    box-shadow: 0 0.12rem 0 var(--go-deep);
+  }
+  .cbtn-go[data-face="stop"] {
+    background: var(--key);
+    color: var(--on-key);
+    box-shadow: 0 0.12rem 0 var(--key-deep);
+  }
+  .cbtn-go[data-face="stop"] svg {
+    fill: currentColor;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+  .cbtn-go[data-face="listen"] {
+    position: relative;
+  }
+  .cbtn-go[data-face="listen"]::after {
+    content: "";
+    position: absolute;
+    inset: -0.3rem;
+    border-radius: 9999px;
+    border: 0.18rem solid var(--go);
+    animation: var(--animate-ring);
+  }
+  @media (hover: hover) {
+    .cbtn:hover {
+      background: var(--card-2);
+    }
+    .cbtn-cam:hover {
+      background: var(--go-ring);
+      filter: brightness(0.96);
+    }
+    .cbtn-go:hover {
+      background: var(--go-h);
+    }
+    .cbtn-go[data-face="stop"]:hover {
+      background: var(--key);
+      filter: brightness(1.1);
+    }
+  }
+  .cbtn:active {
+    transform: scale(0.94);
+  }
+  .cbars {
+    display: flex;
+    align-items: center;
+    gap: 0.16rem;
+    height: 1.8rem;
+  }
+  .cbars i {
+    width: 0.24rem;
+    border-radius: 0.2rem;
+    background: currentColor;
+    height: var(--h, 0.5rem);
+    transition: height 0.09s linear;
+  }
+  .cbars.idle i {
+    animation: cbar 0.9s ease-in-out infinite;
+  }
+  .cbars.idle i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .cbars.idle i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  .cbars.idle i:nth-child(4) {
+    animation-delay: 0.45s;
+  }
+  .cbars.idle i:nth-child(5) {
+    animation-delay: 0.6s;
+  }
+  @keyframes cbar {
+    0%,
+    100% {
+      height: 0.4rem;
+    }
+    50% {
+      height: 1.4rem;
+    }
+  }
+
   /* ---------- the camera window ---------- */
   .win {
     position: relative;

@@ -151,3 +151,16 @@ export function priceAnswer(item: PriceItem): PriceAnswer {
   lines.push(fetched ? t('words.price.source', { date: longDate(fetched) }) : t('words.price.source.nodate'));
   return { tone: 'plain', head: t('words.price.head', { low: whole(item.low), high: whole(item.high) }), lines };
 }
+
+/** What follow-up words ask about the topic of the conversation, when they name nothing themselves. */
+export type FollowUp = 'say' | 'pay' | 'cost' | 'fix' | 'fair';
+
+export function followUp(question: string): FollowUp | null {
+  const s = question.toLowerCase();
+  if (/\b(say|tell|ask)\b.*\b(shop|mechanic|garage|them|him|her|plumber|electrician)\b/.test(s)) return 'say';
+  if (/\bshould i pay\b|\bpay (it|this|that)\b|\bscam\b|\bsafe\b|\bwhat (should|do|can) i do\b/.test(s)) return 'pay';
+  if (/\bhow much\b|\bcosts?\b|\bprice|\bcharges?\b|\bexpensive\b|\bcheap\b|\b(a|the) pro\b|\bprofessional\b/.test(s)) return 'cost';
+  if (/\bfix\b|\bfix it\b|\brepair\b|\bmyself\b|\bdo it\b|\bsteps?\b|\bhow do i\b|\bhow to\b/.test(s)) return 'fix';
+  if (/\bfair\b|\bnormal\b|\btoo (much|high)\b|\bover ?charg|\brip ?off\b|\bok(ay)?\b/.test(s)) return 'fair';
+  return null;
+}

@@ -1,46 +1,41 @@
-// The words under the window: "You asked", the step bar, the verdict, the spoken sentences as captions (the one
-// being spoken in full ink), the lines of a quote, the choices, and the where-it-ran tag pinned to the bottom.
+// Ask as one conversation (design/CHAT-SPEC.md): the person's messages on the right (their words and picture),
+// WeKnow's on the left, newest at the bottom. An answer has no verdict band: its first sentence is the point, in bold,
+// with a small amber "Careful" or red "Stop" tag only when it matters; then the other sentences, the lines of a
+// quote, the where-it-ran tag, and, under the newest answer only, the buttons: the next questions to ask.
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { pick, submitTyped, useAsk, type IconKey } from '../ask/conversation';
+import { pick, pressGuide, useAsk, type AskView, type Line, type MineMsg, type WkMsg } from '../ask/conversation';
 import { deviceWord } from '../engine/device';
-import { I, ToneIcon } from '../ui/icons';
+import { I } from '../ui/icons';
 import { WhereTag } from '../ui/Receipt';
 import { openSheet } from '../ui/uiStore';
 import { t, money } from '../strings';
 import { projectName, useData } from '../store/data';
 import { explainCurrent } from '../app/explainOpen';
 import { SampleButtons } from '../app/Sheets';
-import type { LineItem } from '../answer/types';
+import type { LineItem, Receipt } from '../answer/types';
 
-const HEAD_ICON: Record<IconKey, () => ReactNode> = {
-  mic: I.mic,
-  say: I.say,
-  lamp: I.lamp,
-  nonet: I.nonet,
-  camoff: I.camoff,
-  help: I.help,
-  type: I.keyboard,
-};
-
-function Head() {
-  const v = useAsk();
-  if (!v.head) return null;
-  const { tone, text, icon } = v.head;
-  const Icon = icon ? HEAD_ICON[icon] : null;
+/** The first sentence: the point, in bold. A tag only for a warning or a stop; never a band, never a green tick. */
+function Head({ head }: { head: AskView['head'] }) {
+  if (!head) return null;
+  const { tone, text } = head;
   return (
-    <h2 key={`${tone}:${text}`} className="verdict mb-[0.6rem]" data-tone={tone} aria-live="polite">
-      {Icon ? <Icon /> : <ToneIcon tone={tone} />}
-      <span>{text}</span>
-    </h2>
+    <div className="mb-[0.35rem]">
+      {(tone === 'warn' || tone === 'stop') && (
+        <span className="ctag" data-tone={tone}>
+          {tone === 'stop' ? <I.stopSquare /> : <I.warn />}
+          {tone === 'stop' ? t('tag.stop') : t('tag.careful')}
+        </span>
+      )}
+      <p className="text-[1.375rem] leading-[1.3] font-bold tracking-[-0.018em] text-ink lg:text-[1.5rem]">{text}</p>
+    </div>
   );
 }
 
-function Steps() {
-  const v = useAsk();
-  if (!v.steps) return null;
-  const { label, n, total } = v.steps;
+function Steps({ steps }: { steps: AskView['steps'] }) {
+  if (!steps) return null;
+  const { label, n, total } = steps;
   return (
     <div className="mb-2 flex items-center gap-[0.8rem] text-small font-bold text-ink-2">
       <span className="flex-none">{label}</span>
@@ -61,32 +56,28 @@ function Steps() {
 }
 
 const STATE: Record<LineItem['state'], { cls: string; icon: () => ReactNode; text: (i: LineItem) => string }> = {
-  fair: { cls: 'text-go', icon: I.check, text: () => t('line.fair') },
-  found: { cls: 'text-net', icon: I.check, text: () => t('line.found') },
-  low: { cls: 'text-go', icon: I.check, text: () => t('line.low') },
+  fair: { cls: 'text-ink-2', icon: I.check, text: () => t('line.fair') },
+  found: { cls: 'text-ink-2', icon: I.check, text: () => t('line.found') },
+  low: { cls: 'text-ink-2', icon: I.check, text: () => t('line.low') },
   high: { cls: 'text-warn-ink bg-warn-bg', icon: I.warn, text: (i) => t('quote.mark', { over: money(i.over ?? 0) }) },
   pending: { cls: 'text-net bg-net-bg', icon: I.help, text: () => t('line.pending') },
 };
 
-function Items() {
-  const v = useAsk();
-  if (!v.items?.length) return null;
+function Items({ items }: { items: LineItem[] | null }) {
+  if (!items?.length) return null;
   return (
     // Every line name wraps, never truncates; the amount stays at the right and the status sits under the name.
-    <ol className="mt-4 mb-2 grid grid-cols-[minmax(0,1fr)] rounded-btn border border-hair bg-card px-3 py-1" aria-label="Lines on the paper">
-      {v.items.map((it) => {
+    <ol className="mt-3 mb-1 grid grid-cols-[minmax(0,1fr)] rounded-btn border border-hair bg-bg px-3 py-1" aria-label="Lines on the paper">
+      {items.map((it) => {
         const s = STATE[it.state];
         const Icon = s.icon;
         return (
-          <li
-            key={it.n}
-            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2 gap-y-1 border-t border-hair py-2 text-small first:border-t-0 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
-          >
+          <li key={it.n} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2 gap-y-1 border-t border-hair py-2 text-small first:border-t-0">
             <span className="font-semibold text-ink-2 tabular-nums">{it.n}</span>
             <span className="font-semibold [overflow-wrap:normal] [word-break:normal]">{it.label}</span>
             <span className="text-right font-semibold whitespace-nowrap tabular-nums">{it.amount !== null ? money(it.amount) : ''}</span>
             <span
-              className={`col-start-2 col-span-2 inline-flex items-center gap-1 justify-self-start rounded-full px-2 py-0.5 font-semibold [&_svg]:size-[1.1rem] [&_svg]:flex-none lg:col-span-1 lg:col-start-4 lg:row-start-1 lg:justify-self-end ${s.cls}`}
+              className={`col-start-2 col-span-2 inline-flex items-center gap-1 justify-self-start rounded-full px-2 py-0.5 font-semibold [&_svg]:size-[1.1rem] [&_svg]:flex-none ${s.cls}`}
             >
               <Icon />
               <span>{s.text(it)}</span>
@@ -112,17 +103,16 @@ function NoteTag() {
   );
 }
 
-function Lines() {
-  const v = useAsk();
+function Lines({ lines, now }: { lines: Line[]; now?: number | null }) {
   return (
-    <div aria-live="polite">
-      {v.lines.map((l) => {
+    <>
+      {lines.map((l) => {
+        if (l.kind === 'heard') return null;
         // Every sentence stays readable; the one being said carries a green mark at its edge.
-        const now = l.id === v.now && !v.done;
-        const mark = now ? 'shadow-[inset_3px_0_0_var(--go)] pl-3 -ml-3' : '';
+        const mark = l.id === now ? 'shadow-[inset_3px_0_0_var(--go)] pl-3 -ml-3' : '';
         if (l.kind === 'warn')
           return (
-            <p key={l.id} className="my-[0.45rem] flex items-start gap-2 rounded-btn bg-warn-bg px-[0.8rem] py-[0.65rem] text-caption font-semibold tracking-[-0.012em] text-warn-ink lg:text-[1.4375rem] [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none">
+            <p key={l.id} className="my-[0.45rem] flex items-start gap-2 rounded-btn bg-warn-bg px-[0.8rem] py-[0.65rem] text-caption font-semibold tracking-[-0.012em] text-warn-ink [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none">
               <I.warn />
               <span>{l.text}</span>
             </p>
@@ -130,115 +120,38 @@ function Lines() {
         return (
           <div key={l.id}>
             <p
-              className={`my-[0.45rem] tracking-[-0.012em] text-ink transition-shadow ${mark} ${
-                l.kind === 'strong' || l.kind === 'heard'
-                  ? 'min-h-[1.4em] text-strong font-bold tracking-[-0.02em] lg:text-[1.7rem]'
-                  : 'text-caption font-medium lg:text-[1.4375rem]'
-              } ${l.kind === 'ok' ? 'flex items-start gap-2 [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none [&_svg]:text-go' : ''}`}
+              className={`my-[0.4rem] tracking-[-0.012em] text-ink transition-shadow ${mark} ${
+                l.kind === 'strong' ? 'text-strong font-bold tracking-[-0.02em]' : 'text-caption font-medium'
+              }`}
             >
-              {l.kind === 'ok' && <I.ok />}
               <span>{l.text}</span>
             </p>
             {l.noteTag && <NoteTag />}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/** Links that stay under an answer (Find a pro nearby, Call someone). */
-function Links() {
-  const v = useAsk();
-  if (!v.links.length) return null;
-  return (
-    <div className="mt-[0.9rem] grid gap-[0.7rem]">
-      {v.links.map((o, i) => (
-        <a
-          key={o.value}
-          href={o.href}
-          className={`btn ${i === 0 ? 'btn-yes' : ''}`}
-          {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-        >
-          {o.icon === 'map' ? <I.map /> : <I.phone />}
-          {o.label}
-        </a>
-      ))}
-      {v.links.some((o) => o.external) && <p className="text-small text-ink-2">{t('maps.open')}</p>}
-    </div>
-  );
-}
-
-/** Phone home: the three sample pictures, each asking its own question with one press. */
-function SamplesRow() {
-  return (
-    <div className="mt-3">
-      <p className="mb-2 text-small font-semibold text-ink-2 max-[22.5rem]:sr-only">{t('home.samples')}</p>
-      <SampleButtons compact />
-    </div>
-  );
-}
-
-function Choices() {
-  const v = useAsk();
-  if (!v.choices) return null;
-  const { options, stack } = v.choices;
-  return (
-    <>
-    <div className={`mt-[0.9rem] grid gap-[0.7rem] ${stack || options.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-      {options.map((o, i) =>
-        o.href ? (
-          <a
-            key={o.value}
-            href={o.href}
-            className={`btn ${i === 0 ? 'btn-yes' : ''}`}
-            onClick={() => pick(o.value)}
-            {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-          >
-            {o.icon === 'map' ? <I.map /> : <I.phone />}
-            {o.label}
-          </a>
-        ) : (
-          <button key={o.value} type="button" className={`btn ${i === 0 ? 'btn-yes' : ''}`} onClick={() => pick(o.value)}>
-            {o.label}
-          </button>
-        ),
-      )}
-    </div>
-    {options.some((o) => o.external) && <p className="mt-2 text-small text-ink-2">{t('maps.open')}</p>}
     </>
   );
 }
 
-function Typing() {
-  const v = useAsk();
-  const [text, setText] = useState('');
-  if (!v.typing) return null;
+function LinkButtons({ links }: { links: AskView['links'] }) {
+  if (!links.length) return null;
   return (
-    <form
-      className="mt-[0.9rem] grid gap-[0.7rem]"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!text.trim()) return;
-        submitTyped(text.trim());
-        setText('');
-      }}
-    >
-      <label className="grid gap-[0.35rem] text-small font-semibold text-ink-2">
-        {t('hear.type.label')}
-        <input className="field" autoFocus value={text} maxLength={200} onChange={(e) => setText(e.target.value)} />
-      </label>
-      <button type="submit" className="btn btn-yes">
-        {t('hear.type.go')}
-      </button>
-    </form>
+    <div className="mt-[0.8rem] grid gap-[0.6rem]">
+      {links.map((o, i) => (
+        <a key={o.value} href={o.href} className={`btn ${i === 0 ? 'btn-yes' : ''}`} {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+          {o.icon === 'map' ? <I.map /> : <I.phone />}
+          {o.label}
+        </a>
+      ))}
+      {links.some((o) => o.external) && <p className="text-small text-ink-2">{t('maps.open')}</p>}
+    </div>
   );
 }
 
-export function KeptChip() {
-  const v = useAsk();
+function KeptChip({ kept }: { kept: AskView['kept'] }) {
   const data = useData();
-  const c = v.kept ? data.checks.find((x) => x.id === v.kept!.checkId) : undefined;
+  const c = kept ? data.checks.find((x) => x.id === kept.checkId) : undefined;
   if (!c) return null;
   return (
     <button type="button" className="tag" onClick={() => openSheet({ type: 'move', checkId: c.id })}>
@@ -249,60 +162,184 @@ export function KeptChip() {
   );
 }
 
-/** Phone: the words sit on the page and scroll as one; nothing is pinned over them. Desktop: the same in a card. */
-export function Words({ desktop = false }: { desktop?: boolean }) {
-  const v = useAsk();
-  const box = useRef<HTMLDivElement>(null);
-  const device = deviceWord();
-  const headKey = v.head ? `${v.head.tone}:${v.head.text}` : '';
-  // A new answer: show its start (the verdict and its reasons). Otherwise keep the newest words in view.
-  useEffect(() => {
-    const el = box.current;
-    if (el && !desktop && headKey) el.scrollTop = 0;
-  }, [headKey, desktop]);
-  useEffect(() => {
-    const el = box.current;
-    if (el && !desktop && !headKey) el.scrollTop = v.phase === 'ready' ? 0 : el.scrollHeight;
-  }, [v.lines.length, v.choices, v.typing, desktop, headKey, v.phase]);
-  const showAsked = v.asked && !(v.head && v.head.tone !== 'plain');
-  const answerLike = !!v.head && v.phase !== 'listening';
-  const ready = v.phase === 'ready' && !v.head;
-  const coach = ready && !v.lines.length;
-  const explain = v.kept && (v.phase === 'settled' || v.phase === 'waiting');
+function Tags({ receipt, kept, picture, explain }: { receipt: Receipt | null; kept: AskView['kept']; picture?: string | null; explain?: boolean }) {
+  if (!receipt && !kept) return null;
   return (
-    <div
-      ref={box}
-      className={
-        desktop
-          ? 'card rounded-win px-[1.3rem] pt-[1.25rem] pb-[1.3rem]'
-          : 'flex min-h-0 flex-col overflow-auto px-[0.2rem] pb-1 [scrollbar-width:thin]'
-      }
-    >
-      {showAsked && <p className="mb-2 text-small text-ink-2">{v.asked}</p>}
-      <Steps />
-      <Head />
-      {coach ? (
-        <p className="my-[0.45rem] text-caption font-medium tracking-[-0.012em] lg:text-[1.4375rem]">{t('home.coach')}</p>
-      ) : (
-        <Lines />
+    <div className="mt-3 flex flex-wrap gap-2">
+      {receipt && <WhereTag r={receipt} device={deviceWord()} onOpen={() => openSheet({ type: 'receipt', r: receipt, picture: picture ?? null })} />}
+      <KeptChip kept={kept} />
+      {explain && (
+        <button type="button" className="tag" onClick={() => void explainCurrent()}>
+          <I.lang />
+          <span>{t('explain.button')}</span>
+        </button>
       )}
-      <Choices />
-      <Typing />
-      <Links />
-      {answerLike && <Items />}
-      {(v.receipt || v.kept) && (
-        <div className={desktop ? 'flex flex-wrap gap-2 pt-4 empty:hidden' : 'mt-3 flex flex-wrap gap-2 pb-[0.2rem] [&>*]:min-w-0 [&>*]:flex-[1_1_10rem]'}>
-          {!desktop && v.receipt && <WhereTag r={v.receipt} device={device} onOpen={() => openSheet({ type: 'receipt' })} />}
-          {desktop && <KeptChip />}
-          {explain && (
-            <button type="button" className="tag" onClick={() => void explainCurrent()}>
-              <I.lang />
-              <span>{t('explain.button')}</span>
-            </button>
+    </div>
+  );
+}
+
+function WkBubble({ m }: { m: WkMsg }) {
+  return (
+    <article className="msg-wk">
+      <Steps steps={m.steps} />
+      <Head head={m.head} />
+      <Lines lines={m.lines} />
+      <Items items={m.items} />
+      <LinkButtons links={m.links} />
+      <Tags receipt={m.receipt} kept={m.kept} />
+    </article>
+  );
+}
+
+function MeBubble({ m, looking, reading }: { m: MineMsg; looking: boolean; reading: boolean }) {
+  return (
+    <article className="msg-me" aria-label={t('box.label')}>
+      {m.picture && (
+        <div className={`win msg-pic ${looking ? 'looking' : ''} ${reading ? 'reading' : ''}`}>
+          <img src={m.picture} alt="" className="block size-full object-contain" />
+          {looking && (
+            <>
+              <span className="brk tl" />
+              <span className="brk tr" />
+              <span className="brk bl" />
+              <span className="brk br" />
+            </>
           )}
         </div>
       )}
-      {(ready || (v.offerSamples && v.phase !== 'listening' && v.phase !== 'looking')) && !desktop && <SamplesRow />}
+      {m.text && <p>{m.text}</p>}
+    </article>
+  );
+}
+
+/** The buttons under the newest answer: what WeKnow waits for, step by step, or the next questions. */
+function Buttons() {
+  const v = useAsk();
+  if (v.phase === 'guide')
+    return (
+      <div className="mt-[0.9rem] grid gap-[0.6rem]">
+        <button type="button" className="btn btn-yes" onClick={() => pressGuide('next')}>
+          <I.next />
+          {t('next.step')}
+        </button>
+        <div className="grid grid-cols-2 gap-[0.6rem]">
+          <button type="button" className="btn" onClick={() => pressGuide('again')}>
+            <I.again />
+            {t('next.again')}
+          </button>
+          <button type="button" className="btn" onClick={() => pressGuide('stop')}>
+            <I.stopSquare />
+            {t('next.stop')}
+          </button>
+        </div>
+      </div>
+    );
+  if (v.choices) {
+    const { options } = v.choices;
+    return (
+      <>
+        <div className="mt-[0.9rem] grid grid-cols-1 gap-[0.6rem]">
+          {options.map((o, i) =>
+            o.href ? (
+              <a
+                key={o.value}
+                href={o.href}
+                className={`btn ${i === 0 ? 'btn-yes' : ''}`}
+                onClick={() => pick(o.value)}
+                {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              >
+                {o.icon === 'map' ? <I.map /> : <I.phone />}
+                {o.label}
+              </a>
+            ) : (
+              <button key={o.value} type="button" className={`btn ${i === 0 ? 'btn-yes' : ''}`} onClick={() => pick(o.value)}>
+                {o.label}
+              </button>
+            ),
+          )}
+        </div>
+        {options.some((o) => o.external) && <p className="mt-2 text-small text-ink-2">{t('maps.open')}</p>}
+      </>
+    );
+  }
+  if (!v.next.length || v.phase === 'looking' || v.phase === 'listening') return null;
+  return (
+    <div className="mt-[0.9rem] grid gap-[0.6rem]" aria-label={t('next.label')}>
+      {v.next.map((n) => (
+        <button key={n.label} type="button" className="btn btn-next" onClick={n.act}>
+          {n.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Phone and desktop: the three sample pictures, each attaching itself with its question. */
+export function SamplesRow() {
+  return (
+    <div className="mt-3">
+      <p className="mb-2 text-small font-semibold text-ink-2 max-[22.5rem]:sr-only">{t('home.samples')}</p>
+      <SampleButtons compact />
+    </div>
+  );
+}
+
+/** The newest answer, live: it is being said, and its buttons work. */
+function LiveAnswer({ coach }: { coach: boolean }) {
+  const v = useAsk();
+  const hasWords = !!(v.head || v.steps || v.lines.some((l) => l.kind !== 'heard' && l.text) || v.items?.length || v.choices || v.next.length);
+  if (!hasWords && !coach) return null;
+  const explain = !!v.kept && (v.phase === 'settled' || v.phase === 'waiting');
+  return (
+    <article className="msg-wk" aria-live="polite">
+      {!hasWords && coach ? (
+        <p className="text-caption font-medium tracking-[-0.012em]">{v.chosen ? t('home.coach.picture') : t('home.coach')}</p>
+      ) : (
+        <>
+          <Steps steps={v.steps} />
+          <Head head={v.head} />
+          <Lines lines={v.lines} now={v.done ? null : v.now} />
+          {v.phase !== 'listening' && <Items items={v.items} />}
+          <LinkButtons links={v.links} />
+          <Tags receipt={v.receipt} kept={v.kept} picture={v.still} explain={explain} />
+        </>
+      )}
+      <Buttons />
+      {v.offerSamples && v.phase !== 'looking' && !v.chosen && <SamplesRow />}
+    </article>
+  );
+}
+
+/** The conversation, newest at the bottom; it keeps the newest words in view as they come. */
+export function Chat() {
+  const v = useAsk();
+  const box = useRef<HTMLDivElement>(null);
+  const lastMe = [...v.history].reverse().find((m) => m.who === 'me') as MineMsg | undefined;
+  useEffect(() => {
+    const el = box.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [v.history.length, v.lines.length, v.next.length, v.choices, v.head, v.phase, v.items]);
+  return (
+    <div ref={box} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-1 pt-2 pb-3 [scrollbar-width:thin]">
+      {v.history.map((m) =>
+        m.who === 'me' ? (
+          <MeBubble key={m.id} m={m} looking={m === lastMe && v.looking} reading={m === lastMe && v.reading} />
+        ) : (
+          <WkBubble key={m.id} m={m} />
+        ),
+      )}
+      <LiveAnswer coach={false} />
+    </div>
+  );
+}
+
+/** Before the first message: the greeting (or a dead end, such as no camera) under the camera window. */
+export function Opening() {
+  const v = useAsk();
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1 pt-1 pb-2">
+      <LiveAnswer coach />
+      {!v.chosen && !v.offerSamples && !v.choices && <SamplesRow />}
     </div>
   );
 }

@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Wordmark } from '../ui/controls';
 import { t } from '../strings';
-import { askSample, SAMPLES, type Sample } from '../samples';
+import { attachSample, SAMPLES, type Sample } from '../samples';
 import { setPrefs } from '../store/prefs';
 import { permission, requestCameraAndMic } from '../engine/camera';
 import { deviceWord } from '../engine/device';
@@ -27,7 +27,7 @@ export default function Welcome() {
   const done = (state: string, sample?: Sample['id']) => {
     quiet();
     setPrefs({ started: true });
-    if (sample) void askSample(sample);
+    if (sample) void attachSample(sample);
     else if (state === 'live') greet();
   };
 

@@ -8,7 +8,7 @@ import { listenForQuestion, matchWord, quiet, sayAloud, type Ear } from '../engi
 import { permission } from '../engine/camera';
 
 export type Phase = 'ready' | 'listening' | 'looking' | 'speaking' | 'waiting' | 'settled' | 'guide';
-export type IconKey = 'mic' | 'say' | 'lamp' | 'nonet' | 'camoff' | 'help' | 'type';
+export type IconKey = 'mic' | 'say' | 'lamp' | 'nonet' | 'camoff' | 'help' | 'type' | 'cam';
 
 export interface Line {
   id: number;
@@ -43,9 +43,46 @@ export interface Picture {
   url: string;
   blob: Blob;
   sample?: string;
+  /** Taken with the camera button (not a chosen photo or a sample). */
+  camera?: boolean;
+}
+
+/** Something the person said or showed: their words and their picture, on the right. */
+export interface MineMsg {
+  id: number;
+  who: 'me';
+  text: string;
+  picture?: string;
+}
+/** An answer from WeKnow that is no longer the newest: kept as it was, without its buttons. */
+export interface WkMsg {
+  id: number;
+  who: 'wk';
+  head: AskView['head'];
+  steps: AskView['steps'];
+  lines: Line[];
+  items: LineItem[] | null;
+  receipt: Receipt | null;
+  kept: { checkId: string } | null;
+  links: Choice[];
+}
+export type Msg = MineMsg | WkMsg;
+
+/** A next question under the newest answer: pressing it asks it (it shows as the person's message). */
+export interface Next {
+  label: string;
+  act: () => void;
 }
 
 export interface AskView {
+  /** The conversation so far, oldest first. The newest answer is not in it: it is the live fields below. */
+  history: Msg[];
+  /** The next-question buttons under the newest answer. */
+  next: Next[];
+  /** Words heard so far while listening (they go into the question box). */
+  heard: string;
+  /** The camera opened from the question box once the conversation has started. */
+  viewfinder: boolean;
   phase: Phase;
   asked: string | null;
   steps: { label: string; n: number; total: number } | null;
@@ -55,10 +92,9 @@ export interface AskView {
   done: boolean;
   items: LineItem[] | null;
   choices: { options: Choice[]; stack: boolean } | null;
-  typing: boolean;
   receipt: Receipt | null;
   kept: { checkId: string } | null;
-  /** The picture the person chose (shown when nothing is being read). */
+  /** The picture attached to the question box (shown in the window until it is sent or taken off). */
   chosen: Picture | null;
   /** The still WeKnow is reading or answered about. */
   still: string | null;
@@ -72,9 +108,15 @@ export interface AskView {
   links: Choice[];
   /** Offer the sample pictures under the words (when nothing could be answered). */
   offerSamples: boolean;
+  /** An answer is being read out in the background (narrate), so the question box offers Stop. */
+  talking: boolean;
 }
 
 const INITIAL: AskView = {
+  history: [],
+  next: [],
+  heard: '',
+  viewfinder: false,
   phase: 'ready',
   asked: null,
   steps: null,
@@ -84,7 +126,6 @@ const INITIAL: AskView = {
   done: true,
   items: null,
   choices: null,
-  typing: false,
   receipt: null,
   kept: null,
   chosen: null,
@@ -97,6 +138,7 @@ const INITIAL: AskView = {
   level: 0,
   links: [],
   offerSamples: false,
+  talking: false,
 };
 
 export const askStore = createStore<AskView>(INITIAL);
@@ -113,7 +155,6 @@ let seq = 0;
 let resolveChoice: ((v: string) => void) | null = null;
 let resolveSheet: ((yes: boolean) => void) | null = null;
 let resolvePress: ((v: 'next' | 'again' | 'stop') => void) | null = null;
-let resolveTyped: ((v: string) => void) | null = null;
 let stopEar: (() => void) | null = null;
 let ear: Ear | null = null;
 /** Every wait for the person can be cancelled, so a stopped script unwinds instead of hanging. */
@@ -142,12 +183,12 @@ export function hush() {
   stopEar = null;
   ear?.stop();
   ear = null;
-  resolveChoice = resolveSheet = resolvePress = resolveTyped = null;
+  resolveChoice = resolveSheet = resolvePress = null;
   narrGen++;
   narrating = false;
   for (const cancel of [...waits]) cancel(new Cancel());
   waits.clear();
-  patch({ sheet: null, choices: null, typing: false, reading: false, now: null, done: true, level: 0 });
+  patch({ sheet: null, choices: null, reading: false, now: null, done: true, level: 0, talking: false });
 }
 
 export type ErrorHandler = (e: unknown, t: number) => Promise<void>;
@@ -175,7 +216,49 @@ export async function run(fn: (t: number) => Promise<void>) {
 // ---------- the words ----------
 
 export function clearWords() {
-  patch({ asked: null, head: null, lines: [], now: null, items: null, choices: null, steps: null, receipt: null, kept: null, typing: false, links: [], offerSamples: false });
+  patch({ asked: null, head: null, lines: [], now: null, items: null, choices: null, steps: null, receipt: null, kept: null, links: [], offerSamples: false, next: [] });
+}
+
+// ---------- the conversation ----------
+
+/** The newest answer has something in it worth keeping in the conversation. */
+function liveHasContent(v: AskView) {
+  return !!(v.head || v.steps || v.lines.some((l) => l.text.trim() && l.kind !== 'heard') || v.items?.length);
+}
+
+/** The newest answer moves up into the conversation (without its buttons); the live answer starts empty. */
+export function archive() {
+  const v = view();
+  if (liveHasContent(v)) {
+    const msg: WkMsg = {
+      id: ++seq,
+      who: 'wk',
+      head: v.head,
+      steps: v.steps,
+      lines: v.lines.filter((l) => l.kind !== 'heard'),
+      items: v.items,
+      receipt: v.receipt,
+      kept: v.kept,
+      links: v.links,
+    };
+    askStore.set((s) => ({ ...s, history: [...s.history, msg] }));
+  }
+  clearWords();
+}
+
+/** The person asks: what WeKnow said last moves up, and their words (and picture) go on the right. */
+export function postMine(text: string, picture?: string) {
+  archive();
+  const msg: MineMsg = { id: ++seq, who: 'me', text, picture };
+  askStore.set((s) => ({ ...s, history: [...s.history, msg] }));
+}
+
+/** The person has asked something: the page is a conversation now (the camera opens on demand). */
+export const started = () => view().history.some((m) => m.who === 'me');
+
+/** Offer the next questions under the newest answer. */
+export function offerNext(next: Next[]) {
+  patch({ next: next.slice(0, 4) });
 }
 
 export function setHead(tone: Tone | null, text = '', icon?: IconKey) {
@@ -227,6 +310,7 @@ export function narrate(t: number, texts: Said[]): Promise<void> {
     lines: [...s.lines, ...items.map(({ id, text, kind, noteTag }) => ({ id, text, kind, noteTag }))],
     now: items[0]?.id ?? null,
     done: false,
+    talking: true,
   }));
   const gen = ++narrGen;
   narrating = true;
@@ -240,7 +324,7 @@ export function narrate(t: number, texts: Said[]): Promise<void> {
     } finally {
       if (gen === narrGen) {
         narrating = false;
-        if (t === token) patch({ now: null, done: true });
+        if (t === token) patch({ now: null, done: true, talking: false });
       }
     }
   })();
@@ -252,7 +336,7 @@ export function cutNarration() {
   narrGen++;
   narrating = false;
   quiet();
-  patch({ now: null, done: true });
+  patch({ now: null, done: true, talking: false });
 }
 
 /** Put sentences on screen without saying them (for example the verdict's own words, restored). */
@@ -302,6 +386,9 @@ export function pick(value: string) {
   cutNarration();
   const r = resolveChoice;
   resolveChoice = null;
+  // The answer the person pressed shows as their message, as in any chat.
+  const label = view().choices?.options.find((o) => o.value === value)?.label;
+  if (r && label) postMine(label);
   r?.(value);
 }
 
@@ -380,23 +467,6 @@ export function pressGuide(v: 'next' | 'again' | 'stop') {
 
 export const waitingForPress = () => !!resolvePress;
 
-/** "Type instead": resolves with what was typed. */
-export function typed(t: number): Promise<string> {
-  alive(t);
-  patch({ typing: true, choices: null, phase: 'waiting' });
-  return waitFor<string>((resolve) => {
-    resolveTyped = (v) => {
-      resolveTyped = null;
-      patch({ typing: false });
-      resolve(v);
-    };
-  });
-}
-
-export function submitTyped(v: string) {
-  resolveTyped?.(v);
-}
-
 // ---------- listening for the question ----------
 
 export async function listenQuestion(t: number): Promise<string> {
@@ -404,7 +474,7 @@ export async function listenQuestion(t: number): Promise<string> {
   const e = await listenForQuestion(
     (w) => {
       if (t !== token) return;
-      askStore.set((s) => ({ ...s, lines: s.lines.map((l) => (l.kind === 'heard' ? { ...l, text: w } : l)) }));
+      askStore.set((s) => ({ ...s, heard: w, lines: s.lines.map((l) => (l.kind === 'heard' ? { ...l, text: w } : l)) }));
     },
     (level) => {
       if (t === token) patch({ level });
@@ -417,11 +487,36 @@ export async function listenQuestion(t: number): Promise<string> {
   return heard;
 }
 
-/** The big button, while listening: end listening now. */
+/** The microphone button (or Space), while listening: end listening now. */
 export function finishListening() {
   ear?.stop();
 }
 
+// ---------- the picture attached to the question box ----------
+
+/** Attach a picture (a camera still, a chosen photo or a sample): it shows in the window and goes with Send. */
+export function attach(blob: Blob, sample?: string, camera = false) {
+  const old = view().chosen;
+  if (old) URL.revokeObjectURL(old.url);
+  patch({ chosen: { url: URL.createObjectURL(blob), blob, sample, camera }, still: null, looking: false, dim: false, chip: null, viewfinder: false });
+}
+
+/** A picture was attached: whatever WeKnow was saying or waiting for stops; the conversation stays. */
+export function startOver() {
+  hush();
+  // Before the first message, a dead end that was on screen ("Add a picture first") makes way for the picture.
+  if (!started()) clearWords();
+  patch({ choices: null, phase: started() ? 'settled' : 'ready', viewfinder: false });
+}
+
+/** Take the attached picture off (the × on it, or "Use the camera"): the window shows the live camera again. */
+export function detach() {
+  const old = view().chosen;
+  if (old) URL.revokeObjectURL(old.url);
+  patch({ chosen: null, still: null, looking: false });
+}
+
+/** Start again: the conversation is cleared (a picture already attached stays on the box). */
 export function resetView() {
   hush();
   const chosen = view().chosen;

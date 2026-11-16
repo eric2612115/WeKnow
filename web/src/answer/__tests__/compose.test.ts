@@ -36,7 +36,7 @@ describe('quote answers', () => {
 
   it('every number in the summary comes from the pack item or the paper', () => {
     const s = quoteSummary(items);
-    expect(s.verdict).toEqual({ tone: 'warn', text: 'One line is high' });
+    expect(s.verdict).toEqual({ tone: 'warn', text: 'Line 1 is $146 more than usual.' });
     // The numbers add up for a reader: $540 is $146 over the usual top of $394; most shops charge about $271.
     expect(s.sentences).toEqual([
       'Line 1, rear brake pads replacement: $540 is $146 above the usual top price of $394.',
@@ -74,7 +74,7 @@ describe('bill answers', () => {
   it('a changed account after a note is a stop, said from the note', () => {
     const known = [{ name: 'Riverbend Electric Co-op', payTo: '4821' }];
     const a = billAnswer(billVerdict(u({}), '', known), 'Riverbend Electric Co-op', known);
-    expect(a.verdict).toEqual({ tone: 'stop', text: 'Don’t pay this yet' });
+    expect(a.verdict).toEqual({ tone: 'stop', text: 'Don’t pay this bill yet.' });
     expect(a.reasons[0]).toEqual({ text: 'One. The account is new. You paid them at one ending 4821 before.', fromNote: true });
     expect(a.doLine).toBe('Call the company first. Use the number on an older bill.');
   });
@@ -91,7 +91,7 @@ describe('bill answers', () => {
   it('a letter announcing a new bank or account says so first, plainly, and is a stop', () => {
     const known = [{ name: 'Riverbend Electric Co-op', payTo: '4821' }];
     const a = billAnswer(billVerdict(u({ accountChange: true }), '', known), 'Riverbend Electric Co-op', known);
-    expect(a.verdict).toEqual({ tone: 'stop', text: 'Don’t pay this yet' });
+    expect(a.verdict).toEqual({ tone: 'stop', text: 'Don’t pay this bill yet.' });
     expect(a.reasons[0].text).toBe('One. It asks you to pay a new account.');
     expect(a.reasons[1]).toEqual({ text: 'Two. The account is new. You paid them at one ending 4821 before.', fromNote: true });
     expect(a.doLine).toBe('Call the company first. Use the number on an older bill.');
@@ -107,7 +107,7 @@ describe('bill answers', () => {
   it('a new payee alone is "check this first"; a known payee and account is normal', () => {
     expect(billAnswer(billVerdict(u({}), '', []), 'Riverbend Electric Co-op', []).verdict.tone).toBe('warn');
     const known = [{ name: 'Riverbend Electric Co-op', payTo: '9917' }];
-    expect(billAnswer(billVerdict(u({}), '', known), 'Riverbend Electric Co-op', known).verdict).toEqual({ tone: 'ok', text: 'This looks normal' });
+    expect(billAnswer(billVerdict(u({}), '', known), 'Riverbend Electric Co-op', known).verdict).toEqual({ tone: 'ok', text: 'This bill looks normal.' });
   });
 });
 

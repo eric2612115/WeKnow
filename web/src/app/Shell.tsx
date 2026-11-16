@@ -1,4 +1,4 @@
-// The frame round every page: the app bar (Menu, wordmark; on a desktop the status and account pills) and the
+// The frame round every page: the app bar (Menu, wordmark, the sound switch; on a desktop also the status and account pills) and the
 // Menu drawer. Welcome and Allow have no app bar.
 
 import { Dialog } from 'radix-ui';
@@ -8,11 +8,13 @@ import { DeviceIcon, I } from '../ui/icons';
 import { Seg, Wordmark } from '../ui/controls';
 import { setDrawer, useUi } from '../ui/uiStore';
 import { t } from '../strings';
-import { setPrefs, usePrefs, type Theme } from '../store/prefs';
+import { getPrefs, setPrefs, usePrefs, type Theme } from '../store/prefs';
 import { notesOf, useData } from '../store/data';
 import { deviceWord, refreshModel, useDevice } from '../engine/device';
+import { quiet } from '../engine/speech';
 import { firstName, useAccount, watchAccountLater } from '../engine/accountState';
 import { Sheets } from './Sheets';
+import { startAgain } from '../ask/flows';
 import Welcome from '../pages/Welcome';
 
 export function ThemeSeg({ full = false }: { full?: boolean }) {
@@ -72,8 +74,31 @@ function AccountPill() {
   );
 }
 
+/** Sound on or off. Off cuts what is being said now; the words stay on screen. */
+function SoundButton() {
+  const p = usePrefs();
+  const label = p.voice ? t('btn.sound.mute') : t('btn.sound.unmute');
+  return (
+    <button
+      type="button"
+      className="pill-btn size-[2.9rem] justify-center p-0 data-[off]:bg-card-2 data-[off]:text-ink-2"
+      data-off={p.voice ? undefined : ''}
+      aria-label={label}
+      title={label}
+      onClick={() => {
+        const on = !getPrefs().voice;
+        setPrefs({ voice: on });
+        if (!on) quiet();
+      }}
+    >
+      {p.voice ? <I.sound /> : <I.soundOff />}
+    </button>
+  );
+}
+
 function Drawer() {
   const { drawer } = useUi();
+  const nav = useNavigate();
   const data = useData();
   const a = useAccount();
   const notes = notesOf(data.memory).length;
@@ -105,6 +130,18 @@ function Drawer() {
             {row('/remembers', <I.note />, t('menu.notes'), notes)}
             {row('/settings', <I.set />, t('menu.settings'))}
             {row('/help', <I.help />, t('menu.help'))}
+            <button
+              type="button"
+              className="nav-row w-full text-left"
+              onClick={() => {
+                setDrawer(false);
+                startAgain();
+                nav('/');
+              }}
+            >
+              <I.again />
+              <span>{t('menu.again')}</span>
+            </button>
           </nav>
           <div className="mt-auto grid gap-[0.8rem] border-t border-hair px-[0.4rem] pt-[0.9rem] pb-[0.3rem]">
             <span className="text-small font-semibold text-ink-2">{t('menu.screen')}</span>
@@ -163,9 +200,12 @@ export default function Shell() {
         <NavLink to="/" className="inline-flex min-h-11 min-w-0 items-center text-[min(1.3rem,6.2vw)] text-ink no-underline lg:text-[1.45rem]" aria-label="WeKnow, Ask">
           <Wordmark />
         </NavLink>
-        <div className="ml-auto hidden items-center gap-[0.6rem] lg:flex">
-          <StatusPill />
-          <AccountPill />
+        <div className="ml-auto flex flex-none items-center gap-[0.6rem]">
+          <span className="hidden items-center gap-[0.6rem] lg:flex">
+            <StatusPill />
+            <AccountPill />
+          </span>
+          <SoundButton />
         </div>
       </header>
       <Suspense fallback={<div className="flex-1" />}>

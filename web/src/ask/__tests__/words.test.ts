@@ -123,7 +123,7 @@ describe('the price answer', () => {
   it('says the range, the typical price, what it covers and when it was checked, all from the pack item, never naming the source', () => {
     const a = priceAnswer(pads);
     expect(a.tone).toBe('plain');
-    expect(a.head).toBe('Usually $148 to $394');
+    expect(a.head).toBe('This usually costs $148 to $394.');
     expect(a.lines).toEqual([
       'From my price book: Replace brake pads (one axle).',
       'Most people pay about $271, per axle.',
@@ -136,5 +136,19 @@ describe('the price answer', () => {
     const a = priceAnswer({ ...pads, unit: 'job', typical: 1000.5, includes: undefined, sources: [{ url: 'https://www.example.org/x' }] });
     expect(a.lines).toEqual(['From my price book: Replace brake pads (one axle).', 'Most people pay about $1,001.', 'The numbers come from the price book. Sources and details show where.']);
     expect(a.lines.join(' ')).not.toContain('example.org');
+  });
+});
+
+describe('follow-up words', () => {
+  it('say what they ask about the topic, when they name nothing themselves', async () => {
+    const { followUp } = await import('../words');
+    expect(followUp('How much to fix it?')).toBe('cost');
+    expect(followUp('How much would a plumber charge?')).toBe('cost');
+    expect(followUp('Can I do it myself?')).toBe('fix');
+    expect(followUp('How do I fix it?')).toBe('fix');
+    expect(followUp('What should I say to the shop?')).toBe('say');
+    expect(followUp('Should I pay this?')).toBe('pay');
+    expect(followUp('Is that fair?')).toBe('fair');
+    expect(followUp('My kitchen sink is clogged')).toBeNull();
   });
 });

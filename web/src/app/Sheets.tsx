@@ -16,7 +16,7 @@ import { setPrefs, usePrefs } from '../store/prefs';
 import { deviceWord, getReady, useDevice } from '../engine/device';
 import { sayAloud, quiet } from '../engine/speech';
 import { cameraStore, requestCameraAndMic, useCamera } from '../engine/camera';
-import { askSample, chooseFile, SAMPLES, type Sample } from '../samples';
+import { attachSample, chooseFile, SAMPLES, type Sample } from '../samples';
 import { googleCalendarLink, icsFile } from '../core/reminders';
 import type { Memory } from '../core/memory';
 import { ExplainSheet } from './ExplainSheet';
@@ -26,7 +26,7 @@ export function Sheets() {
   const { sheet } = useUi();
   return (
     <>
-      <ReceiptSheet open={sheet?.type === 'receipt'} />
+      <ReceiptSheet open={sheet?.type === 'receipt'} s={sheet?.type === 'receipt' ? sheet : null} />
       <CheckSheet s={sheet?.type === 'check' ? sheet : null} />
       <MoveSheet s={sheet?.type === 'move' ? sheet : null} />
       <NameSheet s={sheet?.type === 'name' ? sheet : null} />
@@ -46,12 +46,14 @@ const Small = ({ children, className = '' }: { children: ReactNode; className?: 
   <p className={`mt-[0.4rem] text-small text-ink-2 ${className}`}>{children}</p>
 );
 
-function ReceiptSheet({ open }: { open: boolean }) {
+function ReceiptSheet({ open, s }: { open: boolean; s: Extract<SheetState, { type: 'receipt' }> | null }) {
   const v = useAsk();
-  if (!v.receipt) return null;
+  // The answer it was opened from (any answer in the conversation), else the newest one.
+  const r = s?.r ?? v.receipt;
+  if (!r) return null;
   return (
     <Sheet open={open} onClose={closeSheet} title={t('where.title')}>
-      <ReceiptFull r={v.receipt} device={deviceWord()} picture={v.still} />
+      <ReceiptFull r={r} device={deviceWord()} picture={s?.r ? s.picture : v.still} />
     </Sheet>
   );
 }
@@ -244,7 +246,7 @@ export function SampleButtons({ onPick, compact = false }: { onPick?: (id: Sampl
           aria-pressed={v.chosen?.sample === s.id}
           aria-label={t(s.q)}
           className="group flex min-w-0 flex-col items-stretch gap-[0.45rem] text-center text-small leading-tight font-semibold transition-transform duration-150 hover:-translate-y-0.5"
-          onClick={() => (onPick ? onPick(s.id) : void askSample(s.id))}
+          onClick={() => (onPick ? onPick(s.id) : void attachSample(s.id))}
         >
           <span className="thumb group-aria-pressed:shadow-[0_0_0_3px_var(--go)]">
             <img src={s.url} alt="" />
@@ -293,7 +295,7 @@ function SamplesSheet({ open }: { open: boolean }) {
         onPick={(id) => {
           closeSheet();
           nav('/');
-          void askSample(id);
+          void attachSample(id);
         }}
       />
       <ChoosePhoto

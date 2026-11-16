@@ -70,6 +70,41 @@ final class AskModel {
   var consent: Consent?
   var showWhere = false
 
+  /// The conversation so far: every finished question and answer, oldest first. The one in progress lives in the
+  /// properties above (picture, question, verdict, sentences ...) until the next question archives it.
+  var thread: [Exchange] = []
+  /// The next questions offered under the latest answer; pressing one asks it.
+  var choices: [NextQ] = []
+  /// What the conversation is about now, so a follow-up such as "How much to fix it?" needs no name.
+  var topic: Topic?
+  var inConversation: Bool { !thread.isEmpty || question != nil || picture != nil }
+
+  struct Exchange: Identifiable {
+    let id = UUID()
+    var question: String?
+    var picture: UIImage? // with personal details covered
+    var head: String?
+    var tone: Tone
+    var sentences: [String]
+    var tag: WhereRan?
+    var receipt: Receipt?
+  }
+
+  struct NextQ: Identifiable {
+    let id = UUID()
+    let label: String
+    let action: NextAction
+  }
+
+  enum NextAction {
+    case diy(String), steps(String, Int), pause(String, Int), fixed(String, Bool), proPrice(String)
+    case noneOfThese, sayShop, unchecked, doNow, rememberPayee(String, String), haveQuote, quoteOrBill, broken
+  }
+
+  enum Topic {
+    case price(PriceItem), guide(Guide), quote([LineItem]), bill(stop: Bool, warn: Bool)
+  }
+
   /// The installed knowledge sections, merged (Menu › Knowledge packs). The matcher is rebuilt when they change.
   var pack: Pack? { Knowledge.shared.active }
   @ObservationIgnored private var matcherKey = ""
@@ -96,25 +131,46 @@ final class AskModel {
 
   func start(_ image: UIImage, question: String) {
     stop()
-    reset()
+    archive()
     picture = image
     self.question = question
     task = Task { await run(image, question: question) }
   }
 
-  /// A question about a paper ("Is this quote fair?") asked in words: the next picture is read with it.
-  var pendingQuestion: String?
+  /// What is in the input bar before Send: a picture (camera, photo or sample) and the words typed or spoken.
+  /// Nothing is read until the person presses Send, then both go together.
+  var draft: UIImage?
+  var draftText = ""
+  /// Shown under the input bar when a question needs a picture that is not there yet.
+  var draftHint: String?
+
+  /// Send: the picture with the words as its question, or the words alone.
+  func send() {
+    let q = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let img = draft {
+      draft = nil
+      draftText = ""
+      draftHint = nil
+      start(img, question: q.isEmpty ? "What should I know about this?" : q)
+      return
+    }
+    guard !q.isEmpty else { return }
+    if WordsAnswer.needsPicture(q) {
+      draftHint = "Add a picture of it with the camera button, then press Send."
+      return
+    }
+    draftText = ""
+    draftHint = nil
+    ask(words: q)
+  }
 
   /// Asked in words, typed or spoken. Answered from the installed knowledge sections; nothing leaves the phone.
   /// Returns false when the question needs a picture, so the caller can ask for one.
   @discardableResult
   func ask(words: String) -> Bool {
-    if WordsAnswer.needsPicture(words) {
-      pendingQuestion = words
-      return false
-    }
+    if WordsAnswer.needsPicture(words) { return false }
     stop()
-    reset()
+    archive()
     question = words
     task = Task { await runWords(words) }
     return true
@@ -123,92 +179,217 @@ final class AskModel {
   private func runWords(_ q: String) async {
     guard let pack, let matcher else { return fail("There is no price book on this \(S.device). Add one in Menu, Knowledge packs.", tech: "No knowledge sections installed.") }
     phase = .looking
+
+    // A follow-up about the same thing: "How much would a pro charge?" after a guide, "Can I do it myself?" after a price.
+    switch (WordsAnswer.lean(q), topic) {
+    case let (.price, .guide(g)?) where proPrice(for: g) != nil: return await perform(.proPrice(g.ref))
+    case let (.guide, .price(p)?) where diyGuide(for: p.ref) != nil: return await perform(.diy(diyGuide(for: p.ref)!.ref))
+    default: break
+    }
+
     let t0 = Date()
-    let found = await WordsAnswer.find(q, matcher: matcher, pack: pack, useModel: Device.canRead)
+    var found = await WordsAnswer.find(q, matcher: matcher, pack: pack, useModel: Device.canRead)
+    if found.hit == nil, let name = topicName {
+      // The words name no job by themselves: try them with the topic of the conversation.
+      found = await WordsAnswer.find("\(name) \(q)", matcher: matcher, pack: pack, useModel: Device.canRead)
+      found.tech.insert("Follow-up: searched again with the topic “\(name)”.", at: 0)
+    }
     print("[WeKnow] words answer in \(Int(Date().timeIntervalSince(t0) * 1000)) ms: " + found.tech.joined(separator: " | "))
     if Task.isCancelled { return }
 
-    var answer: [String] = []
+    var lines: [String] = []
     var sources: [(label: String, date: String, url: String)] = []
-    var kind = DocKind.unknown
-    var title = "A question"
-    var project = "My home"
+    var head: String?
+    var next: [NextQ] = []
+    receipt = nil
     switch found.hit {
     case let .price(p):
-      kind = .quote
-      title = "Price of \(S.lower(p.name))"
-      if Self.carWords.contains(where: { p.name.lowercased().contains($0) }) || (p.category ?? "").hasPrefix("car") { project = "The car" }
-      let per = WordsAnswer.unitWords(p.unit)
-      verdict = Verdict(tone: .ok, text: "Usually \(S.money(p.low)) to \(S.money(p.high))")
-      answer.append("\(p.name): most people pay about \(S.money(p.typical))\(per).")
-      if let inc = WordsAnswer.includes(p) { answer.append(inc) }
-      answer.append("If a quote is well over \(S.money(p.high)), show it to me and I will check it line by line.")
+      topic = .price(p)
+      head = "Usually \(S.money(p.low)) to \(S.money(p.high))."
+      lines.append("\(p.name): most people pay about \(S.money(p.typical))\(WordsAnswer.unitWords(p.unit)).")
+      if let inc = WordsAnswer.includes(p) { lines.append(inc) }
       let when = WordsAnswer.checked(p.sources)
-      answer.append("These numbers come from the price book on this \(S.device)" + (when.map { ", checked \($0)." } ?? "."))
+      lines.append("These numbers come from the price book on this \(S.device)" + (when.map { ", checked \($0)." } ?? "."))
       sources.append((label: "Repair price book: \(p.name)", date: when.map { "checked \($0)" } ?? "", url: p.sources.first?.url ?? ""))
+      if let g = diyGuide(for: p.ref) { next.append(NextQ(label: "Can I do it myself?", action: .diy(g.ref))) }
+      next.append(NextQ(label: "I have a quote for this", action: .haveQuote))
+      keepWords(kind: .quote, title: "Price of \(S.lower(p.name))", car: isCar(p.name, p.category), head: head!, lines: lines)
     case let .prices(ps):
-      kind = .quote
       let low = ps.map(\.low).min() ?? 0, high = ps.map(\.high).max() ?? 0
-      let first = ps.first!
-      title = "Price of \(S.lower(first.name))"
-      if (first.category ?? "").hasPrefix("car") { project = "The car" }
-      verdict = Verdict(tone: .ok, text: "From \(S.money(low)) to \(S.money(high))")
-      answer.append("It depends on the model. I have prices for \(ps.count) of them on this \(S.device).")
-      for p in ps.prefix(3) { answer.append("\(p.name): about \(S.money(p.typical)).") }
-      answer.append("Tell me the exact model, or show me the quote, and I will check it.")
+      topic = ps.first.map(Topic.price)
+      head = "From \(S.money(low)) to \(S.money(high)), depending on the model."
+      lines.append("I have prices for \(ps.count) models on this \(S.device).")
+      for p in ps.prefix(3) { lines.append("\(p.name): about \(S.money(p.typical)).") }
       let when = WordsAnswer.checked(ps.flatMap(\.sources))
-      answer.append("These numbers come from the price book on this \(S.device)" + (when.map { ", checked \($0)." } ?? "."))
+      lines.append("These numbers come from the price book on this \(S.device)" + (when.map { ", checked \($0)." } ?? "."))
       for p in ps { sources.append((label: "Repair price book: \(p.name)", date: when.map { "checked \($0)" } ?? "", url: p.sources.first?.url ?? "")) }
+      next.append(NextQ(label: "I have a quote for this", action: .haveQuote))
+      if let p = ps.first { keepWords(kind: .quote, title: "Price of \(S.lower(p.name))", car: isCar(p.name, p.category), head: head!, lines: lines) }
     case let .guide(g):
-      kind = .problem
-      title = g.name
-      if (g.category ?? "").hasPrefix("car") { project = "The car" }
-      if g.steps.isEmpty {
-        verdict = Verdict(tone: .stop, text: "Call a professional")
-        answer.append("This sounds like: \(S.lower(g.name)).")
-        if let why = g.safety?.first { answer.append(why) }
-        if let ref = g.proRefs?.first, let p = pack.price(ref) {
-          answer.append("A professional usually charges \(S.money(p.low)) to \(S.money(p.high)) for this.")
-        }
-      } else {
-        verdict = Verdict(tone: .ok, text: "You can fix this")
-        answer.append("This sounds like: \(S.lower(g.name)). It takes about \(WordsAnswer.minutes(g)) minutes.")
-        if let s = g.safety?.first { answer.append("First, be careful: \(s)") }
-        for (i, step) in g.steps.enumerated() { answer.append("Step \(i + 1). \(step)") }
-        if let stop = g.stopIf?.first { answer.append("Stop and call a professional if: \(S.lower(stop))") }
-      }
       let when = WordsAnswer.checked(g.sources)
-      sources.append((label: "Home repair guide: \(g.name)", date: when.map { "checked \($0)" } ?? "", url: g.sources.first?.url ?? ""))
+      receipt = Receipt(stayed: ["Your question", "The answer"], sent: [],
+                        sources: [(label: "Home repair guide: \(g.name)", date: when.map { "checked \($0)" } ?? "", url: g.sources.first?.url ?? "")],
+                        tech: found.tech + ["On-device model: \(Device.status)", "Knowledge pack: \(packVersion)", "Nothing was sent to the internet."])
+      keepWords(kind: .problem, title: g.name, car: isCar(g.name, g.category), head: "This sounds like: \(S.lower(g.name)).", lines: [])
+      return await guideIntro(g, tag: .local)
     case nil:
-      verdict = Verdict(tone: .plain, text: "I don’t know this one yet")
-      answer = [
-        "I only answer from the knowledge packs on this \(S.device), and none of them covers this.",
-        "Try a repair price, like “brake pads”, or a problem at home, like “a clogged sink”. Or press Ask and show me the paper.",
+      head = "I don’t know this one yet."
+      lines = [
+        "None of the knowledge packs on this \(S.device) covers it.",
+        "Try a repair price, like “brake pads”, or a problem at home, like “a clogged sink”. A picture helps too.",
       ]
     }
-
-    tag = .local
     receipt = Receipt(
       stayed: ["Your question", "The answer"], sent: [], sources: sources,
       tech: found.tech + ["On-device model: \(Device.status)", "Knowledge pack: \(packVersion)", "Nothing was sent to the internet."])
-    var filedUnder: String?
-    if kind != .unknown, !UserDefaults.standard.bool(forKey: Prefs.dontKeepChecks), let v = verdict {
-      Household.shared.add(
-        CheckRecord(date: .now, kind: kind, project: project, title: title, verdict: v.text, tone: v.tone.word,
-                    sentences: answer, onDevice: true),
-        picture: nil)
-      filedUnder = project
-    }
+    await answer(head, lines, next: next, tag: .local)
+  }
 
-    answerFrom = 0
+  // MARK: Answers in the conversation
+
+  /// Shows and says one answer: the point first (bold), then the sentences, then the next-question buttons.
+  private func answer(_ head: String?, tone: Tone = .plain, _ lines: [String], next: [NextQ] = [], tag where_: WhereRan? = nil) async {
+    verdict = head.map { Verdict(tone: tone, text: $0) }
+    tag = where_
+    answerFrom = sentences.count
     phase = .speaking
-    if let v = verdict { await Voice.shared.say(v.text + ".") }
-    for s in answer {
+    if let head { await Voice.shared.say(head) }
+    for s in lines {
       if Task.isCancelled { return }
       await say(Sentence(text: s))
     }
-    if let filedUnder, !Task.isCancelled { await say(Sentence(text: "It is in My checks, under \(filedUnder).")) }
+    if Task.isCancelled { return }
+    choices = next
     phase = .done
+  }
+
+  private var topicName: String? {
+    switch topic {
+    case let .price(p)?: p.name
+    case let .guide(g)?: g.name
+    case let .quote(items)?: items.first?.label
+    default: nil
+    }
+  }
+
+  private func proPrice(for g: Guide) -> PriceItem? { g.proRefs?.compactMap { pack?.price($0) }.first }
+  private func diyGuide(for priceRef: String) -> Guide? { pack?.guides.first { !$0.steps.isEmpty && ($0.proRefs ?? []).contains(priceRef) } }
+  private func isCar(_ name: String, _ category: String?) -> Bool {
+    (category ?? "").hasPrefix("car") || Self.carWords.contains { name.lowercased().contains($0) }
+  }
+
+  private func keepWords(kind: DocKind, title: String, car: Bool, head: String, lines: [String]) {
+    guard !UserDefaults.standard.bool(forKey: Prefs.dontKeepChecks) else { return }
+    Household.shared.add(
+      CheckRecord(date: .now, kind: kind, project: car ? "The car" : "My home", title: title, verdict: head, tone: "plain",
+                  sentences: lines, onDevice: true),
+      picture: nil)
+  }
+
+  /// "This sounds like: a clogged kitchen sink." Then the time, the first caution, and the buttons.
+  private func guideIntro(_ g: Guide, tag where_: WhereRan? = nil) async {
+    topic = .guide(g)
+    let pro = proPrice(for: g)
+    if g.steps.isEmpty {
+      var lines: [String] = []
+      if let why = g.safety?.first { lines.append(why) }
+      if let p = pro { lines.append("A professional usually charges \(S.money(p.low)) to \(S.money(p.high)) for this.") }
+      return await answer("This needs a professional.", tone: .warn, lines, tag: where_)
+    }
+    var lines = ["It takes about \(WordsAnswer.minutes(g)) minutes, in \(S.words(g.steps.count)) steps."]
+    if let s = g.safety?.first { lines.append("Before you start: \(s)") }
+    var next = [NextQ(label: "Show me the steps", action: .steps(g.ref, 0))]
+    if pro != nil { next.append(NextQ(label: "How much would a pro charge?", action: .proPrice(g.ref))) }
+    await answer("This sounds like: \(S.lower(g.name)).", lines, next: next, tag: where_)
+  }
+
+  private func perform(_ a: NextAction) async {
+    guard let pack else { return }
+    phase = .looking
+    switch a {
+    case let .diy(ref):
+      guard let g = pack.guide(ref) else { return await answer("I don’t have steps for this yet.", []) }
+      await guideIntro(g)
+
+    case let .steps(ref, i):
+      guard let g = pack.guide(ref) else { return }
+      topic = .guide(g)
+      if i < g.steps.count {
+        var lines = [g.steps[i]]
+        if i == g.steps.count - 1, let stop = g.stopIf?.first { lines.append("Stop and call a professional if: \(S.lower(stop))") }
+        await answer("Step \(i + 1) of \(g.steps.count)", lines, next: [
+          NextQ(label: i + 1 < g.steps.count ? "Next step" : "I did the last step", action: .steps(ref, i + 1)),
+          NextQ(label: "Say it again", action: .steps(ref, i)),
+          NextQ(label: "Stop for now", action: .pause(ref, i)),
+        ])
+      } else {
+        await answer("That was the last step.", ["Did that fix it?"], next: [
+          NextQ(label: "It’s fixed", action: .fixed(ref, true)),
+          NextQ(label: "Still not working", action: .fixed(ref, false)),
+        ])
+      }
+
+    case let .pause(ref, i):
+      await answer("All right, we stopped at step \(i + 1).", ["Carry on any time."], next: [NextQ(label: "Carry on", action: .steps(ref, i))])
+
+    case let .fixed(ref, yes):
+      if yes { return await answer("Good, it’s fixed.", ["If it comes back, ask me again."]) }
+      await perform(.proPrice(ref))
+
+    case let .proPrice(ref):
+      guard let g = pack.guide(ref), let p = proPrice(for: g) else { return await answer("I don’t have a price for a professional for this yet.", []) }
+      await answer("A professional usually charges \(S.money(p.low)) to \(S.money(p.high)).", [
+        "Most charge about \(S.money(p.typical)).",
+        "If you get a quote, show it to me and I will check it line by line.",
+      ], next: [NextQ(label: "I have a quote", action: .haveQuote)])
+
+    case .haveQuote:
+      draftHint = "Take a picture of the quote with the camera button, then press Send."
+      await answer(nil, ["Take a picture of the quote with the camera button, then press Send. I will check every line."])
+
+    case .noneOfThese:
+      await answer("I don’t have steps for this yet.", ["Tell me in a few words what is wrong, and I will look again."])
+
+    case .quoteOrBill:
+      await answer(nil, ["Hold the paper flat so it fills the picture, then take it again with the camera button."])
+
+    case .broken:
+      await answer(nil, ["Tell me in a few words what is wrong, then press Send. A picture helps too."])
+
+    case .sayShop:
+      guard case let .quote(items)? = topic, let worst = items.filter({ $0.state == .high }).max(by: { ($0.over ?? 0) < ($1.over ?? 0) }) else {
+        return await answer("Every line looked normal.", ["You can pay it as it is."])
+      }
+      let usualTop = worst.item.map { S.money($0.high) } ?? ""
+      await answer("Here is what you could say.", [
+        "“Line \(worst.n), \(S.lower(worst.label)), is \(S.money(worst.amount ?? 0)). Most shops charge about \(S.money(worst.typical ?? 0)), and the usual top is \(usualTop). Can you explain the difference, or match the usual price?”",
+      ])
+
+    case .unchecked:
+      guard case let .quote(items)? = topic else { return }
+      let pending = items.filter { $0.state == .pending }.map(\.label)
+      await answer(pending.count == 1 ? "I could not check one line." : "I could not check \(S.words(pending.count)) lines.", [
+        "\(S.list(pending)) \(pending.count == 1 ? "is" : "are") not in my price book yet.",
+        "Ask the shop what each one is for.",
+      ])
+
+    case .doNow:
+      guard case let .bill(stop, warn)? = topic else { return }
+      if stop {
+        await answer("Don’t pay it yet.", [
+          "Call the company with the number on an older bill or on their website, not the number on this paper.",
+          "Ask them if the account really changed.",
+        ])
+      } else if warn {
+        await answer("Check it before you pay.", ["Call the company with a number you already have, and ask if this bill is real."])
+      } else {
+        await answer("Pay it the way you always do.", [])
+      }
+
+    case let .rememberPayee(name, payTo):
+      Household.shared.remember(payee: name, payTo: payTo)
+      await answer("I will remember \(name).", ["Next time I will check that the account still ends in \(payTo). You can see it in Menu, What WeKnow remembers."])
+    }
   }
 
   func stop() {
@@ -232,7 +413,34 @@ final class AskModel {
     speaking = nil
     tag = nil
     receipt = nil
+    choices = []
     phase = .ready
+  }
+
+  /// Moves the finished question and answer into the conversation and clears the stage for the next one.
+  private func archive() {
+    if question != nil || picture != nil {
+      thread.append(Exchange(
+        question: question, picture: picture.map { $0.covered(by: bars.map(\.rect)) }, head: verdict?.text,
+        tone: verdict?.tone ?? .plain, sentences: sentences.map(\.text), tag: tag, receipt: receipt))
+    }
+    reset()
+  }
+
+  /// Menu › Start again.
+  func newConversation() {
+    stop()
+    reset()
+    thread = []
+    topic = nil
+  }
+
+  /// A next-question button: shown as the person's message, then answered.
+  func choose(_ q: NextQ) {
+    stop()
+    archive()
+    question = q.label
+    task = Task { await perform(q.action) }
   }
 
   private func say(_ s: Sentence) async {
@@ -288,7 +496,7 @@ final class AskModel {
     // 3. Read the masked words into the fixed form, find candidates, let the model choose.
     let reading: Reading
     do {
-      reading = try await Reader.read(paper, question: question, matcher: matcher, where: place)
+      reading = try await Reader.read(paper, image: cg, question: question, matcher: matcher, where: place)
     } catch {
       readerLog.error("reading failed on \(place.rawValue, privacy: .public): \(String(describing: error), privacy: .public)")
       print("[WeKnow] reading failed on \(place.rawValue): \(error)")
@@ -301,7 +509,18 @@ final class AskModel {
     scanning = false
 
     // 4. Plain code decides.
-    let u = reading.understanding
+    var u = reading.understanding
+    // A quote line counts only if its amount is printed on the paper; a photo with no prices (earbuds, a sink) is
+    // not a quote, whatever the model filled in.
+    if u.kind == .quote {
+      let printed = paper.masked.replacingOccurrences(of: ",", with: "")
+      u.lines = u.lines.filter { line in
+        guard let a = line.amount else { return false }
+        let whole = a.rounded() == a ? String(Int(a)) : String(format: "%.2f", a)
+        return printed.contains(whole)
+      }
+      if u.lines.isEmpty { u.kind = .unknown }
+    }
     var answer: [Sentence] = []
     var stayed = ["The picture", "The words read from it"]
     var sources: [(String, String, String)] = []
@@ -314,6 +533,7 @@ final class AskModel {
     ]
     if !paper.bars.isEmpty { stayed.insert(coveredList(paper.coveredKinds).capitalizedFirst + " (covered)", at: 1) }
 
+    var next: [NextQ] = []
     switch u.kind {
     case .quote:
       let items = Compose.lineItems(Verdicts.quote(u, pack: pack), labels: u.lines.map(\.label))
@@ -338,6 +558,12 @@ final class AskModel {
       tech.append(contentsOf: items.map { i in
         "Line \(i.n): \(i.state) \(i.amount.map(S.money) ?? "-")" + (i.item.map { " vs \(S.money($0.low))–\(S.money($0.high)) (\($0.ref))" } ?? "")
       })
+      topic = .quote(items)
+      if items.contains(where: { $0.state == .high }) { next.append(NextQ(label: "What should I say to the shop?", action: .sayShop)) }
+      if items.contains(where: { $0.state == .pending }) { next.append(NextQ(label: "Which lines did you not check?", action: .unchecked)) }
+      if let g = items.compactMap({ $0.item.flatMap { diyGuide(for: $0.ref) } }).first {
+        next.append(NextQ(label: "Can I do some of it myself?", action: .diy(g.ref)))
+      }
     case .bill:
       let known = Household.shared.known
       let v = Verdicts.bill(u, maskedText: paper.masked, known: known)
@@ -351,22 +577,31 @@ final class AskModel {
       sources.append(("Bill checks on this \(S.device)", "checked \(S.longDate(pack.version))", ""))
       tech.append("Bill flags: \(v.flags.map(\.rawValue).joined(separator: ", ").ifEmpty("none"))")
       tech.append("Read: payee \(u.payee ?? "-"), pays to account ending \(u.payTo ?? "-"), urgent \(u.urgent), addressed to AI \(u.addressedToAI)")
+      topic = .bill(stop: b.verdict.tone == .stop, warn: b.verdict.tone == .warn)
+      if v.flags == [.newPayee], let name = u.payee, let to = u.payTo {
+        next.append(NextQ(label: "Remember this company", action: .rememberPayee(name, to)))
+      }
     case .problem:
-      if let ref = u.problemRef, let g = pack.guide(ref) {
-        verdict = Verdict(tone: .ok, text: "You can fix this")
-        let mins = g.minutes.count == 2 && g.minutes[0] != g.minutes[1] ? "\(Int(g.minutes[0])) to \(Int(g.minutes[1]))" : "\(Int(g.minutes.first ?? 15))"
-        answer = [Sentence(text: "This looks like: \(S.lower(g.name)).")]
-        answer.append(Sentence(text: "It takes about \(mins) minutes. Here is the first step."))
-        if let first = g.steps.first { answer.append(Sentence(text: first)) }
-        let fetched = g.sources.compactMap(\.fetched).sorted().last
-        sources.append(("Home repair guide: \(g.name)", fetched.map { "checked \(S.longDate($0))" } ?? "", g.sources.first?.url ?? ""))
+      // Never one guess: the guide the model picked (if any) and the next closest ones, for the person to choose.
+      let said = reading.problem.trimmingCharacters(in: .whitespacesAndNewlines)
+      var refs: [String] = u.problemRef.map { [$0] } ?? []
+      for c in matcher.candidates("\(said) \(question)", kind: .guide, minCoverage: 0.2) where !refs.contains(c.ref) { refs.append(c.ref) }
+      let guides = refs.prefix(3).compactMap { pack.guide($0) }
+      let echo = said.lowercased().trimmingCharacters(in: .punctuationCharacters) == question.lowercased().trimmingCharacters(in: .punctuationCharacters)
+      let looks = said.isEmpty ? "This looks like a problem at home." : echo ? "Here is what I have that might fit." : "This looks like: \(S.lower(said).trimmingCharacters(in: CharacterSet(charactersIn: ".")))."
+      tech.append("Problem read: \(said.isEmpty ? "-" : said); guides offered: \(guides.map(\.ref).joined(separator: ", ").ifEmpty("none"))")
+      if guides.isEmpty {
+        verdict = Verdict(tone: .plain, text: "I don’t have steps for this yet")
+        answer = [Sentence(text: looks), Sentence(text: "Tell me in a few words what is wrong, and I will look again.")]
       } else {
-        verdict = Verdict(tone: .plain, text: "I don’t know this one yet")
-        answer = [Sentence(text: "I do not have a guide for it yet.")]
+        verdict = Verdict(tone: .plain, text: "Which one is it?")
+        answer = [Sentence(text: looks)]
+        next = guides.map { NextQ(label: $0.name, action: .diy($0.ref)) } + [NextQ(label: "None of these", action: .noneOfThese)]
       }
     case .unknown:
-      verdict = Verdict(tone: .plain, text: "I can’t read this yet")
-      answer = [Sentence(text: "I can’t tell what this paper is. Try a repair quote, a bill or a problem at home.")]
+      verdict = Verdict(tone: .plain, text: "I’m not sure what this is")
+      answer = [Sentence(text: "I don’t see a price or a bill here.")]
+      next = [NextQ(label: "It’s a quote or a bill", action: .quoteOrBill), NextQ(label: "Something is broken", action: .broken)]
     }
 
     tag = reading.where_ == .device ? .local : .cloud
@@ -377,13 +612,13 @@ final class AskModel {
       tech: tech)
     if verdict?.tone == .stop { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
     print("[WeKnow] result: \(verdict?.text ?? "-") | " + tech.joined(separator: " | "))
-    let filedUnder = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: reading.where_ == .device)
+    _ = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: reading.where_ == .device)
 
     // 5. Say it.
     answerFrom = sentences.count
     phase = .speaking
-    // The verdict is on the band; it is said first, not repeated as a caption.
-    if let v = verdict { await Voice.shared.say(v.text + ".") }
+    // The point is said first (it is shown in bold above the sentences).
+    if let v = verdict { await Voice.shared.say(v.text) }
     for s in answer {
       if Task.isCancelled { return }
       await say(s)
@@ -395,7 +630,8 @@ final class AskModel {
     } else if reading.where_ == .cloud {
       await say(Sentence(text: "I checked the covered words on the internet. The picture stayed on this \(S.device)."))
     }
-    if let filedUnder { await say(Sentence(text: "It is in My checks, under \(filedUnder).")) }
+    if Task.isCancelled { return }
+    choices = next
     phase = .done
   }
 

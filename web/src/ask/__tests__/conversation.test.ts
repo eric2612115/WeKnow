@@ -91,6 +91,25 @@ describe('the conversation on the Ask page', () => {
     C.pick('no');
     await done;
     expect(picked).toBe('no');
-    expect(C.view().head?.text).toBe('One line is high');
+    // The answer moved up into the conversation, and the button pressed shows as the person's message.
+    const h = C.view().history;
+    expect(h).toHaveLength(2);
+    expect(h[0]).toMatchObject({ who: 'wk', head: { tone: 'warn', text: 'One line is high' } });
+    expect(h[0].who === 'wk' && h[0].lines).toHaveLength(2);
+    expect(h[1]).toMatchObject({ who: 'me', text: 'No thanks' });
+    expect(C.view().head).toBeNull();
+  });
+
+  it('the conversation keeps every turn in order; Start again clears it', () => {
+    C.postMine('How much does a brake pad replacement cost?');
+    C.setHead('plain', 'This usually costs $148 to $394.');
+    C.offerNext([{ label: 'I have a quote for this', act: () => undefined }]);
+    C.postMine('I have a quote for this');
+    expect(C.view().history.map((m) => m.who)).toEqual(['me', 'wk', 'me']);
+    expect(C.view().next).toEqual([]);
+    expect(C.started()).toBe(true);
+    C.resetView();
+    expect(C.view().history).toEqual([]);
+    expect(C.started()).toBe(false);
   });
 });

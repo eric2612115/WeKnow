@@ -70,7 +70,7 @@ export function quoteSummary(items: LineItem[]): QuoteSummary {
     if (!pending && fair === items.length - highs.length && fair > 0) sentences.push(t('quote.high.2', { typical: money(worst.typical ?? 0) }));
     else sentences.push([typical, fair ? fairSentence : '', pending ? pendingSentence : ''].filter(Boolean).join(' '));
     return {
-      verdict: { tone: 'warn', text: highs.length === 1 ? t('quote.high.title') : t('quote.highs.title', { n: words(highs.length, true) }) },
+      verdict: { tone: 'warn', text: highs.length === 1 ? t('quote.high.title', { n: worst.n, over: money(worst.over ?? 0) }) : t('quote.highs.title', { n: words(highs.length, true) }) },
       sentences: [...sentences, ...lows],
       worst,
     };

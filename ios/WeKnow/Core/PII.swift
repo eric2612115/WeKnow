@@ -29,7 +29,8 @@ enum PII {
     (.email, re(#"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#, true)),
     (.ssn, re(#"\b\d{3}-\d{2}-\d{4}\b"#, false)),
     (.card, re(#"\b(?:\d[ -]?){13,19}\b"#, false)),
-    (.vin, re(#"\b[A-HJ-NPR-Z0-9]{17}\b"#, false)),
+    // Any 17 letters and digits with both in it: text recognition often reads 0 as O, so I, O and Q are allowed.
+    (.vin, re(#"\b(?=[A-Z0-9]*[0-9])(?=[A-Z0-9]*[A-Z])[A-Z0-9]{17}\b"#, false)),
     // Labelled account / routing / IBAN numbers, and any long digit run.
     (.account, re(#"\b(?:acct|account|routing|aba|iban|a\/c)\b[#:\s.-]*[A-Z0-9][A-Z0-9 -]{5,}"#, true)),
     (.account, re(#"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b"#, false)),

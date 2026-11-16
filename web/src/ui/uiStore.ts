@@ -1,9 +1,10 @@
 // Which drawer or sheet is open. One sheet at a time, as in the design: opening one closes the other.
 
+import type { Receipt } from '../answer/types';
 import { createStore, useStore } from '../store/store';
 
 export type SheetState =
-  | { type: 'receipt' }
+  | { type: 'receipt'; r?: Receipt; picture?: string | null }
   | { type: 'check'; checkId: string }
   | { type: 'move'; checkId: string; back?: 'check' }
   | { type: 'name'; mode: 'new' | 'rename' | 'newmove'; projectId?: string; checkId?: string }

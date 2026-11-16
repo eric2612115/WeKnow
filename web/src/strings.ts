@@ -10,14 +10,14 @@ export const EN = {
   'welcome.q2': 'Is this a fair price?',
   'welcome.q3': 'Should I pay this?',
   'welcome.start': 'Start',
-  'welcome.fine': 'No account. No typing. Turn your sound up.',
+  'welcome.fine': 'No account. Show it, say it or type it. Turn your sound up.',
   'allow.title': 'Press Allow',
   'allow.line': 'So WeKnow can see and hear.',
   'allow.point': 'Press this one',
   'allow.fine': 'Pictures stay on this {device} unless you say yes.',
   'allow.say': 'Hello. I’m WeKnow. A box has appeared. Press Allow, so I can see and hear.',
   'allow.say.three': 'Hello. I’m WeKnow. Three boxes will appear. Press Allow on each.',
-  'first.say': 'Good. Now point me at something. Press Ask, and tell me what’s wrong.',
+  'first.say': 'Good. Type or say your question, or show me the paper.',
 
   // App bar and Menu
   'menu.button': 'Menu',
@@ -35,22 +35,75 @@ export const EN = {
   close: 'Close',
 
   // Ask
-  'home.coach': 'Point at it. Press Ask. Say what’s wrong.',
+  'home.coach': 'Type or say your question, or show me the paper.',
+  'home.coach.picture': 'Press Send to ask about this picture. You can change the words first.', // added: a picture is attached
   'btn.ask': 'Ask',
   'btn.stop': 'Stop',
   'btn.next': 'Next',
   'btn.again': 'Again',
   'btn.listening': 'Listening. Press when you have finished.', // added: screen reader name of the Listening face
   'home.space': 'Space presses the big button',
-  // added: ask by typing, and turn the voice off, from the Ask page itself
-  'btn.type': 'Type',
-  'btn.type.hint': 'Type a question',
-  'btn.sound.on': 'Sound on',
-  'btn.sound.off': 'Sound off',
-  'btn.sound.mute': 'Turn the sound off. The words stay on screen.',
-  'btn.sound.unmute': 'Turn the sound on',
+  // added: the question box at the bottom of Ask (the pattern of chat apps), and the sound switch in the app bar
+  'box.label': 'Your question',
+  'box.placeholder': 'Ask about a quote, a bill or a problem…',
+  'box.placeholder.short': 'Ask a question…', // added: the same box on a phone, where the long hint would wrap
+  'box.placeholder.picture': 'Ask about this picture…',
+  'box.placeholder.picture.short': 'Ask about it…',
+  'box.listening': 'Listening…',
+  'box.camera': 'Take a picture',
+  'box.camera.back': 'Back to the camera',
+  'box.camera.q': 'What should I know about this?',
+  'box.attached': 'Picture added',
+  'box.remove': 'Remove the picture',
+  'box.mic': 'Say your question',
+  'box.send': 'Send',
+  'box.finish': 'Finished talking',
+  'mic.none': 'This browser cannot listen. Type your question in the box instead.', // added: no speech recognition
+  'mic.again': 'Press the microphone and say it once more, or type it.', // added: nothing was heard
+  'pic.need.title': 'Add a picture first',
+  'pic.need.line': 'Press the camera button to take a picture of it, then press Send. Your words are kept.',
+  // added: Ask as one conversation (design/CHAT-SPEC.md): the next questions under every answer
+  'menu.again': 'Start again',
+  'tag.careful': 'Careful',
+  'tag.stop': 'Stop',
+  'next.label': 'Ask next',
+  'cam.take': 'Take the picture',
+  'cam.sheet': 'Take a picture',
+  'next.myself': 'Can I do it myself?',
+  'next.quote': 'I have a quote for this',
+  'next.say': 'What should I say to the shop?',
+  'next.unchecked': 'Which lines did you not check?',
+  'next.myself.any': 'Can I do any of it myself?',
+  'next.billdo': 'What should I do now?',
+  'next.remember': 'Remember this company',
+  'next.remind': 'Remind me to pay it',
+  'next.steps': 'Show me the steps',
+  'next.pro': 'How much would a pro charge?',
+  'next.none': 'None of these',
+  'next.step': 'Next step',
+  'next.again': 'Say it again',
+  'next.stop': 'Stop',
+  'next.fixed': 'It’s fixed',
+  'next.broken': 'Still broken',
+  'next.paper': 'It’s a quote or a bill',
+  'next.thing': 'Something is broken',
+  'next.else': 'Something else',
+  'q.paper': 'Is this a fair price, or should I pay this?',
+  'q.thing': 'What is broken here, and how do I fix it?',
+  'maybe.title': 'I am not sure which one this is.',
+  'maybe.line': 'Is it one of these?',
+  'none.title': 'Then I don’t have a guide for it yet.',
+  'quote.photo': 'Take a picture of the quote with the camera button, then press Send. I will check every line.',
+  'quote.unchecked': 'I did not check: {names}. They are not in my price book yet.',
+  'quote.unchecked.none': 'I checked every line.',
+  'pro.none': 'I don’t have a pro price for this one yet.',
+  'myself.none': 'I don’t have steps for this one. A pro is the safe choice.',
+  'bill.do.ok': 'Pay it the way you always do. Nothing looks different from last time.',
+  'remember.done': 'Done. I will remember {payee} on this {device}, and tell you if the account ever changes.',
+  'btn.sound.mute': 'Sound is on. Press to turn it off; the words stay on screen.',
+  'btn.sound.unmute': 'Sound is off. Press to turn it on.',
   'type.title': 'Type your question',
-  'type.line': 'You can ask about a price or a fix. No picture needed.',
+  'type.line': 'Type it in the box at the bottom. You can ask about a price or a fix.',
   'home.samples': 'No camera handy? Try a picture.',
   'home.choose': 'Choose a photo', // added: the file picker beside the sample pictures
   'home.camera': 'Use the camera', // added: back to the live camera after choosing a picture
@@ -75,9 +128,10 @@ export const EN = {
   'kept.chip': 'Kept in {project}',
 
   // A thing, and step by step (guides come from the pack; these are the frame around them)
-  'fix.title': 'You can fix this',
+  'fix.title': 'You can fix this yourself.',
   'fix.what': 'I have a guide for this: {guide}.', // added: the guide's own name replaces the drain example
   'fix.offer': 'It takes about {minutes} minutes. Shall I talk you through it?',
+  'fix.time': 'It takes about {minutes} minutes.', // added: the steps are a next question now
   'fix.minutes': '{low} to {high}', // added
   'fix.yes': 'Yes, guide me',
   'fix.no': 'Not now',
@@ -123,9 +177,9 @@ export const EN = {
   'quote.wait': 'There is no internet, so that line has to wait.',
   'quote.wait.n': 'There is no internet, so those lines have to wait.', // added
   'quote.cloud': 'I am checking the prices on the internet.',
-  'quote.high.title': 'One line is high',
-  'quote.highs.title': '{n} lines are high', // added
-  'quote.fair.title': 'This looks fair',
+  'quote.high.title': 'Line {n} is {over} more than usual.',
+  'quote.highs.title': '{n} lines cost more than usual.', // added
+  'quote.fair.title': 'This price is normal: every line I know is inside the usual range.',
   'quote.high.1': 'Line {n}, {label}: {amount} is {over} above the usual top price of {top}.', // spec: "Line 3, brake labor, is $180 high." with the reference stated
   'quote.high.2': 'Most shops charge about {typical}. The other lines look fair.',
   'quote.typical': 'Most shops charge about {typical}.', // "Shops near you" needs a local price book; ours is national
@@ -156,9 +210,9 @@ export const EN = {
   'letter.covered': 'I covered your name, address and account number. They stay on this {device}.',
   'letter.stays': 'Your name, address and account number stay on this {device}.', // added: device path
   'letter.cloud': 'I am checking it on the internet.',
-  'letter.stop.title': 'Don’t pay this yet',
-  'letter.check.title': 'Check this first',
-  'letter.fine.title': 'This looks normal',
+  'letter.stop.title': 'Don’t pay this bill yet.',
+  'letter.check.title': 'Check this bill before you pay.',
+  'letter.fine.title': 'This bill looks normal.',
   'letter.sign.account': 'It wants the money sent to a new account.',
   'letter.sign.notice': 'It asks you to pay a new account.', // added: the letter itself announces a new bank or account
   'letter.sign.notice.digits': 'It asks you to pay a new account ending {digits}.', // added: the same, quoting the last four
@@ -375,14 +429,14 @@ export const EN = {
   'dark.title': 'It is too dark',
   'dark.phone': 'It is too dark for me to see. I am turning on the light.',
   'dark.better.title': 'The light is on',
-  'dark.better.line': 'That is better. Press Ask when you are ready.',
+  'dark.better.line': 'That is better. Press the camera button when you are ready.',
   'dark.computer': 'It is too dark for me to see. Turn on a lamp, or move near a window.',
   'new.title': 'I don’t know this one yet',
   'new.line': 'I do not have a guide for this yet.',
   'new.offline': 'There is no internet now. Ask me again when it is back.',
   // added: a question answered from words alone, without a picture
   'words.look': 'Let me check.',
-  'words.price.head': 'Usually {low} to {high}',
+  'words.price.head': 'This usually costs {low} to {high}.',
   'words.price.what': 'From my price book: {name}.',
   'words.price.typical': 'Most people pay about {typical}.',
   'words.price.typical.unit': 'Most people pay about {typical}, per {unit}.',
@@ -397,9 +451,9 @@ export const EN = {
   'kind.Price': 'Price',
   'what.title': 'I’m not sure what this is', // added: the reading came back as "unknown"
   'what.line': 'Point me at a repair quote, a bill, or something at home that needs fixing.', // added
-  'read.fail': 'I could not read that one. Hold it still and press Ask again.', // added: the reading failed
+  'read.fail': 'I could not read that one. Press Send to try again, or take the picture again.', // added: the reading failed
   'read.fail.title': 'Let’s try that again', // added
-  'read.fail.picture': 'I could not read that picture. Try another one, or press Ask to try again.', // added: a sample or chosen picture
+  'read.fail.picture': 'I could not read that picture. Press Send to try again, or try another one.', // added: a sample or chosen picture
   'busy.title': 'Busy right now', // added: the cloud said too many requests, or the network failed
   'busy.line': 'WeKnow is busy right now. Try again in a minute.', // added
   'cam.panel': 'The camera is off',
@@ -487,10 +541,10 @@ export const EN = {
   'set.delete.yes': 'Delete everything',
   'help.title': 'Help',
   'help.how.title': 'How it works',
-  'help.how': 'Point the camera at it. Press Ask. Say what’s wrong. WeKnow looks, and tells you what to do.',
+  'help.how': 'Take a picture with the camera button. Type or say what’s wrong. Press Send. WeKnow looks, and tells you what to do.',
   'help.hear': 'Hear how WeKnow works',
   'help.hybrid': 'On a phone or computer that can read by itself, WeKnow reads the picture right there and your details never leave it. Where it cannot, it asks before using the internet, and says so on every answer.', // added
-  'help.hear.say': 'Point me at something. Press Ask, and say what’s wrong. I will look, and tell you what to do.',
+  'help.hear.say': 'Take a picture with the camera button. Type or say what’s wrong, and press Send. I will look, and tell you what to do.',
   'help.words.title': 'Words WeKnow always understands',
   'help.setup.title': 'Setting it up for someone else?',
   'help.setup': 'Five things, about five minutes, on their own {device}.',

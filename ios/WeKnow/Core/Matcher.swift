@@ -52,6 +52,21 @@ struct Matcher: Sendable {
   /// At 0.6, every one of the 71 labelled eval lines (web/fixtures/eval/truth.json) still has its item in the top 5,
   /// and 11 of the 15 lines the pack does not know get no candidates at all (0.5: 4 of 15).
   func candidates(_ text: String, kind: Kind, k: Int = 5, minCoverage: Double = 0.6) -> [Candidate] {
+    let found = rank(text, kind: kind, k: k, minCoverage: minCoverage)
+    if !found.isEmpty { return found }
+    // Shops add details in brackets or after a comma: "Install ceiling fan (existing box)", "Washer repair, won't
+    // spin". When the whole line finds nothing, the job itself is tried: without the brackets, then before the comma.
+    let core = text.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
+      .trimmingCharacters(in: .whitespaces)
+    let head = core.split(whereSeparator: { ",;–—".contains($0) }).first.map { String($0).trimmingCharacters(in: .whitespaces) } ?? core
+    for alt in [core, head] where alt != text && Lexicon.terms(alt).count >= 1 {
+      let r = rank(alt, kind: kind, k: k, minCoverage: minCoverage)
+      if !r.isEmpty { return r }
+    }
+    return []
+  }
+
+  private func rank(_ text: String, kind: Kind, k: Int, minCoverage: Double) -> [Candidate] {
     let q = Lexicon.expand(text)
     guard !q.terms.isEmpty else { return [] }
     let docs = kind == .price ? prices : guides

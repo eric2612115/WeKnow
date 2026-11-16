@@ -4,6 +4,7 @@
 import type { SVGProps } from 'react';
 import {
   ArrowRight,
+  ArrowUp,
   CalendarPlus,
   Camera,
   CameraOff,
@@ -38,6 +39,7 @@ import {
   Keyboard,
   Volume2,
   VolumeX,
+  X,
 } from 'lucide-react';
 import type { Tone, WhereRan } from '../answer/types';
 
@@ -134,6 +136,8 @@ export const I = {
   map: () => <MapPin {...base} />,
   lang: () => <Languages {...base} />,
   keyboard: () => <Keyboard {...base} />,
+  close: () => <X {...base} strokeWidth={2.5} />,
+  send: () => <ArrowUp {...base} strokeWidth={2.5} />,
   sound: () => <Volume2 {...base} />,
   soundOff: () => <VolumeX {...base} />,
 };

@@ -12,7 +12,7 @@ import { DeviceIcon, I } from '../ui/icons';
 import { openSheet } from '../ui/uiStore';
 import { ThemeSeg } from '../app/Shell';
 import { DeviceRow, RateSeg, SizeSeg } from '../app/Sheets';
-import { resetView } from '../ask/conversation';
+import { startAgain } from '../ask/flows';
 import { mailState, useMail } from '../engine/mailState';
 import { t } from '../strings';
 
@@ -262,7 +262,7 @@ export default function Settings() {
                     onYes: async () => {
                       await wipeAll();
                       resetPrefs();
-                      resetView();
+                      startAgain();
                       void mailState.disconnect();
                       nav('/settings');
                     },

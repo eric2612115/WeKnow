@@ -10,7 +10,8 @@ import { DeviceIcon, I } from '../ui/icons';
 import { backToCamera } from '../samples';
 import { t } from '../strings';
 
-export const CameraWindow = forwardRef<HTMLVideoElement, { className?: string }>(function CameraWindow({ className = '' }, ref) {
+/** `liveOnly`: always the live camera (the camera opened over the conversation), never a picture. */
+export const CameraWindow = forwardRef<HTMLVideoElement, { className?: string; liveOnly?: boolean }>(function CameraWindow({ className = '', liveOnly = false }, ref) {
   const v = useAsk();
   const cam = useCamera();
   const d = useDevice();
@@ -24,10 +25,10 @@ export const CameraWindow = forwardRef<HTMLVideoElement, { className?: string }>
     }
   }, [cam.stream, v.still, v.chosen]);
 
-  const picture = v.still ?? v.chosen?.url ?? null;
+  const picture = liveOnly ? null : (v.still ?? v.chosen?.url ?? null);
   const live = !picture && cam.state === 'live';
   const off = !picture && (cam.state === 'blocked' || cam.state === 'none');
-  const looking = !!v.still || v.looking;
+  const looking = !liveOnly && (!!v.still || v.looking);
   const chip = v.chip ?? (live ? 'live' : null);
   const device = deviceWord();
 
@@ -73,7 +74,7 @@ export const CameraWindow = forwardRef<HTMLVideoElement, { className?: string }>
           {t('cam.panel')}
         </div>
       )}
-      {v.chosen && !v.still && cam.state !== 'none' && (v.phase === 'ready' || v.phase === 'settled') && (
+      {!liveOnly && v.chosen && !v.still && cam.state !== 'none' && (v.phase === 'ready' || v.phase === 'settled') && (
         <button type="button" className="onpic bottom-[0.7rem] min-h-11" onClick={backToCamera}>
           <I.cam />
           <span>{t('home.camera')}</span>

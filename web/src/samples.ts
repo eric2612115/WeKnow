@@ -1,11 +1,11 @@
 // Sample pictures for anyone without a sink, a quote or a bill to hand. The quote and the bill are the labelled
-// fixtures (fictional names and numbers); the sink is a drawing. Choosing one puts it in the camera window.
+// fixtures (fictional names and numbers); the sink is a drawing. Choosing one attaches it to the question box.
 
 import quoteUrl from '../fixtures/quote-brakes.png';
 import billUrl from '../fixtures/bill-changed-account.png';
 import drainUrl from './assets/samples/drain.jpg';
-import { patch, view } from './ask/conversation';
-import { startAsk } from './ask/flows';
+import { attach, detach, startOver, view } from './ask/conversation';
+import { setBox } from './ask/box';
 import { t, type StringId } from './strings';
 
 export interface Sample {
@@ -29,12 +29,13 @@ export function chosenSampleQuestion(): string | undefined {
   return s ? t(s.q) : undefined;
 }
 
-/** One press: put the sample in the window and ask its own question at once (no listening). */
-export async function askSample(id: Sample['id']) {
+/** One press: attach the sample to the question box (it shows in the window) and put its question in the box,
+ * ready for Send. Nothing is asked until Send. */
+export async function attachSample(id: Sample['id']) {
   const s = SAMPLES.find((x) => x.id === id);
   if (!s) return;
   await chooseSample(id);
-  startAsk(t(s.q));
+  setBox(t(s.q));
 }
 
 export async function chooseSample(id: Sample['id']) {
@@ -50,14 +51,8 @@ export function chooseFile(file: File) {
 }
 
 function showPicture(blob: Blob, sample?: string) {
-  const old = view().chosen;
-  if (old) URL.revokeObjectURL(old.url);
-  const url = URL.createObjectURL(blob);
-  patch({ chosen: { url, blob, sample }, still: null, looking: false, dim: false });
+  startOver();
+  attach(blob, sample);
 }
 
-export function backToCamera() {
-  const old = view().chosen;
-  if (old) URL.revokeObjectURL(old.url);
-  patch({ chosen: null, still: null, looking: false });
-}
+export const backToCamera = detach;

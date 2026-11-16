@@ -7,7 +7,7 @@ import { I } from '../ui/icons';
 import { openSheet } from '../ui/uiStore';
 import { SampleButtons, ChoosePhoto } from '../app/Sheets';
 import { deviceWord } from '../engine/device';
-import { askSample } from '../samples';
+import { attachSample } from '../samples';
 import { quiet, sayAloud } from '../engine/speech';
 import { t } from '../strings';
 
@@ -42,7 +42,7 @@ export default function Help() {
               <SampleButtons
                 onPick={(id) => {
                   nav('/');
-                  void askSample(id);
+                  void attachSample(id);
                 }}
               />
             </div>

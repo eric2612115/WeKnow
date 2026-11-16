@@ -4,6 +4,7 @@
 // LanguageModelSession: Apple's on-device model, or Gemini through Firebase AI Logic (Session.swift decides).
 
 import Foundation
+import CoreGraphics
 import FoundationModels
 import OSLog
 
@@ -61,6 +62,8 @@ struct Reading: Sendable {
   var readMs: Int
   var chooseMs: Int
   var offered: Int
+  /// The problem in one sentence, as the model read it (for the choices WeKnow offers when it is not sure).
+  var problem: String = ""
 }
 
 enum Reader {
@@ -113,13 +116,20 @@ enum Reader {
 
   /// Read masked text. `session` makes a fresh session on the chosen model for each step.
   static func read(
-    _ paper: PaperText, question: String, matcher: Matcher, where place: Where, engine: String,
+    _ paper: PaperText, image: CGImage? = nil, question: String, matcher: Matcher, where place: Where, engine: String,
     options: GenerationOptions, session: () -> LanguageModelSession
   ) async throws -> Reading {
     let t0 = Date()
-    let form = try await session().respond(
-      to: readPrompt(paper.masked, question: question), generating: PaperForm.self, options: options
-    ).content
+    // Where the model can see pictures (Apple's on-device model on iOS 27), it gets the photo too, so a thing with no
+    // words on it (a sink, a pair of earbuds) is still recognised. The photo never leaves the phone on this path.
+    let text = readPrompt(paper.masked, question: question)
+    let form: PaperForm
+    if let image, let seen = try? await session().respond(to: Prompt { text; Attachment(image) }, generating: PaperForm.self, options: options).content {
+      form = seen
+    } else {
+      // No picture input on this device (or it failed): the masked words alone, as before.
+      form = try await session().respond(to: text, generating: PaperForm.self, options: options).content
+    }
     let t1 = Date()
     readerLog.notice("read by \(engine, privacy: .public) in \(Int(t1.timeIntervalSince(t0) * 1000)) ms: kind=\(form.kind.docKind.rawValue, privacy: .public) lines=\(form.lines.count)")
 
@@ -162,6 +172,7 @@ enum Reader {
       urgent: form.urgent, addressedToAI: form.addressedToAI, offered: offered)
     return Reading(
       understanding: u, where_: place, engine: engine,
-      readMs: Int(t1.timeIntervalSince(t0) * 1000), chooseMs: Int(t2.timeIntervalSince(t1) * 1000), offered: offered.count)
+      readMs: Int(t1.timeIntervalSince(t0) * 1000), chooseMs: Int(t2.timeIntervalSince(t1) * 1000), offered: offered.count,
+      problem: form.problem)
   }
 }

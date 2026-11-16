@@ -110,7 +110,7 @@ enum Compose {
   }
 
   static func quote(_ items: [LineItem]) -> (verdict: Verdict, sentences: [String]) {
-    if items.isEmpty { return (Verdict(tone: .plain, text: "I can’t read this yet"), ["I can’t read the small words. Move closer to the top half."]) }
+    if items.isEmpty { return (Verdict(tone: .plain, text: "I can’t read the prices yet"), ["I can’t read the small words. Move closer to the top half."]) }
     let highs = items.filter { $0.state == .high }.sorted { ($0.over ?? 0) > ($1.over ?? 0) }
     let fair = items.filter { $0.state == .fair || $0.state == .low }.count
     let pending = items.filter { $0.state == .pending }.count
@@ -129,11 +129,11 @@ enum Compose {
       } else {
         sentences.append([typical, fair > 0 ? fairSentence : "", pending > 0 ? pendingSentence : ""].filter { !$0.isEmpty }.joined(separator: " "))
       }
-      let title = highs.count == 1 ? "One line is high" : "\(S.words(highs.count, capital: true)) lines are high"
+      let title = highs.count == 1 ? "One price is higher than usual" : "\(S.words(highs.count, capital: true)) prices are higher than usual"
       return (Verdict(tone: .warn, text: title), sentences + lows)
     }
     let sentences = pending > 0 ? ["\(fairSentence) \(pendingSentence)"] : ["Every line is inside the usual range."]
-    return (Verdict(tone: .ok, text: "This looks fair"), sentences + lows)
+    return (Verdict(tone: .ok, text: "These prices look normal"), sentences + lows)
   }
 
   // ---------- bills ----------
@@ -141,7 +141,7 @@ enum Compose {
   static let order: [Verdicts.BillFlag] = [.changedAccount, .instructionToAI, .newPayee, .urgency]
 
   static func bill(_ v: Verdicts.Bill, payee: String?, known: [Verdicts.KnownPayee]) -> (verdict: Verdict, reasons: [Sentence], doLine: String?) {
-    if v.safe { return (Verdict(tone: .ok, text: "This looks normal"), [Sentence(text: "Same company and same account as last time.", fromNote: true)], nil) }
+    if v.safe { return (Verdict(tone: .ok, text: "This bill looks like the usual one"), [Sentence(text: "Same company and same account as last time.", fromNote: true)], nil) }
     let match = Verdicts.knownPayee(payee, in: known)
     var raw: [Sentence] = []
     for f in order where v.flags.contains(f) {
@@ -156,7 +156,7 @@ enum Compose {
     }
     let stop = v.flags.contains(.changedAccount) || v.flags.contains(.instructionToAI)
     let reasons = raw.enumerated().map { i, r in Sentence(text: "\(S.words(i + 1, capital: true)). \(r.text)", fromNote: r.fromNote) }
-    return (Verdict(tone: stop ? .stop : .warn, text: stop ? "Don’t pay this yet" : "Check this first"), reasons,
+    return (Verdict(tone: stop ? .stop : .warn, text: stop ? "Don’t pay this yet" : "Check this bill first"), reasons,
             "Call the company first. Use the number on an older bill.")
   }
 }

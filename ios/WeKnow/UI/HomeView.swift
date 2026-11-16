@@ -1,4 +1,4 @@
-// The Ask page, phone layout (UI-SPEC 2.2): the window, the words under it, one large button.
+// The Ask page: the live camera in the window, the words under it, and the input bar every chat app has.
 
 import PhotosUI
 import SwiftUI
@@ -13,61 +13,49 @@ struct HomeView: View {
   @Binding var theme: ThemeChoice
   @State private var picking = false
   @State private var page: MenuPage?
-  @State private var words: WordsWay?
+  @State private var camera = LiveCamera()
   @AppStorage(Prefs.voiceOff) private var voiceOff = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  enum WordsWay: String, Identifiable { case type, speak; var id: String { rawValue } }
-
-  private var answering: Bool { model.phase != .ready || model.picture != nil }
+  @State private var whereShown: AskModel.Exchange?
 
   var body: some View {
     GeometryReader { geo in
       VStack(spacing: 12) {
         appBar
-        PictureWindow(model: model, reduceMotion: reduceMotion)
-          .frame(height: geo.size.height * (model.verdict == nil ? 0.5 : 0.3))
-          .animation(.weknow(0.32), value: model.verdict == nil)
-        WordsArea(model: model)
-          .frame(maxHeight: .infinity, alignment: .top)
-        HStack(alignment: .center, spacing: 0) {
-          SideButton(icon: "keyboard", label: "Type", id: "type") { words = .type }
-            .frame(maxWidth: .infinity)
-          AskButton(phase: model.phase) {
-            switch model.phase {
-            case .looking, .speaking, .asking: model.stop()
-            case .ready, .done: picking = true
-            }
-          }
-          SideButton(icon: "mic.fill", label: "Speak", id: "speak") { words = .speak }
-            .frame(maxWidth: .infinity)
+        if model.inConversation {
+          ConversationView(model: model, camera: camera, reduceMotion: reduceMotion) { whereShown = $0 }
+            .frame(maxHeight: .infinity)
+        } else {
+          // Before the first message: the live camera, as a camera app opens.
+          PictureWindow(model: model, camera: camera, reduceMotion: reduceMotion, openPhotos: { picking = true })
+            .frame(height: geo.size.height * 0.55)
+          Spacer(minLength: 0)
         }
-        .padding(.bottom, 4)
+        Composer(model: model, addPicture: takePicture)
+          .padding(.bottom, 6)
       }
       .padding(.horizontal, 16)
     }
     .background(Color.bg.ignoresSafeArea())
+    .task { await camera.start() }
+    .onChange(of: model.inConversation || model.draft != nil) { _, busy in
+      if busy { camera.stop() } else { Task { await camera.start() } }
+    }
+    .sheet(item: $whereShown) { ex in
+      if let receipt = ex.receipt { WhereSheet(tag: ex.tag, receipt: receipt) }
+    }
     .sheet(isPresented: $picking) {
       PickSheet { choice in
         picking = false
         switch choice {
-        case let .sample(s): model.start(s)
-        case let .image(img): model.start(img, question: model.pendingQuestion ?? "What should I know about this?")
+        case let .sample(s):
+          attach(s.image)
+          if model.draftText.isEmpty { model.draftText = s.question }
+        case let .image(img): attach(img)
         }
-        model.pendingQuestion = nil
       }
       .presentationDetents([.medium, .large])
-    }
-    .sheet(item: $words) { how in
-      WordsSheet(listenFirst: how == .speak) { q in
-        words = nil
-        guard !q.isEmpty else { return }
-        // A question about a paper needs its picture: the picker opens and the picture is read with these words.
-        if !model.ask(words: q) {
-          Task { try? await Task.sleep(for: .milliseconds(450)); picking = true }
-        }
-      }
-      .presentationDetents([.large])
     }
     .sheet(isPresented: $model.showWhere) {
       if let receipt = model.receipt { WhereSheet(tag: model.tag, receipt: receipt) }
@@ -85,6 +73,23 @@ struct HomeView: View {
     }
   }
 
+  /// The camera button: a still from the live camera goes into the input bar, next to the words; nothing is read
+  /// until Send. In a conversation (or without a live camera) the camera and photo picker opens instead.
+  private func takePicture() {
+    if model.draft != nil && !model.inConversation { model.draft = nil; return } // take it again: the live camera comes back
+    guard camera.state == .running, !model.inConversation else { picking = true; return }
+    Task {
+      if let img = await camera.capture() { attach(img) } else { picking = true }
+    }
+  }
+
+  /// The picture goes into the input bar; the words already typed stay.
+  private func attach(_ img: UIImage?) {
+    guard let img else { return }
+    model.draft = img
+    model.draftHint = nil
+  }
+
   private var appBar: some View {
     HStack(spacing: 12) {
       Menu {
@@ -92,8 +97,8 @@ struct HomeView: View {
         Button { page = .remembers } label: { Label("What WeKnow remembers", systemImage: "book.closed") }
         Button { page = .priceBook } label: { Label("Knowledge packs", systemImage: "books.vertical") }
         Button { page = .settings } label: { Label("Settings", systemImage: "gearshape") }
-        if model.picture != nil {
-          Button { model.stop(); model.reset() } label: { Label("Start again", systemImage: "arrow.counterclockwise") }
+        if model.inConversation {
+          Button { model.newConversation() } label: { Label("Start again", systemImage: "arrow.counterclockwise") }
         }
       } label: {
         Label("Menu", systemImage: "line.3.horizontal")
@@ -132,7 +137,9 @@ struct HomeView: View {
 
 struct PictureWindow: View {
   let model: AskModel
+  let camera: LiveCamera
   let reduceMotion: Bool
+  let openPhotos: () -> Void
   @State private var sweep = false
 
   var body: some View {
@@ -171,17 +178,38 @@ struct PictureWindow: View {
             .multilineTextAlignment(.center)
         }
         .padding(20)
+      } else if let draft = model.draft {
+        Image(uiImage: draft).resizable().scaledToFit().padding(10)
+          .accessibilityLabel("The picture you added")
+      } else if camera.state == .running {
+        CameraPreview(session: camera.session)
+          .accessibilityLabel("The camera. Point it at a quote, a bill or a problem, then press the camera button")
       } else {
         VStack(spacing: 12) {
           Image(systemName: "doc.viewfinder").font(.system(size: 44, weight: .regular)).foregroundStyle(Color.ink2)
           Text("Show me a quote, a bill, or a problem at home.")
             .font(.system(size: 19, weight: .semibold)).multilineTextAlignment(.center).foregroundStyle(Color.ink)
-          Text("Press Ask. No paper? Type or speak your question.").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
+          Text("Or type or say your question below.").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
             .multilineTextAlignment(.center)
         }
         .padding(24)
       }
       Corners().padding(16).allowsHitTesting(false)
+      if model.picture == nil && model.question == nil {
+        // Photos and the sample pictures, in the corner of the window.
+        Button(action: openPhotos) {
+          Label("Photos", systemImage: "photo.on.rectangle")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(Color.ink)
+            .padding(.horizontal, 12).frame(height: 40)
+            .background(Capsule().fill(Color.card.opacity(0.94)))
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .padding(.bottom, 22)
+        .accessibilityLabel("Choose a photo or a sample picture")
+        .accessibilityIdentifier("photos")
+      }
     }
     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     .shadow(color: .black.opacity(0.12), radius: 15, y: 12)
@@ -256,83 +284,7 @@ struct MarkView: View {
   }
 }
 
-// MARK: - Words
-
-struct WordsArea: View {
-  let model: AskModel
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      if let q = model.question, model.verdict == nil {
-        Text("You asked: “\(q)”").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
-      }
-      if model.phase == .looking, model.picture == nil {
-        HStack(spacing: 10) {
-          ProgressView()
-          Text("Looking in the knowledge packs on this \(S.device)…").font(.system(size: 19, weight: .semibold)).foregroundStyle(Color.ink2)
-        }
-      }
-      if model.phase == .asking {
-        Text("May I check this on the internet?").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.ink)
-      }
-      // The verdict stays pinned to the top of the words, the tag to the bottom; the sentences scroll between.
-      if let v = model.verdict { VerdictBand(verdict: v).transition(.move(edge: .bottom).combined(with: .opacity)) }
-      ScrollViewReader { proxy in
-        ScrollView {
-          VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(model.sentences.enumerated()), id: \.element.id) { i, s in
-              VStack(alignment: .leading, spacing: 6) {
-                Text(s.text)
-                  .font(.system(size: 22, weight: .medium)).lineSpacing(4)
-                  .foregroundStyle(model.speaking == nil || model.speaking == i ? Color.ink : Color.ink2)
-                  .fixedSize(horizontal: false, vertical: true)
-                if s.fromNote { NoteTag() }
-              }
-              .id(s.id)
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .onChange(of: model.sentences.count) { _, _ in
-          if let last = model.sentences.last { withAnimation(.weknow(0.3)) { proxy.scrollTo(last.id, anchor: .bottom) } }
-        }
-        .onChange(of: model.phase) { _, phase in
-          // When WeKnow has finished talking, the answer reads from its first sentence.
-          if phase == .done, model.sentences.indices.contains(model.answerFrom) {
-            withAnimation(.weknow(0.3)) { proxy.scrollTo(model.sentences[model.answerFrom].id, anchor: .top) }
-          }
-        }
-      }
-      if let tag = model.tag {
-        Button { model.showWhere = true } label: { WhereTag(tag: tag) }
-          .buttonStyle(.plain)
-          .accessibilityHint("Shows where this answer came from")
-      }
-    }
-    .animation(.weknow(0.28), value: model.verdict)
-  }
-}
-
-struct VerdictBand: View {
-  let verdict: Verdict
-  var body: some View {
-    HStack(spacing: 12) {
-      ZStack {
-        Image(systemName: verdict.tone.icon).font(.system(size: 26, weight: .semibold)).foregroundStyle(verdict.tone.iconColor)
-        if verdict.tone == .stop {
-          RoundedRectangle(cornerRadius: 1).fill(.white).frame(width: 13, height: 3.5)
-        }
-      }
-      Text(verdict.text).font(.system(size: 28, weight: .bold)).tracking(-0.5).foregroundStyle(verdict.tone.textColor)
-        .fixedSize(horizontal: false, vertical: true)
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, verdict.tone == .plain ? 0 : 16)
-    .padding(.vertical, verdict.tone == .plain ? 4 : 14)
-    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(verdict.tone.band))
-    .accessibilityElement(children: .combine)
-  }
-}
+// MARK: - Tags
 
 struct NoteTag: View {
   var body: some View {
@@ -363,68 +315,5 @@ struct WhereTag: View {
     .background(Capsule().fill(cloud ? Color.netBg : Color.card))
     .overlay(Capsule().stroke(cloud ? Color.net.opacity(0.35) : Color.line, lineWidth: 1.5))
     .accessibilityLabel(tag.text)
-  }
-}
-
-// MARK: - Big button
-
-struct AskButton: View {
-  let phase: AskModel.Phase
-  let action: () -> Void
-  @State private var pressed = false
-
-  private var busy: Bool { phase == .looking || phase == .speaking || phase == .asking }
-
-  var body: some View {
-    Button(action: action) {
-      VStack(spacing: 4) {
-        Image(systemName: busy ? "stop.fill" : "viewfinder").font(.system(size: 26, weight: .bold))
-        Text(busy ? "Stop" : "Ask").font(.system(size: 24, weight: .bold))
-      }
-      .foregroundStyle(busy ? Color.onKey : Color.onGo)
-      .frame(width: 112, height: 112)
-      .background(
-        Circle().fill(busy ? Color.key : Color.go)
-          .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1).padding(1))
-      )
-      .background(Circle().fill(busy ? Color.ink2 : Color.goDeep).offset(y: pressed ? 1 : 3.5))
-      .offset(y: pressed ? 2.5 : 0)
-      .padding(9)
-      .background(Circle().fill((busy ? Color.key : Color.go).opacity(0.12)))
-    }
-    .buttonStyle(PressStyle(pressed: $pressed))
-    .accessibilityLabel(busy ? "Stop" : "Ask")
-  }
-}
-
-/// Type and Speak, either side of the big button.
-struct SideButton: View {
-  let icon: String
-  let label: String
-  let id: String
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      VStack(spacing: 4) {
-        Image(systemName: icon).font(.system(size: 21, weight: .semibold))
-        Text(label).font(.system(size: 16, weight: .bold))
-      }
-      .foregroundStyle(Color.ink)
-      .frame(width: 76, height: 76)
-      .background(Circle().fill(Color.card))
-      .overlay(Circle().stroke(Color.line, lineWidth: 1.5))
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(label == "Type" ? "Type a question" : "Speak a question")
-    .accessibilityIdentifier(id)
-  }
-}
-
-struct PressStyle: ButtonStyle {
-  @Binding var pressed: Bool
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .onChange(of: configuration.isPressed) { _, p in withAnimation(.weknow(0.14)) { pressed = p } }
   }
 }

@@ -39,9 +39,16 @@ struct PaperText: Sendable {
     struct Piece { let masked: String; let rect: CGRect }
     var pieces: [Piece] = []
     var bars: [CoverBar] = []
-    for obs in observations {
+    let underLabel = namesUnderLabels(observations)
+    for (i, obs) in observations.enumerated() {
       guard let best = obs.topCandidates(1).first else { continue }
       let text = best.string
+      if underLabel.contains(i) {
+        // A name printed under its label ("CUSTOMER" above "Wendell Farthingale"): covered whole.
+        pieces.append(Piece(masked: "[name]", rect: flip(obs.boundingBox.cgRect)))
+        bars.append(CoverBar(kind: .name, rect: flip(obs.boundingBox.cgRect)))
+        continue
+      }
       let spans = PII.spans(text)
       var masked = text
       for span in spans.reversed() { masked.replaceSubrange(span.range, with: PII.token(for: span)) }
@@ -68,6 +75,31 @@ struct PaperText: Sendable {
       return PaperRow(masked: ordered.map(\.masked).joined(separator: "   "), rect: rect)
     }
     return PaperText(rows: paperRows, bars: bars)
+  }
+
+  /// Labels that put a person's name on the next line down, as forms and quotes print them.
+  private static let nameLabel = #"^(?i:customer|customer name|name|bill to|billed to|sold to|ship to|attn|attention|client|owner|insured|patient|member|tenant|resident|account holder|prepared for|service advisor|technician)\s*:?$"#
+  private static let looksLikeName = #"^[A-Z][A-Za-z'’.-]+(?:\s+[A-Z][A-Za-z'’.-]+){1,3}$"#
+
+  /// Observations that hold a name right under a name label, in the same column.
+  private static func namesUnderLabels(_ obs: [RecognizedTextObservation]) -> Set<Int> {
+    var out = Set<Int>()
+    for (i, o) in obs.enumerated() {
+      guard let t = o.topCandidates(1).first?.string.trimmingCharacters(in: .whitespaces),
+            t.range(of: nameLabel, options: .regularExpression) != nil else { continue }
+      let label = o.boundingBox.cgRect
+      // The nearest piece below the label (Vision's y grows upward) that starts in the label's column.
+      let below = obs.enumerated().filter { j, b in
+        let r = b.boundingBox.cgRect
+        return j != i && r.maxY <= label.minY + label.height * 0.3 && label.minY - r.maxY < label.height * 2.5
+          && abs(r.minX - label.minX) < 0.05
+      }.min { label.minY - $0.element.boundingBox.cgRect.maxY < label.minY - $1.element.boundingBox.cgRect.maxY }
+      if let (j, b) = below, let s = b.topCandidates(1).first?.string.trimmingCharacters(in: .whitespaces),
+         s.range(of: looksLikeName, options: .regularExpression) != nil, !s.contains(where: \.isNumber) {
+        out.insert(j)
+      }
+    }
+    return out
   }
 
   /// Vision's normalized rects have their origin bottom-left; the picture is drawn top-left.
