@@ -6,12 +6,13 @@
 import type { Reading, Where } from '../reader';
 import type { Settings } from '../config';
 import type { LayeredKnowledge } from '../core/knowledge';
-import type { Guide, PriceItem } from '../core/packs';
+import type { Guide, Pack, PriceItem } from '../core/packs';
 import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts } from '../core/verdict';
-import { guideByRef, proPrice } from '../core/packs';
+import { guideByRef, priceByRef, proPrice } from '../core/packs';
+import { aboutPicture, kindOrder, lean, matchStrength, pickLexical, priceAnswer, type ItemKind, type Scored } from './words';
 import { maskText } from '../core/pii';
 import { buildCloudLookup } from '../core/cloudPayload';
 import {
@@ -38,6 +39,7 @@ import {
   addLine,
   alive,
   ask,
+  Cancel,
   choice,
   clearLines,
   clearWords,
@@ -131,11 +133,24 @@ export function startAsk(preset?: string) {
   void run((t) => askFlow(t, preset));
 }
 
-async function askFlow(t: number, preset?: string) {
-  const question = preset ?? (await hearQuestion(t));
+/** Ask by typing: the question comes from the typing form instead of the microphone, then goes the same way. */
+export function startTyped() {
+  void run((t) => askFlow(t, undefined, 'type'));
+}
+
+async function askFlow(t: number, preset?: string, how: 'voice' | 'type' = 'voice') {
+  const question = preset ?? (how === 'type' ? await typeQuestion(t) : await hearQuestion(t));
   if (!question) return;
   clearWords();
   patch({ asked: tr('asked', { words: question }) });
+
+  // A question that does not point at anything is answered from the pack, without a picture, when it can be.
+  // A sample's own question, or a picture the person put in the window, always goes to the picture.
+  if (!preset && !view().chosen && !aboutPicture(question)) {
+    if (await wordsFlow(t, question)) return;
+    alive(t);
+    if (ui.cameraState() !== 'live') return dontKnow(t);
+  }
 
   const still = await ui.capture();
   alive(t);
@@ -203,7 +218,10 @@ interface Ctx {
   reading: Reading;
   kb: LayeredKnowledge;
   settings: Settings;
-  picture: Blob;
+  /** The still that was read; none when the question was answered from words alone. */
+  picture?: Blob;
+  /** Set when the question was answered from words alone: what picked the pack item. */
+  words?: { by: 'model' | 'match'; offered: number; ms: number };
 }
 
 async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: string, where: Where): Promise<Reading> {
@@ -298,6 +316,17 @@ async function pickQuestion(t: number): Promise<string> {
   return qs[Number(c.slice(1))] ?? qs[0];
 }
 
+/** The Type button: the typing form instead of the microphone. Nothing is said, so it works with the sound off. */
+async function typeQuestion(t: number): Promise<string> {
+  clearWords();
+  patch({ still: null, looking: false, reading: false });
+  setHead('plain', tr('type.title'), 'type');
+  showLines([tr('type.line')]);
+  const text = (await typed(t)).trim();
+  clearWords();
+  return text;
+}
+
 // ---------- when the picture cannot be read ----------
 
 async function cameraOff(t: number) {
@@ -370,6 +399,7 @@ function firstTimeHere(where: Where): string[] {
 }
 
 function tech(c: Ctx, extra: string[] = []): string[] {
+  if (c.words) return wordsTech(c, extra);
   const r = c.reading;
   const chose = r.retrieval.offered > 0;
   const answered = chose ? 2 : 1;
@@ -397,8 +427,11 @@ async function keep(
   c: Ctx,
   o: { kind: CheckKind; family: Family; title: string; tone: Tone; verdict: string; lines: Said[]; items?: LineItem[]; receipt: Receipt; project?: string },
 ): Promise<Check> {
-  const { shrinkPhoto } = await import('../image');
-  const small = await shrinkPhoto(c.picture, 900, 0.8).catch(() => c.picture);
+  let small: Blob | undefined;
+  if (c.picture) {
+    const { shrinkPhoto } = await import('../image');
+    small = await shrinkPhoto(c.picture, 900, 0.8).catch(() => c.picture);
+  }
   const said = o.lines.map((x) => (typeof x === 'string' ? { text: x } : x));
   const noteLine = said.findIndex((l) => l.noteTag);
   const check = await addCheck(
@@ -485,6 +518,149 @@ function fileRequests(names: string[], region: string, onDone: (filed: string[],
     }
     onDone(filed, failed);
   })();
+}
+
+// ---------- a question in words, without a picture ----------
+// Plain search finds a few pack items for the question; the built-in model on this device picks one (text only),
+// or, without it, plain code takes the top match only when it clearly names the job (ask/words.ts). Nothing here
+// goes to the cloud. Every number in the answer comes from the pack item.
+
+interface WordsHit {
+  kind: ItemKind;
+  ref: string;
+  by: 'model' | 'match';
+  offered: number;
+}
+
+async function lookUpWords(t: number, question: string, kb: LayeredKnowledge): Promise<WordsHit | null> {
+  const l = lean(question);
+  const order = kindOrder(l);
+  const lists = await Promise.all(order.map((kind) => kb.candidates(question, { kind, k: 4 })));
+  alive(t);
+  const all = lists.flat();
+  if (!all.length) return null;
+
+  if (deviceStore.get().model === 'available') {
+    setPhase('speaking');
+    void narrate(t, [tr('words.look')]);
+    let r: { ref: string | null; offered: number } | null = null;
+    try {
+      const { chooseForQuestion } = await import('../reader');
+      r = await withTimeout(chooseForQuestion(question, all), 30_000);
+    } catch (e) {
+      console.warn('[WeKnow] on-device choice failed; using the plain match', e);
+    }
+    alive(t);
+    clearLines();
+    if (r) {
+      const c = r.ref ? all.find((x) => x.ref === r.ref) : undefined;
+      return c ? { kind: c.kind, ref: c.ref, by: 'model', offered: r.offered } : null;
+    }
+  }
+
+  const tops = lists.map((xs) => xs[0]).filter((c) => !!c);
+  const slice = await kb.resolve(tops.map((c) => c.ref));
+  alive(t);
+  const scored: Scored[] = tops.map((c) => {
+    const item = c.kind === 'price' ? priceByRef(slice, c.ref) : guideByRef(slice, c.ref);
+    return { kind: c.kind, ref: c.ref, strength: item ? matchStrength(question, [item.name, ...item.aliases]) : 0 };
+  });
+  const hit = pickLexical(l, scored);
+  return hit ? { kind: hit.kind, ref: hit.ref, by: 'match', offered: tops.length } : null;
+}
+
+/** Answer a question from the pack alone. True when it answered; false when nothing clearly matched. */
+async function wordsFlow(t: number, question: string): Promise<boolean> {
+  const t0 = performance.now();
+  let found: { hit: WordsHit; kb: LayeredKnowledge; settings: Settings; pack: Pack } | null = null;
+  try {
+    const [kb, settings] = await Promise.all([knowledge(), appSettings()]);
+    alive(t);
+    const hit = await lookUpWords(t, question, kb);
+    if (hit) found = { hit, kb, settings, pack: await kb.resolve([hit.ref]) };
+  } catch (e) {
+    if (e instanceof Cancel) throw e;
+    console.warn('[WeKnow] words lookup failed', e);
+    return false;
+  }
+  alive(t);
+  if (!found) return false;
+  const { hit, kb, settings, pack } = found;
+  const ms = Math.round(performance.now() - t0);
+  const reading: Reading = {
+    understanding: {
+      kind: hit.kind === 'guide' ? 'problem' : 'unknown',
+      lines: [],
+      problemRef: hit.kind === 'guide' ? hit.ref : null,
+      payee: null,
+      payTo: null,
+      urgent: false,
+      addressedToAI: false,
+      accountChange: false,
+    },
+    where: 'device',
+    ms,
+    steps: { read: 0, choose: ms },
+    pack,
+    retrieval: { shards: kb.stats().shards, bytes: 0, offered: hit.offered, trimmed: 0 },
+  };
+  const c: Ctx = { t, question, where: 'device', reading, kb, settings, words: { by: hit.by, offered: hit.offered, ms } };
+  patch({ still: null, looking: false, reading: false, chip: null });
+  if (hit.kind === 'guide') {
+    if (!guideByRef(pack, hit.ref)) return false;
+    await problemFlow(c);
+    return true;
+  }
+  const item = priceByRef(pack, hit.ref);
+  if (!item) return false;
+  await wordsPrice(c, item);
+  return true;
+}
+
+async function wordsPrice(c: Ctx, item: PriceItem) {
+  const { t } = c;
+  const a = priceAnswer(item);
+  const receipt: Receipt = {
+    w: whereRan({ where: 'device', online: deviceStore.get().online, sent: 0, pending: 0 }),
+    n: 0,
+    stayed: [tr('where.question'), tr('where.answer.words', { device: dev() })],
+    sent: [],
+    sources: priceSources([item]),
+    tech: tech(c),
+  };
+  const lines: Said[] = [...a.lines, ...firstTimeHere('device'), tr('words.price.quote')];
+  clearLines();
+  setHead(a.tone, a.head);
+  patch({ receipt });
+  const car = (item.category ?? '').startsWith('car');
+  const check = await keep(c, { kind: 'Price', family: 'quote', title: item.name, tone: a.tone, verdict: a.head, lines, receipt, project: car ? tr('project.car') : undefined });
+  alive(t);
+  settle();
+  void narrate(t, [...lines, keptLine(check)]);
+  await offerReady(t);
+}
+
+function wordsTech(c: Ctx, extra: string[]): string[] {
+  const w = c.words!;
+  const by =
+    w.by === 'model'
+      ? `Picked by the built-in model on this ${dev()} (Firebase AI Logic, on-device, text only) among ${w.offered} pack ${w.offered === 1 ? 'item' : 'items'} found by plain search.`
+      : `Picked by plain code on this ${dev()}: the top search match, taken because the question holds the job words of its name or an alias (all of a short one; at least half, and two, of a longer one).`;
+  return [
+    `Answered from the question alone, without a picture. ${by}`,
+    'Requests to the cloud model: 0.',
+    `Pack ${c.kb.id}, version ${c.kb.version}. ${w.ms} ms.`,
+    ...extra,
+  ];
+}
+
+/** A question in words that the pack does not know, with no camera to look instead. Never a made-up price. */
+function dontKnow(t: number) {
+  clearLines();
+  setHead('plain', tr('words.none.title'));
+  patch({ offerSamples: true, still: null, looking: false });
+  settle();
+  void narrate(t, [tr('words.none.line'), tr('words.none.more')]);
 }
 
 // ---------- a quote ----------
@@ -829,7 +1005,7 @@ async function problemFlow(c: Ctx) {
   const receipt: Receipt = {
     w: whereRan({ where, online: deviceStore.get().online, sent: 0, pending: 0 }),
     n: 0,
-    stayed: where === 'device' ? [tr('where.picture'), tr('where.question'), tr('where.steps')] : [tr('where.steps')],
+    stayed: where === 'device' ? [...(c.picture ? [tr('where.picture')] : []), tr('where.question'), tr('where.steps')] : [tr('where.steps')],
     sent: where === 'cloud' ? [tr('where.sent.picture'), tr('where.sent.question', { q: c.question })] : [],
     sentPicture: where === 'cloud',
     sources: guideSources(guide),

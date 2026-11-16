@@ -35,6 +35,9 @@ import {
   ImageUp,
   MapPin,
   Languages,
+  Keyboard,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import type { Tone, WhereRan } from '../answer/types';
 
@@ -130,4 +133,7 @@ export const I = {
   image: () => <ImageUp {...base} />,
   map: () => <MapPin {...base} />,
   lang: () => <Languages {...base} />,
+  keyboard: () => <Keyboard {...base} />,
+  sound: () => <Volume2 {...base} />,
+  soundOff: () => <VolumeX {...base} />,
 };

@@ -102,6 +102,115 @@ final class AskModel {
     task = Task { await run(image, question: question) }
   }
 
+  /// A question about a paper ("Is this quote fair?") asked in words: the next picture is read with it.
+  var pendingQuestion: String?
+
+  /// Asked in words, typed or spoken. Answered from the installed knowledge sections; nothing leaves the phone.
+  /// Returns false when the question needs a picture, so the caller can ask for one.
+  @discardableResult
+  func ask(words: String) -> Bool {
+    if WordsAnswer.needsPicture(words) {
+      pendingQuestion = words
+      return false
+    }
+    stop()
+    reset()
+    question = words
+    task = Task { await runWords(words) }
+    return true
+  }
+
+  private func runWords(_ q: String) async {
+    guard let pack, let matcher else { return fail("There is no price book on this \(S.device). Add one in Menu, Knowledge packs.", tech: "No knowledge sections installed.") }
+    phase = .looking
+    let t0 = Date()
+    let found = await WordsAnswer.find(q, matcher: matcher, pack: pack, useModel: Device.canRead)
+    print("[WeKnow] words answer in \(Int(Date().timeIntervalSince(t0) * 1000)) ms: " + found.tech.joined(separator: " | "))
+    if Task.isCancelled { return }
+
+    var answer: [String] = []
+    var sources: [(label: String, date: String, url: String)] = []
+    var kind = DocKind.unknown
+    var title = "A question"
+    var project = "My home"
+    switch found.hit {
+    case let .price(p):
+      kind = .quote
+      title = "Price of \(S.lower(p.name))"
+      if Self.carWords.contains(where: { p.name.lowercased().contains($0) }) || (p.category ?? "").hasPrefix("car") { project = "The car" }
+      let per = WordsAnswer.unitWords(p.unit)
+      verdict = Verdict(tone: .ok, text: "Usually \(S.money(p.low)) to \(S.money(p.high))")
+      answer.append("\(p.name): most people pay about \(S.money(p.typical))\(per).")
+      if let inc = WordsAnswer.includes(p) { answer.append(inc) }
+      answer.append("If a quote is well over \(S.money(p.high)), show it to me and I will check it line by line.")
+      let when = WordsAnswer.checked(p.sources)
+      answer.append("These numbers come from the price book on this \(S.device)" + (when.map { ", checked \($0)." } ?? "."))
+      sources.append((label: "Repair price book: \(p.name)", date: when.map { "checked \($0)" } ?? "", url: p.sources.first?.url ?? ""))
+    case let .prices(ps):
+      kind = .quote
+      let low = ps.map(\.low).min() ?? 0, high = ps.map(\.high).max() ?? 0
+      let first = ps.first!
+      title = "Price of \(S.lower(first.name))"
+      if (first.category ?? "").hasPrefix("car") { project = "The car" }
+      verdict = Verdict(tone: .ok, text: "From \(S.money(low)) to \(S.money(high))")
+      answer.append("It depends on the model. I have prices for \(ps.count) of them on this \(S.device).")
+      for p in ps.prefix(3) { answer.append("\(p.name): about \(S.money(p.typical)).") }
+      answer.append("Tell me the exact model, or show me the quote, and I will check it.")
+      let when = WordsAnswer.checked(ps.flatMap(\.sources))
+      answer.append("These numbers come from the price book on this \(S.device)" + (when.map { ", checked \($0)." } ?? "."))
+      for p in ps { sources.append((label: "Repair price book: \(p.name)", date: when.map { "checked \($0)" } ?? "", url: p.sources.first?.url ?? "")) }
+    case let .guide(g):
+      kind = .problem
+      title = g.name
+      if (g.category ?? "").hasPrefix("car") { project = "The car" }
+      if g.steps.isEmpty {
+        verdict = Verdict(tone: .stop, text: "Call a professional")
+        answer.append("This sounds like: \(S.lower(g.name)).")
+        if let why = g.safety?.first { answer.append(why) }
+        if let ref = g.proRefs?.first, let p = pack.price(ref) {
+          answer.append("A professional usually charges \(S.money(p.low)) to \(S.money(p.high)) for this.")
+        }
+      } else {
+        verdict = Verdict(tone: .ok, text: "You can fix this")
+        answer.append("This sounds like: \(S.lower(g.name)). It takes about \(WordsAnswer.minutes(g)) minutes.")
+        if let s = g.safety?.first { answer.append("First, be careful: \(s)") }
+        for (i, step) in g.steps.enumerated() { answer.append("Step \(i + 1). \(step)") }
+        if let stop = g.stopIf?.first { answer.append("Stop and call a professional if: \(S.lower(stop))") }
+      }
+      let when = WordsAnswer.checked(g.sources)
+      sources.append((label: "Home repair guide: \(g.name)", date: when.map { "checked \($0)" } ?? "", url: g.sources.first?.url ?? ""))
+    case nil:
+      verdict = Verdict(tone: .plain, text: "I don’t know this one yet")
+      answer = [
+        "I only answer from the knowledge packs on this \(S.device), and none of them covers this.",
+        "Try a repair price, like “brake pads”, or a problem at home, like “a clogged sink”. Or press Ask and show me the paper.",
+      ]
+    }
+
+    tag = .local
+    receipt = Receipt(
+      stayed: ["Your question", "The answer"], sent: [], sources: sources,
+      tech: found.tech + ["On-device model: \(Device.status)", "Knowledge pack: \(packVersion)", "Nothing was sent to the internet."])
+    var filedUnder: String?
+    if kind != .unknown, !UserDefaults.standard.bool(forKey: Prefs.dontKeepChecks), let v = verdict {
+      Household.shared.add(
+        CheckRecord(date: .now, kind: kind, project: project, title: title, verdict: v.text, tone: v.tone.word,
+                    sentences: answer, onDevice: true),
+        picture: nil)
+      filedUnder = project
+    }
+
+    answerFrom = 0
+    phase = .speaking
+    if let v = verdict { await Voice.shared.say(v.text + ".") }
+    for s in answer {
+      if Task.isCancelled { return }
+      await say(Sentence(text: s))
+    }
+    if let filedUnder, !Task.isCancelled { await say(Sentence(text: "It is in My checks, under \(filedUnder).")) }
+    phase = .done
+  }
+
   func stop() {
     task?.cancel()
     task = nil
@@ -267,6 +376,7 @@ final class AskModel {
       sources: sources.map { (label: $0.0, date: $0.1, url: $0.2) },
       tech: tech)
     if verdict?.tone == .stop { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+    print("[WeKnow] result: \(verdict?.text ?? "-") | " + tech.joined(separator: " | "))
     let filedUnder = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: reading.where_ == .device)
 
     // 5. Say it.
@@ -312,14 +422,8 @@ final class AskModel {
     case .unknown:
       return nil
     }
-    let tone: String = switch verdict.tone {
-    case .ok: "ok"
-    case .warn: "warn"
-    case .stop: "stop"
-    case .plain: "plain"
-    }
     Household.shared.add(
-      CheckRecord(date: .now, kind: u.kind, project: project, title: title, verdict: verdict.text, tone: tone,
+      CheckRecord(date: .now, kind: u.kind, project: project, title: title, verdict: verdict.text, tone: verdict.tone.word,
                   sentences: answer.map(\.text), onDevice: onDevice),
       picture: picture.covered(by: bars.map(\.rect)))
     return project
@@ -372,6 +476,18 @@ final class AskModel {
   /// "I covered your name, phone, address and plate. They stay on this phone." (quote.covered / letter.covered)
   private func coveredSentence(_ kinds: Set<PIIKind>) -> String {
     "I covered \(coveredList(kinds)). They stay on this \(S.device)."
+  }
+}
+
+extension Tone {
+  /// How a check's tone is stored in My checks.
+  var word: String {
+    switch self {
+    case .ok: "ok"
+    case .warn: "warn"
+    case .stop: "stop"
+    case .plain: "plain"
+    }
   }
 }
 

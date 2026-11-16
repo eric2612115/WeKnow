@@ -12,7 +12,9 @@ import {
   view,
   waitingForPress,
 } from '../ask/conversation';
-import { setAskUi, startAsk } from '../ask/flows';
+import { setAskUi, startAsk, startTyped } from '../ask/flows';
+import { quiet } from '../engine/speech';
+import { getPrefs, setPrefs, usePrefs } from '../store/prefs';
 import { cameraStore, captureStill, permission, startCamera, stopCamera } from '../engine/camera';
 import { deviceWord } from '../engine/device';
 import { CameraWindow } from '../home/Window';
@@ -80,20 +82,49 @@ function BigButton() {
   );
 }
 
+/** Sound on or off, from the Ask page itself. Off cuts what is being said now; the words stay on screen. */
+function toggleSound() {
+  const on = !getPrefs().voice;
+  setPrefs({ voice: on });
+  if (!on) quiet();
+}
+
 function Deck() {
   const v = useAsk();
+  const p = usePrefs();
   const guide = v.phase === 'guide';
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center justify-items-center gap-2 px-1 pt-[0.55rem] pb-[calc(1.2rem+env(safe-area-inset-bottom))] lg:grid-cols-[auto_auto_auto] lg:justify-center lg:gap-x-[1.4rem] lg:pt-[0.4rem] lg:pb-[0.2rem]">
-      <button type="button" className={`flank ${guide ? '' : 'invisible'}`} onClick={() => pressGuide('again')} tabIndex={guide ? 0 : -1}>
-        <I.again />
-        <span>{t('btn.again')}</span>
-      </button>
+      {guide ? (
+        <button type="button" className="flank" onClick={() => pressGuide('again')}>
+          <I.again />
+          <span>{t('btn.again')}</span>
+        </button>
+      ) : (
+        <button type="button" className="flank" data-flank="type" onClick={startTyped} title={t('btn.type.hint')}>
+          <I.keyboard />
+          <span>{t('btn.type')}</span>
+        </button>
+      )}
       <BigButton />
-      <button type="button" className={`flank ${guide ? '' : 'invisible'}`} onClick={() => pressGuide('stop')} tabIndex={guide ? 0 : -1}>
-        <StopFace />
-        <span>{t('btn.stop')}</span>
-      </button>
+      {guide ? (
+        <button type="button" className="flank" onClick={() => pressGuide('stop')}>
+          <StopFace />
+          <span>{t('btn.stop')}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="flank"
+          data-flank="sound"
+          data-off={p.voice ? undefined : ''}
+          onClick={toggleSound}
+          title={p.voice ? t('btn.sound.mute') : t('btn.sound.unmute')}
+        >
+          {p.voice ? <I.sound /> : <I.soundOff />}
+          <span>{p.voice ? t('btn.sound.on') : t('btn.sound.off')}</span>
+        </button>
+      )}
       <p className="col-span-full mt-2 hidden text-small text-ink-2 lg:block">
         <kbd>Space</kbd> {t('home.space').replace(/^Space /, '')}
       </p>

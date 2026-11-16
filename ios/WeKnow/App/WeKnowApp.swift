@@ -27,6 +27,16 @@ struct WeKnowApp: App {
             try? await Task.sleep(for: .milliseconds(600))
             model.start(s)
           }
+          // `-WeKnowImage /path/to/sheet.png -WeKnowQuestion "Is this fair?"` reads a picture file (simulator tests).
+          if let path = UserDefaults.standard.string(forKey: "WeKnowImage"), let img = UIImage(contentsOfFile: path) {
+            try? await Task.sleep(for: .milliseconds(600))
+            model.start(img, question: UserDefaults.standard.string(forKey: "WeKnowQuestion") ?? "What should I know about this?")
+          }
+          // `-WeKnowAsk "How much is a brake pad replacement?"` asks in words, as if typed.
+          if let q = UserDefaults.standard.string(forKey: "WeKnowAsk"), !q.isEmpty {
+            try? await Task.sleep(for: .milliseconds(600))
+            model.ask(words: q)
+          }
           if let t = UserDefaults.standard.string(forKey: "WeKnowTheme"), let c = ThemeChoice(rawValue: t) { themeRaw = c.rawValue }
         }
     }

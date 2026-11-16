@@ -66,7 +66,13 @@ function CheckSheet({ s }: { s: Extract<SheetState, { type: 'check' }> | null })
   return (
     <Sheet open={!!s} onClose={closeSheet} title={c.title} size="wide">
       <div className="grid gap-[1.4rem] lg:grid-cols-2 lg:items-start">
-        <span className="thumb">{pic && <img src={pic} alt="" />}</span>
+        {c.pictureId ? (
+          <span className="thumb">{pic && <img src={pic} alt="" />}</span>
+        ) : (
+          <span className="thumb words">
+            <I.say />
+          </span>
+        )}
         <div>
           <VerdictBand tone={c.tone} text={c.verdict} className="!animate-none" />
           <p className="mt-1 mb-2 text-small text-ink-2">{t('check.meta', { kind: t(`kind.${c.kind}` as StringId), date: shortDate(c.date), device })}</p>

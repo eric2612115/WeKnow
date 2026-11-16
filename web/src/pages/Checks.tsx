@@ -24,6 +24,12 @@ const useDesktop = () => {
 
 function Thumb({ check, className = '' }: { check: Check; className?: string }) {
   const url = usePicture(check.pictureId);
+  if (!check.pictureId)
+    return (
+      <span className={`thumb words ${className}`}>
+        <I.say />
+      </span>
+    );
   return <span className={`thumb ${className}`}>{url && <img src={url} alt="" />}</span>;
 }
 

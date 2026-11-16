@@ -41,7 +41,12 @@ knowledge in the cloud: they send the whole page, cite no source, and give no ve
    sourced range; bill flags (`account-change-notice`, `new-payee`, `changed-account`, `urgency`, `instruction-to-ai`) are rules over the form plus
    on-device household memory. Missing or malformed warning fields count as warnings.
 5. **Route (explicit).** On-device when Chrome reports the model available; cloud only after consent, labelled on screen.
-6. **Leave the device only as a masked line item.** `buildCloudLookup` admits only an item name and a region and refuses
+6. **Questions in words, no picture.** A typed or spoken question has no photo to read in step 1: plain code finds pack
+   candidates for it, the on-device model (when there is one) marks which ones it is about, and the answer is said from
+   the pack item. A question that points at a paper ("Is this fair?") goes to the picture path instead. Nothing leaves
+   the device on this path; with no local model only a close lexical match is used, otherwise WeKnow says it does not
+   know. When several items fit (one job, many phone models), iOS gives their range and asks for the model.
+7. **Leave the device only as a masked line item.** `buildCloudLookup` admits only an item name and a region and refuses
    any personal pattern; Firestore rules refuse anything else.
 
 Firebase pieces: AI Logic (hybrid inference, structured output), App Check (reCAPTCHA Enterprise), Authentication
@@ -69,7 +74,8 @@ the rules also miss. It cannot clear a warning, invent a price, or move money; W
 |---|---|---|---|---|---|
 | Cloud, three-step reader via server prompt templates, free tier, 2026-11-16 (regenerated set) | 50 (25 quotes, 25 bills) | 50 | 0 | 3.4 s (42 via templates); 5.1 s (8 via the fallback model) | `docs/eval/cloud-templates-2026-11-16b.json` |
 | Same reader, first set | 50 | 50 | 0 | 2.8 s | `docs/eval/cloud-templates-2026-11-16.json` |
-| On-device, Apple model, iOS Simulator, 2026-11-16 | 2 fixtures (brake quote x4, changed-account bill) | all | 0 | 25–50 s in the simulator | `design/screens/ios/` |
+| On-device, Apple model, iOS Simulator, 2026-11-16 | 2 fixtures (brake quote x4, changed-account bill), plus the brake quote on an iPhone 17 Pro in airplane mode | all | 0 | 25–50 s in the simulator | `design/screens/ios/` |
+| On-device, Apple model, iOS Simulator, questions in words, 2026-11-16 | 5 questions (brake pads, new water heater, running toilet, cracked phone screen, an unknown job) | 5 | 0 | 4–10 s in the simulator | `docs/claims.md` C17 |
 | On-device, Chrome Gemini Nano | TODO | TODO | TODO | TODO | TODO |
 
 The set is synthetic: fictional quotes built from pack items at fair, high and low prices plus unknown lines, and bills

@@ -322,6 +322,22 @@ export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, questi
   };
 }
 
+/**
+ * A typed or spoken question without a picture: let the built-in model on this device pick which offered pack
+ * item the question is about (the same choose step as a reading, text only, never the cloud). Returns a ref that
+ * was offered, or null.
+ */
+export async function chooseForQuestion(question: string, options: Candidate[]): Promise<{ ref: string | null; offered: number; trimmed: number }> {
+  const asked = question.replace(/"/g, "'").slice(0, 200);
+  const fitted = fitChoices([{ i: 0, text: asked, options }].filter((it) => it.options.length), BUDGETS.nano);
+  const item = fitted.items[0];
+  if (!item) return { ref: null, offered: 0, trimmed: fitted.trimmed };
+  const c = await model('device', CHOOSE_SCHEMA, 'choose', false).generateContent(choosePrompt([item]));
+  const choices = (JSON.parse(c.response.text()) as { choices?: Array<{ i: number; ref: string | null }> }).choices ?? [];
+  const ref = choices.find((ch) => ch.i === 0)?.ref ?? null;
+  return { ref: ref && item.options.some((o) => o.ref === ref) ? ref : null, offered: item.options.length, trimmed: fitted.trimmed };
+}
+
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();

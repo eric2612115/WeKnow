@@ -10,6 +10,8 @@ says so. Either way it talks you through the answer.
 - **A repair quote:** "Line 1, rear brake pads, $540, is $146 above the usual top price of $394. The cabin filter is fair."
 - **A bill:** "This bill asks you to pay a new account. Last time you paid one ending in 4821. Don't pay yet; call the number you already have."
 - **A clogged drain:** step-by-step instructions, spoken, with when to stop and call a pro.
+- **No paper at hand?** Type or say the question ("How much is a brake pad replacement?"). It is answered on the
+  device from the knowledge packs, with nothing sent anywhere. Sound can be turned off at any moment.
 
 Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hybrid inference**.
 
@@ -56,7 +58,9 @@ You need a Firebase project with AI Logic (Gemini Developer API), Firestore, Ano
 open ios/WeKnow.xcodeproj
 ```
 
-Run the WeKnow scheme on an iPhone simulator or device and tap a sample picture. The reading happens on the device
+Run the WeKnow scheme on an iPhone simulator or device and tap a sample picture, or press Type and ask in words.
+The menu shows My checks (kept on the phone, with personal details covered), What WeKnow remembers, Settings, and
+Knowledge packs: every pack section the site publishes, its size on the phone, and Remove or Get for each. The reading happens on the device
 with Apple's model; no Firebase config is needed for that. To enable the consented cloud path, copy
 `ios/WeKnow/GoogleService-Info.example.plist` to `GoogleService-Info.plist` with your iOS app's config and register an
 App Check debug token.

@@ -32,6 +32,8 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSCameraUsageDescription: WeKnow looks at the paper or the thing you point at. The picture stays on this phone unless you say yes.
         NSPhotoLibraryUsageDescription: Choose a picture of a quote, a bill or a problem at home for WeKnow to check.
+        NSMicrophoneUsageDescription: Say your question. The sound is turned into words on this phone and is never kept or sent.
+        NSSpeechRecognitionUsageDescription: Your spoken question is turned into words on this phone, so WeKnow can answer it.
     # WeKnow/GoogleService-Info.plist is git-ignored. When it is there it is copied into the app; without it the
     # app still builds and reads on the device, and says the internet path is not set up.
     postBuildScripts:

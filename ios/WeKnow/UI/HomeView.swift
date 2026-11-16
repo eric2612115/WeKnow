@@ -13,7 +13,11 @@ struct HomeView: View {
   @Binding var theme: ThemeChoice
   @State private var picking = false
   @State private var page: MenuPage?
+  @State private var words: WordsWay?
+  @AppStorage(Prefs.voiceOff) private var voiceOff = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  enum WordsWay: String, Identifiable { case type, speak; var id: String { rawValue } }
 
   private var answering: Bool { model.phase != .ready || model.picture != nil }
 
@@ -26,11 +30,17 @@ struct HomeView: View {
           .animation(.weknow(0.32), value: model.verdict == nil)
         WordsArea(model: model)
           .frame(maxHeight: .infinity, alignment: .top)
-        AskButton(phase: model.phase) {
-          switch model.phase {
-          case .looking, .speaking, .asking: model.stop()
-          case .ready, .done: picking = true
+        HStack(alignment: .center, spacing: 0) {
+          SideButton(icon: "keyboard", label: "Type", id: "type") { words = .type }
+            .frame(maxWidth: .infinity)
+          AskButton(phase: model.phase) {
+            switch model.phase {
+            case .looking, .speaking, .asking: model.stop()
+            case .ready, .done: picking = true
+            }
           }
+          SideButton(icon: "mic.fill", label: "Speak", id: "speak") { words = .speak }
+            .frame(maxWidth: .infinity)
         }
         .padding(.bottom, 4)
       }
@@ -42,10 +52,22 @@ struct HomeView: View {
         picking = false
         switch choice {
         case let .sample(s): model.start(s)
-        case let .image(img): model.start(img, question: "What should I know about this?")
+        case let .image(img): model.start(img, question: model.pendingQuestion ?? "What should I know about this?")
         }
+        model.pendingQuestion = nil
       }
       .presentationDetents([.medium, .large])
+    }
+    .sheet(item: $words) { how in
+      WordsSheet(listenFirst: how == .speak) { q in
+        words = nil
+        guard !q.isEmpty else { return }
+        // A question about a paper needs its picture: the picker opens and the picture is read with these words.
+        if !model.ask(words: q) {
+          Task { try? await Task.sleep(for: .milliseconds(450)); picking = true }
+        }
+      }
+      .presentationDetents([.large])
     }
     .sheet(isPresented: $model.showWhere) {
       if let receipt = model.receipt { WhereSheet(tag: model.tag, receipt: receipt) }
@@ -87,6 +109,20 @@ struct HomeView: View {
         Text("WeKnow").font(.system(size: 21, weight: .heavy)).tracking(-0.4).foregroundStyle(Color.ink)
       }
       Spacer()
+      // Sound on or off at any moment; off stops the voice now and shows the words only.
+      Button {
+        voiceOff.toggle()
+        if voiceOff { Voice.shared.stop() }
+      } label: {
+        Image(systemName: voiceOff ? "speaker.slash.fill" : "speaker.wave.2.fill")
+          .font(.system(size: 19, weight: .semibold))
+          .foregroundStyle(voiceOff ? Color.ink2 : Color.ink)
+          .frame(width: 46, height: 46)
+          .background(Circle().fill(Color.card))
+          .overlay(Circle().stroke(Color.hair, lineWidth: 1))
+      }
+      .accessibilityLabel(voiceOff ? "Sound off. Turn sound on" : "Sound on. Turn sound off")
+      .accessibilityIdentifier("sound")
     }
     .frame(height: 58)
   }
@@ -124,12 +160,24 @@ struct PictureWindow: View {
         }
         .padding(10)
         .accessibilityLabel("The picture, with your personal details covered")
+      } else if let q = model.question {
+        // Asked in words: no picture, the question stands in the window.
+        VStack(spacing: 12) {
+          Image(systemName: "text.bubble").font(.system(size: 34, weight: .regular)).foregroundStyle(Color.ink2)
+          Text("“\(q)”")
+            .font(.system(size: 21, weight: .semibold)).multilineTextAlignment(.center).foregroundStyle(Color.ink)
+            .minimumScaleFactor(0.7)
+          Text("Answered on this \(S.device), from its knowledge packs.").font(.system(size: 16, weight: .medium)).foregroundStyle(Color.ink2)
+            .multilineTextAlignment(.center)
+        }
+        .padding(20)
       } else {
         VStack(spacing: 12) {
           Image(systemName: "doc.viewfinder").font(.system(size: 44, weight: .regular)).foregroundStyle(Color.ink2)
           Text("Show me a quote, a bill, or a problem at home.")
             .font(.system(size: 19, weight: .semibold)).multilineTextAlignment(.center).foregroundStyle(Color.ink)
-          Text("Press Ask.").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
+          Text("Press Ask. No paper? Type or speak your question.").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
+            .multilineTextAlignment(.center)
         }
         .padding(24)
       }
@@ -217,6 +265,12 @@ struct WordsArea: View {
     VStack(alignment: .leading, spacing: 10) {
       if let q = model.question, model.verdict == nil {
         Text("You asked: “\(q)”").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
+      }
+      if model.phase == .looking, model.picture == nil {
+        HStack(spacing: 10) {
+          ProgressView()
+          Text("Looking in the knowledge packs on this \(S.device)…").font(.system(size: 19, weight: .semibold)).foregroundStyle(Color.ink2)
+        }
       }
       if model.phase == .asking {
         Text("May I check this on the internet?").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.ink)
@@ -340,7 +394,30 @@ struct AskButton: View {
     }
     .buttonStyle(PressStyle(pressed: $pressed))
     .accessibilityLabel(busy ? "Stop" : "Ask")
-    .frame(maxWidth: .infinity)
+  }
+}
+
+/// Type and Speak, either side of the big button.
+struct SideButton: View {
+  let icon: String
+  let label: String
+  let id: String
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      VStack(spacing: 4) {
+        Image(systemName: icon).font(.system(size: 21, weight: .semibold))
+        Text(label).font(.system(size: 16, weight: .bold))
+      }
+      .foregroundStyle(Color.ink)
+      .frame(width: 76, height: 76)
+      .background(Circle().fill(Color.card))
+      .overlay(Circle().stroke(Color.line, lineWidth: 1.5))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(label == "Type" ? "Type a question" : "Speak a question")
+    .accessibilityIdentifier(id)
   }
 }
 

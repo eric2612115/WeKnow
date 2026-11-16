@@ -42,6 +42,15 @@ export const EN = {
   'btn.again': 'Again',
   'btn.listening': 'Listening. Press when you have finished.', // added: screen reader name of the Listening face
   'home.space': 'Space presses the big button',
+  // added: ask by typing, and turn the voice off, from the Ask page itself
+  'btn.type': 'Type',
+  'btn.type.hint': 'Type a question',
+  'btn.sound.on': 'Sound on',
+  'btn.sound.off': 'Sound off',
+  'btn.sound.mute': 'Turn the sound off. The words stay on screen.',
+  'btn.sound.unmute': 'Turn the sound on',
+  'type.title': 'Type your question',
+  'type.line': 'You can ask about a price or a fix. No picture needed.',
   'home.samples': 'No camera handy? Try a picture.',
   'home.choose': 'Choose a photo', // added: the file picker beside the sample pictures
   'home.camera': 'Use the camera', // added: back to the live camera after choosing a picture
@@ -371,6 +380,21 @@ export const EN = {
   'new.title': 'I don’t know this one yet',
   'new.line': 'I do not have a guide for this yet.',
   'new.offline': 'There is no internet now. Ask me again when it is back.',
+  // added: a question answered from words alone, without a picture
+  'words.look': 'Let me check.',
+  'words.price.head': 'Usually {low} to {high}',
+  'words.price.what': 'From my price book: {name}.',
+  'words.price.typical': 'Most people pay about {typical}.',
+  'words.price.typical.unit': 'Most people pay about {typical}, per {unit}.',
+  'words.price.includes': 'That covers {includes}.',
+  'words.price.source': 'The numbers come from the price book, checked {date}. Sources and details show where.',
+  'words.price.source.nodate': 'The numbers come from the price book. Sources and details show where.',
+  'words.price.quote': 'If you have a quote, show it to me and I will check it.',
+  'words.none.title': 'I don’t know that one yet',
+  'words.none.line': 'I have no price or guide for that yet.',
+  'words.none.more': 'I know prices and fixes for home and car repairs. You can also try a sample picture.',
+  'where.answer.words': 'The answer, from the price book on this {device}',
+  'kind.Price': 'Price',
   'what.title': 'I’m not sure what this is', // added: the reading came back as "unknown"
   'what.line': 'Point me at a repair quote, a bill, or something at home that needs fixing.', // added
   'read.fail': 'I could not read that one. Hold it still and press Ask again.', // added: the reading failed

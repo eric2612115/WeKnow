@@ -10,7 +10,7 @@ import { idbMemoryStorage } from './memoryIdb';
 import { getPrefs, setPrefs } from './prefs';
 import { createStore, useStore } from './store';
 
-export type CheckKind = 'Guide' | 'Quote' | 'Invoice' | 'Bill' | 'Letter' | 'Email';
+export type CheckKind = 'Guide' | 'Quote' | 'Price' | 'Invoice' | 'Bill' | 'Letter' | 'Email';
 /** What a check is about, for filing it next to its own kind. */
 export type Family = 'quote' | 'bill' | 'problem' | 'email' | 'other';
 

@@ -395,9 +395,14 @@
     align-content: center;
     gap: 0.3rem;
     padding: 0.4rem 0.2rem;
+    text-align: center;
     transition:
       background 0.14s,
       transform 0.14s var(--ease-wk);
+  }
+  .flank[data-off] {
+    color: var(--ink-2);
+    background: var(--card-2);
   }
   .flank svg {
     width: 1.8rem;
@@ -847,6 +852,17 @@
     box-shadow:
       0 0 0 1px var(--hair),
       var(--sh-1);
+  }
+  /* a check asked in words, with no picture */
+  .thumb.words {
+    display: grid;
+    place-items: center;
+    background: var(--card-2);
+    color: var(--ink-2);
+  }
+  .thumb.words svg {
+    width: 2.2rem;
+    height: 2.2rem;
   }
   .thumb img {
     width: 100%;

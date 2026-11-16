@@ -21,6 +21,7 @@ const HEAD_ICON: Record<IconKey, () => ReactNode> = {
   nonet: I.nonet,
   camoff: I.camoff,
   help: I.help,
+  type: I.keyboard,
 };
 
 function Head() {
@@ -218,7 +219,9 @@ function Typing() {
       className="mt-[0.9rem] grid gap-[0.7rem]"
       onSubmit={(e) => {
         e.preventDefault();
-        if (text.trim()) submitTyped(text.trim());
+        if (!text.trim()) return;
+        submitTyped(text.trim());
+        setText('');
       }}
     >
       <label className="grid gap-[0.35rem] text-small font-semibold text-ink-2">

@@ -8,7 +8,7 @@ import { listenForQuestion, matchWord, quiet, sayAloud, type Ear } from '../engi
 import { permission } from '../engine/camera';
 
 export type Phase = 'ready' | 'listening' | 'looking' | 'speaking' | 'waiting' | 'settled' | 'guide';
-export type IconKey = 'mic' | 'say' | 'lamp' | 'nonet' | 'camoff' | 'help';
+export type IconKey = 'mic' | 'say' | 'lamp' | 'nonet' | 'camoff' | 'help' | 'type';
 
 export interface Line {
   id: number;

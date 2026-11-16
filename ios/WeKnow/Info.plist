@@ -22,8 +22,12 @@
 	<string>1</string>
 	<key>NSCameraUsageDescription</key>
 	<string>WeKnow looks at the paper or the thing you point at. The picture stays on this phone unless you say yes.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Say your question. The sound is turned into words on this phone and is never kept or sent.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a picture of a quote, a bill or a problem at home for WeKnow to check.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Your spoken question is turned into words on this phone, so WeKnow can answer it.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
