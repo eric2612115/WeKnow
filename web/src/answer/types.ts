@@ -32,7 +32,8 @@ export interface Receipt {
   n: number; // items for the mixed and pending tags
   stayed: string[];
   sent: string[]; // the exact words that went (the dashed box)
-  sentPicture?: boolean; // the whole picture went (shown as a small copy in the box)
+  sentPicture?: boolean; // a picture went (shown as a small copy in the box: always the covered copy)
+  coveredPicture?: string; // object URL of the covered picture that went; not kept with a saved check
   waiting?: string;
   saved?: string;
   sources: SourceRow[];

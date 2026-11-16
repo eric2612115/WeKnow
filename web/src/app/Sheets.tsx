@@ -53,7 +53,7 @@ function ReceiptSheet({ open, s }: { open: boolean; s: Extract<SheetState, { typ
   if (!r) return null;
   return (
     <Sheet open={open} onClose={closeSheet} title={t('where.title')}>
-      <ReceiptFull r={r} device={deviceWord()} picture={s?.r ? s.picture : v.still} />
+      <ReceiptFull r={r} device={deviceWord()} />
     </Sheet>
   );
 }

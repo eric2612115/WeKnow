@@ -4,6 +4,7 @@
 // narration never holds a button. Every number shown or said comes from a pack item; every sentence is in strings.ts.
 
 import type { Reading, Where } from '../reader';
+import type { Covered } from '../coverPicture';
 import type { Settings } from '../config';
 import type { Candidate, LayeredKnowledge } from '../core/knowledge';
 import type { Guide, Pack, PriceItem } from '../core/packs';
@@ -17,6 +18,7 @@ import { maskText } from '../core/pii';
 import { buildCloudLookup } from '../core/cloudPayload';
 import {
   billAnswer,
+  coveredList,
   guideSources,
   lineItems,
   listNames,
@@ -296,8 +298,15 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   const d = deviceStore.get();
   const where: Where = d.model === 'available' ? 'device' : 'cloud';
   let saidCloud = false;
+  // The cloud path: the words on the picture are read on this device and every personal detail is covered in
+  // black first. Only that covered copy may be sent; if the words cannot be read, nothing is sent.
+  let covered: Covered | undefined;
   if (where === 'cloud') {
     if (!d.online) return noInternet(t);
+    covered = await coverFirst(pic.blob);
+    alive(t);
+    if (!covered) return cannotCover(t, question, pic);
+    const list = coveredList(covered.counts);
     const p = getPrefs();
     if (!p.consented || p.askEvery) {
       const yes = await ask(
@@ -306,13 +315,13 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
           kind: 'net',
           title: tr('ask.thing.title'),
           body: tr('ask.thing.body', { device: dev() }),
-          picture: url,
+          picture: covered.url,
           parcel: [`“${question}”`],
-          not: [tr('ask.thing.whole'), tr('ask.thing.not')],
+          not: [list ? tr('ask.thing.list', { list }) : tr('ask.thing.none'), tr('ask.thing.covered', { device: dev() }), tr('ask.thing.not')],
           yes: tr('ask.thing.yes'),
           no: tr('ask.thing.no'),
         },
-        [tr('ask.thing.say', { device: dev() })],
+        [list ? tr('ask.thing.say', { device: dev(), list: coveredList(covered.counts, true) }) : tr('ask.thing.say.none', { device: dev() })],
       );
       if (!yes) return nothingSent(t);
       setPrefs({ consented: true });
@@ -322,7 +331,7 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   // Start reading at once; what WeKnow is doing is said while it reads, never before.
   const job = (async () => {
     const [kb, settings] = await Promise.all([knowledge(), appSettings()]);
-    const reading = await readNow(kb, settings, still.blob, question, where);
+    const reading = await readNow(kb, settings, still.blob, question, where, covered);
     return { kb, settings, reading };
   })();
   job.catch(() => undefined);
@@ -334,7 +343,7 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   patch({ reading: false });
   lastSent = null;
 
-  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic };
+  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic, covered };
   const kind = reading.understanding.kind;
   if (kind === 'quote') return quoteFlow(ctx);
   if (kind === 'bill') return billFlow(ctx);
@@ -440,13 +449,62 @@ interface Ctx {
   words?: { by: 'model' | 'match'; offered: number; ms: number };
   /** The picture as sent, to read it again with a clearer question. */
   src?: PictureSrc;
+  /** On the cloud path: the covered copy that was sent, and what was covered on it. */
+  covered?: Covered;
 }
 
-async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: string, where: Where): Promise<Reading> {
+/**
+ * Read a picture. On the cloud path the reader gets the covered copy only, never `blob` (the picture as taken):
+ * without a covered copy nothing is read in the cloud.
+ */
+async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: string, where: Where, covered?: Covered): Promise<Reading> {
   const [{ readPhoto, setCloudModel }, { shrinkPhoto }] = await Promise.all([import('../reader'), import('../image')]);
   setCloudModel(s.cloudModel);
+  if (where === 'cloud') {
+    if (!covered) throw new Error('the picture was not covered');
+    return readPhoto(kb, covered.blob, question, where);
+  }
   const small = await shrinkPhoto(blob);
   return readPhoto(kb, small, question, where);
+}
+
+/** Shrink the picture and cover its personal details on this device. Undefined when the words could not be read. */
+async function coverFirst(blob: Blob): Promise<Covered | undefined> {
+  try {
+    const [{ coverPicture, warmCover }, { shrinkPhoto }] = await Promise.all([import('../coverPicture'), import('../image')]);
+    void warmCover().catch(() => undefined);
+    const small = await shrinkPhoto(blob);
+    return await coverPicture(small, blob);
+  } catch (e) {
+    console.warn('[WeKnow] could not cover the picture; nothing was sent', e);
+    return undefined;
+  }
+}
+
+/** The words on the picture could not be read in time: nothing was sent. The picture goes back on the box. */
+function cannotCover(t: number, question: string, pic: PictureSrc) {
+  lastSent = null;
+  patch({ looking: false, reading: false });
+  attach(pic.blob, pic.sample, pic.camera);
+  if (!boxText().trim()) setBox(question);
+  archive();
+  clearLines();
+  setHead('plain', tr('cover.fail.title'));
+  settle();
+  void narrate(t, [tr('cover.fail.line'), tr('cover.fail.try')]);
+  offerNext([
+    nextQ(tr('cover.fail.again'), (t2) => {
+      if (view().chosen) detach();
+      return pictureFlow(t2, question, pic, false);
+    }),
+    {
+      label: tr('cover.fail.photo'),
+      act: () => {
+        detach();
+        takePicture();
+      },
+    },
+  ]);
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -577,6 +635,23 @@ function tech(c: Ctx, extra: string[] = []): string[] {
   ];
 }
 
+/** On the cloud path, what stayed: the picture as it was taken, and the details covered on it. */
+function stayedCovered(c: Ctx): string[] {
+  if (c.where !== 'cloud' || !c.covered) return [];
+  const list = coveredList(c.covered.counts);
+  return [tr('where.picture.original'), ...(list ? [tr('where.covered.list', { list })] : [])];
+}
+
+/** On the cloud path, what went: the covered copy of the picture (shown as it was sent) and the question. */
+function sentCovered(c: Ctx, more: string[] = []): Pick<Receipt, 'sent' | 'sentPicture' | 'coveredPicture'> {
+  if (c.where !== 'cloud') return { sent: more };
+  return {
+    sent: [tr('where.sent.covered'), tr('where.sent.question', { q: c.question }), ...more],
+    sentPicture: !!c.covered,
+    coveredPicture: c.covered?.url,
+  };
+}
+
 async function keep(
   c: Ctx,
   o: { kind: CheckKind; family: Family; title: string; tone: Tone; verdict: string; lines: Said[]; items?: LineItem[]; receipt: Receipt; project?: string },
@@ -599,7 +674,8 @@ async function keep(
       lines: said.map((l) => l.text),
       noteLine: noteLine >= 0 ? noteLine : undefined,
       items: o.items,
-      receipt: o.receipt,
+      // The covered copy's URL lasts only as long as this page; a kept check keeps the picture as it was taken.
+      receipt: { ...o.receipt, coveredPicture: undefined },
     },
     small,
     o.project,
@@ -1024,9 +1100,8 @@ async function quoteFlow(c: Ctx) {
       stayed:
         where === 'device'
           ? [tr('where.picture'), tr('where.covered.quote'), ...(note ? [tr('where.note', { when: note.when })] : []), tr('where.prices', { n: items.length - pending, total: items.length })]
-          : [...(note ? [tr('where.note', { when: note.when })] : []), tr('where.prices', { n: items.length - pending, total: items.length })],
-      sent: where === 'cloud' ? [tr('where.sent.picture'), tr('where.sent.question', { q: c.question }), ...o.sent] : o.sent,
-      sentPicture: where === 'cloud',
+          : [...stayedCovered(c), ...(note ? [tr('where.note', { when: note.when })] : []), tr('where.prices', { n: items.length - pending, total: items.length })],
+      ...sentCovered(c, o.sent),
       waiting: o.waiting,
       sources: priceSources(matched as PriceItem[]),
       tech: tech(c, o.sent.length ? [`Price requests filed for ${unknown.length} ${unknown.length === 1 ? 'line' : 'lines'} (masked item and region only).`] : []),
@@ -1230,9 +1305,8 @@ async function billFlow(c: Ctx) {
     stayed:
       where === 'device'
         ? [tr('where.picture'), tr('where.covered.letter'), ...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })]
-        : [...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })],
-    sent: where === 'cloud' ? [tr('where.sent.picture'), tr('where.sent.question', { q: c.question })] : [],
-    sentPicture: where === 'cloud',
+        : [...stayedCovered(c), ...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })],
+    ...sentCovered(c),
     sources: [{ label: tr('where.src.rules', { device: dev() }), date: tr('where.checked', { date: longDate(c.kb.version.slice(0, 10)) }) }],
     tech: tech(c, [`Bill flags: ${v.flags.join(', ') || 'none'}.`]),
   };
@@ -1346,9 +1420,8 @@ function guideReceipt(c: Ctx, guide: Guide): Receipt {
   return {
     w: whereRan({ where, online: deviceStore.get().online, sent: 0, pending: 0 }),
     n: 0,
-    stayed: where === 'device' ? [...(c.picture ? [tr('where.picture')] : []), tr('where.question'), tr('where.steps')] : [tr('where.steps')],
-    sent: where === 'cloud' ? [tr('where.sent.picture'), tr('where.sent.question', { q: c.question })] : [],
-    sentPicture: where === 'cloud',
+    stayed: where === 'device' ? [...(c.picture ? [tr('where.picture')] : []), tr('where.question'), tr('where.steps')] : [...stayedCovered(c), tr('where.steps')],
+    ...sentCovered(c),
     sources: guideSources(guide),
     tech: tech(c),
   };

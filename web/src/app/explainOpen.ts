@@ -16,8 +16,11 @@ const KIND: Record<Family, string> = {
 export async function explainCurrent() {
   const v = view();
   const check = v.kept ? dataStore.get().checks.find((c) => c.id === v.kept!.checkId) : undefined;
+  // After a cloud reading only the covered copy may go over the internet again; the picture as taken never does.
+  const covered = v.receipt?.w === 'cloud' ? v.receipt.coveredPicture : undefined;
+  const src = v.receipt?.w === 'cloud' ? covered : v.still;
   let picture: Blob | undefined;
-  if (v.still) picture = await fetch(v.still).then((r) => r.blob()).catch(() => undefined);
+  if (src) picture = await fetch(src).then((r) => r.blob()).catch(() => undefined);
   openSheet({
     type: 'explain',
     key: `ask-${Date.now()}`,
@@ -25,13 +28,16 @@ export async function explainCurrent() {
     verdict: v.head?.text ?? check?.verdict ?? '',
     sentences: check?.lines ?? v.lines.filter((l) => l.kind !== 'heard').map((l) => l.text),
     picture,
-    pictureUrl: v.still ?? undefined,
+    pictureUrl: src ?? undefined,
+    pictureCovered: !!covered,
     sentToCloud: v.receipt?.w === 'cloud',
   });
 }
 
 export async function explainCheck(c: Check) {
-  const picture = c.pictureId ? await pictureBlob(c.pictureId) : undefined;
+  // A kept check holds the picture as it was taken. When its reading used the internet, only a covered copy went,
+  // so the explanation is written from the answer alone and the picture is not sent.
+  const picture = c.pictureId && c.receipt.w !== 'cloud' ? await pictureBlob(c.pictureId) : undefined;
   openSheet({
     type: 'explain',
     key: `check-${c.id}-${Date.now()}`,

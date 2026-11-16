@@ -1,5 +1,5 @@
-import { cpSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
@@ -21,9 +21,50 @@ function evalFixtures(): Plugin {
   };
 }
 
+// The text reader that covers personal details before a picture may be sent (src/coverPicture.ts) runs from WeKnow's
+// own site, never a CDN: its worker, its WebAssembly core (the LSTM-only builds; the browser picks one) and the
+// English data are served at /tessdata from the npm packages in the dev server, and copied there by a build.
+const TESSDATA: Record<string, string> = {
+  'worker.min.js': 'tesseract.js/dist/worker.min.js',
+  'worker.min.js.LICENSE.txt': 'tesseract.js/dist/worker.min.js.LICENSE.txt',
+  'core/tesseract-core-lstm.wasm.js': 'tesseract.js-core/tesseract-core-lstm.wasm.js',
+  'core/tesseract-core-simd-lstm.wasm.js': 'tesseract.js-core/tesseract-core-simd-lstm.wasm.js',
+  'core/tesseract-core-relaxedsimd-lstm.wasm.js': 'tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js',
+  'eng.traineddata.gz': '@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz',
+};
+function tessdata(): Plugin {
+  const from = (p: string) => resolve(import.meta.dirname, 'node_modules', TESSDATA[p]);
+  let outDir = 'dist';
+  let isBuild = false;
+  return {
+    name: 'weknow-tessdata',
+    configResolved(c) {
+      outDir = resolve(c.root, c.build.outDir);
+      isBuild = c.command === 'build';
+    },
+    configureServer(server) {
+      server.middlewares.use('/tessdata/', (req, res, next) => {
+        const path = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\//, ''));
+        if (!(path in TESSDATA)) return next();
+        res.setHeader('Content-Type', path.endsWith('.gz') ? 'application/octet-stream' : 'text/javascript');
+        res.end(readFileSync(from(path)));
+      });
+    },
+    closeBundle() {
+      if (!isBuild) return;
+      for (const p of Object.keys(TESSDATA)) {
+        mkdirSync(dirname(resolve(outDir, 'tessdata', p)), { recursive: true });
+        copyFileSync(from(p), resolve(outDir, 'tessdata', p));
+      }
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), evalFixtures()],
+  plugins: [react(), tailwindcss(), evalFixtures(), tessdata()],
+  // Pre-bundle the text reader's loader up front, so its first use in the dev server does not reload the page.
+  optimizeDeps: { include: ['tesseract.js'] },
   build: {
     rolldownOptions: {
       output: {

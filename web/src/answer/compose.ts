@@ -3,7 +3,8 @@
 
 import type { BillFlag, BillVerdict, KnownPayee, LineVerdict } from '../core/verdict';
 import type { Guide, Pack, PriceItem } from '../core/packs';
-import { t, words, money, longDate } from '../strings';
+import type { PIIKind } from '../core/pii';
+import { t, words, money, longDate, type StringId } from '../strings';
 import type { LineItem, Receipt, SourceRow, Verdict, WhereRan } from './types';
 
 // ---------- quotes ----------
@@ -18,6 +19,14 @@ export function lineItems(verdicts: LineVerdict[], labels: string[]): LineItem[]
     if (v.kind === 'low') return { ...base, state: 'low' as const };
     return { ...base, state: 'fair' as const };
   });
+}
+
+const COVER_ORDER: PIIKind[] = ['name', 'phone', 'email', 'street', 'account', 'card', 'ssn', 'plate', 'vin'];
+/** "2 names, 1 phone number, 1 account number" (with `and` before the last when it is said). Empty when none. */
+export function coveredList(counts: Partial<Record<PIIKind, number>>, said = false): string {
+  const parts = COVER_ORDER.filter((k) => counts[k]).map((k) => t(`cover.${k}${counts[k] === 1 ? '' : '.many'}` as StringId, { n: counts[k] ?? 0 }));
+  if (!said || parts.length < 2) return parts.join(', ');
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 const lower = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);

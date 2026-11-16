@@ -405,7 +405,7 @@ const PIPE: PipeStep[] = [
     how: 'Pattern rules plus Apple’s on-device name tagger replace them with tokens like [phone] and draw black bars on the picture. The copy kept in My checks is the covered one.',
     tech: [
       ['iPhone', 'On-device regex rules + NaturalLanguage name tagger'],
-      ['Web', 'core/pii.ts masking, for everything that could leave: lookups, mail, requests'],
+      ['Web', 'core/pii.ts rules over words found on the device (tesseract.js), black bars before a cloud reading; masking for lookups, mail, requests'],
     ],
     shown: true,
   },
@@ -749,7 +749,7 @@ export default function How() {
               icon={ScanText}
               title="Reading, on a device with no local model"
               line="iPhone never sends the picture. The consent screen says what is sent, before sending."
-              code={'iPhone  covered text rows only\nWeb     the picture + your question\n\nweknow-read-photo-v1\nweknow-choose-v1\n+ an App Check token'}
+              code={'iPhone  covered text rows only\nWeb     the covered picture + your question\n\nweknow-read-photo-v1\nweknow-choose-v1\n+ an App Check token'}
             >
               <Fold q="Why server prompt templates?">
                 It goes through Firebase AI Logic server prompt templates. The prompts are kept on Firebase, so nobody can read or change them from the app.

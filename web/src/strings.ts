@@ -360,13 +360,42 @@ export const EN = {
   'ask.item.region': 'Region: {region}',
   'ask.thing.title': 'May I send this picture over the internet?',
   'ask.thing.body': 'This {device} cannot read pictures by itself. This is all I would send:',
-  // Lead decision (design notes, question 2): no local text reading on the web, so the whole picture goes.
+  // The words on the picture are read on this device first, and every personal detail is covered in black.
+  'ask.thing.covered': 'Names, numbers, addresses and accounts are covered on this {device} before the picture is sent.', // added
+  'ask.thing.list': 'Covered: {list}.', // added
+  'ask.thing.none': 'I found no personal details to cover.', // added
+  // Still used when a picture read on this device is explained in another language over the internet (after a yes).
   'ask.thing.whole': 'The whole picture is sent as it is, with any names and numbers on it.',
   'ask.thing.not': 'I will tell you every time I use the internet.',
   'ask.thing.yes': 'Yes, send it',
   'ask.thing.no': 'No',
-  'ask.thing.say': 'This {device} cannot read pictures by itself. May I send this picture over the internet?',
-  'ask.thing.said': 'I am sending the picture over the internet.', // added: after the first yes
+  'ask.thing.say': 'This {device} cannot read pictures by itself. I covered {list} on it. May I send the covered picture over the internet?',
+  'ask.thing.say.none': 'This {device} cannot read pictures by itself. I found no personal details on it. May I send it over the internet?', // added
+  'ask.thing.said': 'I covered your details and I am sending the picture over the internet.', // added: after the first yes
+  // Covering personal details on the picture (added: the cloud reading path)
+  'cover.name': '{n} name',
+  'cover.name.many': '{n} names',
+  'cover.phone': '{n} phone number',
+  'cover.phone.many': '{n} phone numbers',
+  'cover.email': '{n} email address',
+  'cover.email.many': '{n} email addresses',
+  'cover.street': '{n} address',
+  'cover.street.many': '{n} addresses',
+  'cover.account': '{n} account number',
+  'cover.account.many': '{n} account numbers',
+  'cover.card': '{n} card number',
+  'cover.card.many': '{n} card numbers',
+  'cover.ssn': '{n} Social Security number',
+  'cover.ssn.many': '{n} Social Security numbers',
+  'cover.plate': '{n} plate',
+  'cover.plate.many': '{n} plates',
+  'cover.vin': '{n} VIN',
+  'cover.vin.many': '{n} VINs',
+  'cover.fail.title': 'I could not cover your details',
+  'cover.fail.line': 'I could not read the words on this picture to cover your personal details, so I sent nothing.',
+  'cover.fail.try': 'Try again, or take a clearer photo: closer, flat and in good light.',
+  'cover.fail.again': 'Try again',
+  'cover.fail.photo': 'Take a clearer photo',
   'ask.mail.title': 'May I check this email on the internet?', // added: the email path
   'ask.mail.body': 'This {device} cannot read by itself. I covered your details first. This is all I would send:',
   'ask.mail.not': 'Not sent: your name, email address, phone or account numbers.',
@@ -413,6 +442,9 @@ export const EN = {
   'where.note.payee': 'Your note about this payee: account ending {digits}',
   'where.mail': 'The email, with your details covered',
   'where.sent.picture': 'This picture',
+  'where.sent.covered': 'This picture, with your personal details covered in black', // added
+  'where.picture.original': 'The picture as you took it', // added
+  'where.covered.list': 'The details I covered: {list}', // added
   'where.sent.question': 'Your question: “{q}”',
   'where.src.price': 'Repair price book: {name}',
   'where.src.web': 'Looked up online just now: {name}',
@@ -526,7 +558,7 @@ export const EN = {
   'set.privacy.stays.4': 'The people you pay, and who to call',
   'set.privacy.goes': 'May go over the internet, after you say yes',
   'set.privacy.goes.1': 'The name of one thing to look up, and your region',
-  'set.privacy.goes.2': 'If this {device} cannot read by itself: the whole picture you ask about, or the covered words of an email',
+  'set.privacy.goes.2': 'If this {device} cannot read by itself: the picture you ask about, with names, numbers and addresses covered first, or the covered words of an email',
   'set.every': 'Ask me every time before using the internet',
   'set.dev.ready': 'This {device} works without the internet',
   'set.dev.ready.fine': 'Ready. Guides and prices were last checked on {date}.',

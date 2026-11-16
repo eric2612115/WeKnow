@@ -30,7 +30,7 @@ export function WhereTag({ r, device, onOpen, className = '' }: { r: Receipt; de
 
 const laneH = 'mb-[0.4rem] flex items-center gap-2 text-body font-bold [&_svg]:size-6 [&_svg]:flex-none';
 
-export function Lanes({ r, device, picture }: { r: Receipt; device: string; picture?: string | null }) {
+export function Lanes({ r, device }: { r: Receipt; device: string }) {
   const sent = r.sent.length > 0;
   return (
     <>
@@ -57,9 +57,10 @@ export function Lanes({ r, device, picture }: { r: Receipt; device: string; pict
         {sent ? (
           <>
             <div className="parcel my-[0.3rem] mb-[0.4rem] text-small">
-              {r.sentPicture && picture && (
-                <span className="thumb w-28">
-                  <img src={picture} alt="" />
+              {/* Only the covered copy that went is shown here, never the picture as it was taken. */}
+              {r.sentPicture && r.coveredPicture && (
+                <span className="thumb w-28 bg-white">
+                  <img src={r.coveredPicture} alt="The covered picture that was sent" className="!object-contain" />
                 </span>
               )}
               {r.sent.map((s) => (
@@ -105,11 +106,11 @@ export function HybridNote({ device }: { device: string }) {
   );
 }
 
-export function ReceiptFull({ r, device, picture }: { r: Receipt; device: string; picture?: string | null }) {
+export function ReceiptFull({ r, device }: { r: Receipt; device: string }) {
   return (
     <div>
       <WhereTag r={r} device={device} className="mb-3" />
-      <Lanes r={r} device={device} picture={picture} />
+      <Lanes r={r} device={device} />
       {r.w === 'cloud' && <HybridNote device={device} />}
       {r.saved && (
         <div className="border-t border-hair py-[0.85rem]">

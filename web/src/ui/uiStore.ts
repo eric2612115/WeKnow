@@ -22,6 +22,8 @@ export type SheetState =
       sentences: string[];
       picture?: Blob;
       pictureUrl?: string;
+      /** `picture` is the copy with personal details covered (the one the cloud reading was sent). */
+      pictureCovered?: boolean;
       /** The picture already went over the internet for this answer (with a yes). */
       sentToCloud: boolean;
     };

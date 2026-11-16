@@ -11,11 +11,11 @@
     ],
     "rewrites": [
       {
-        "source": "/!(packs|assets|fixtures)",
+        "source": "/!(packs|assets|fixtures|tessdata)",
         "destination": "/index.html"
       },
       {
-        "source": "/!(packs|assets|fixtures)/**",
+        "source": "/!(packs|assets|fixtures|tessdata)/**",
         "destination": "/index.html"
       }
     ],
@@ -44,6 +44,15 @@
           {
             "key": "Cache-Control",
             "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "/tessdata/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
           }
         ]
       },

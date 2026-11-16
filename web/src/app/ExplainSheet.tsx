@@ -115,11 +115,13 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
                 <img src={x.pictureUrl} alt="The picture that would be sent" className="!object-contain" />
               </span>
             )}
-            {stage.withPicture && <span>{t('where.sent.picture')}</span>}
+            {stage.withPicture && <span>{t(x.pictureCovered ? 'where.sent.covered' : 'where.sent.picture')}</span>}
             <span>{t('ask.explain.answer')}</span>
             <span>{t('ask.explain.lang', { language: lang.name })}</span>
           </div>
-          {stage.withPicture && <p className="mt-[0.4rem] text-small text-ink-2">{t('ask.thing.whole')}</p>}
+          {stage.withPicture && (
+            <p className="mt-[0.4rem] text-small text-ink-2">{x.pictureCovered ? t('ask.thing.covered', { device }) : t('ask.thing.whole')}</p>
+          )}
           <p className="mt-[0.4rem] text-small text-ink-2">{t('ask.thing.not')}</p>
           <div className="mt-[1.1rem] grid grid-cols-2 gap-[0.7rem]">
             <button
