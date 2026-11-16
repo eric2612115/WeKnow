@@ -1,5 +1,5 @@
 // The question box at the bottom of Ask, laid out the way chat apps lay it out: the camera and Choose a photo on the
-// left (they attach a picture, shown as a small picture with an x on its corner, and in the window; nothing is sent),
+// left (they attach a picture or a PDF, shown as a small picture with an x on its corner, and in the window; nothing is sent),
 // the words in the middle (always there, Enter sends), and on the right the microphone when the box is empty (it fills
 // the words, it does not send), a round dark send arrow when it holds words or a picture, the level bars while WeKnow
 // listens and a stop square while it looks or speaks. One soft pill, no border.
@@ -87,6 +87,8 @@ export function Composer() {
 
   // The long hint only where it fits on one line; a phone gets the short one.
   const [wide, setWide] = useState(false);
+  // A computer (a mouse or trackpad): a screenshot or a PDF can be pasted anywhere on Ask, so the hint says so.
+  const [desktop] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches);
   // Once the words take more than one line, they get the whole width above the buttons (until the box is empty).
   const tall = useStore(tallStore) && !!shown;
 
@@ -147,8 +149,13 @@ export function Composer() {
               <button type="button" className="cx" aria-label={t('box.remove')} title={t('box.remove')} onClick={detach}>
                 <I.close />
               </button>
+              {pic.paper && (
+                <span className="cbadge" aria-hidden="true">
+                  PDF
+                </span>
+              )}
             </span>
-            <span className="sr-only">{t('box.attached')}</span>
+            <span className="sr-only">{pic.paper ? t('box.attached.pdf') : t('box.attached')}</span>
           </div>
         )}
         <button type="button" className="cbtn" aria-label={camLabel} title={camLabel} onClick={takePicture}>
@@ -160,13 +167,13 @@ export function Composer() {
         <input
           ref={file}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           className="hidden"
           tabIndex={-1}
           aria-hidden="true"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) chooseFile(f);
+            if (f) void chooseFile(f);
             e.target.value = '';
           }}
         />
@@ -183,7 +190,9 @@ export function Composer() {
                   ? t('box.placeholder.picture')
                   : t('box.placeholder.picture.short')
                 : wide
-                  ? t('box.placeholder')
+                  ? desktop
+                    ? t('box.placeholder.paste')
+                    : t('box.placeholder')
                   : t('box.placeholder.short')
           }
           enterKeyHint="send"

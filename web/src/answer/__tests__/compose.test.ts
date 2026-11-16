@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { billAnswer, knownSentences, lineItems, listNames, quoteSummary, sayToShop, tagText, whereRan } from '../compose';
-import { billVerdict, priceVerdict, type LineVerdict } from '../../core/verdict';
+import { billMath } from '../../core/billMath';
+import { billAnswer, sumLines, knownSentences, lineItems, listNames, quoteSummary, sayToShop, tagText, whereRan } from '../compose';
+import { billVerdict, priceVerdict, withBillMath, type LineVerdict } from '../../core/verdict';
 import type { PriceItem } from '../../core/packs';
 import type { Understanding } from '../../core/understanding';
 
@@ -120,5 +121,46 @@ describe('where it ran', () => {
     expect(tagText({ w: 'local', n: 0 }, 'phone')).toBe('On this phone');
     expect(tagText({ w: 'pending', n: 3 }, 'phone')).toBe('3 items not checked');
     expect(tagText({ w: 'mixed', n: 1 }, 'computer')).toBe('Used the internet for 1 item');
+  });
+});
+
+describe('the two plain-code bill checks (core/billMath.ts)', () => {
+  const ub = (o: Partial<Understanding>): Understanding => ({ kind: 'bill', lines: [], problemRef: null, payee: 'Riverbend Electric Co-op', payTo: '9917', urgent: false, addressedToAI: false, accountChange: false, ...o });
+  const known = [{ name: 'Riverbend Electric Co-op', payTo: '9917' }];
+
+  it('numbers that do not add up turn a normal bill into a stop, with the numbers', () => {
+    const math = billMath(['Subtotal $120.00', 'Tax $9.90', 'Total $199.90']);
+    const v = withBillMath(billVerdict(ub({}), '', known), math);
+    expect(v).toEqual({ safe: false, flags: ['numbers-dont-add-up'] });
+    const a = billAnswer(v, 'Riverbend Electric Co-op', known, '9917', math);
+    expect(a.verdict).toEqual({ tone: 'stop', text: 'Don’t pay this bill yet.' });
+    expect(a.reasons.map((r) => r.text)).toEqual(['One. The numbers on this bill don’t add up: $120.00 plus $9.90 tax is $129.90, but the total says $199.90.']);
+  });
+
+  it('two account numbers alone are Careful, last four digits only', () => {
+    const math = billMath(['Account number: 1100-2299-1234', 'Account # 1100 2299 5678']);
+    const v = withBillMath(billVerdict(ub({}), '', known), math);
+    const a = billAnswer(v, 'Riverbend Electric Co-op', known, '9917', math);
+    expect(a.verdict.tone).toBe('warn');
+    expect(a.reasons[0].text).toBe('One. This bill shows two different account numbers (ending 1234 and 5678). Call the company before paying.');
+  });
+
+  it('never clears another warning, and adds nothing when the numbers add up', () => {
+    const v0 = billVerdict(ub({ urgent: true, addressedToAI: true }), '', []);
+    const fine = billMath(['Subtotal $120.00', 'Tax $9.90', 'Total $129.90', 'Account: 40-2271-0583']);
+    expect(withBillMath(v0, fine)).toEqual(v0);
+    expect(withBillMath(v0, null)).toEqual(v0);
+    const off = billMath(['Subtotal $1.00', 'Tax $1.00', 'Total $9.00']);
+    expect(withBillMath(v0, off).flags).toEqual([...v0.flags, 'numbers-dont-add-up']);
+  });
+
+  it('"Which numbers?" lists the amounts behind the sum', () => {
+    expect(sumLines(billMath(['Total $500.00', 'Deposit paid $200.00', 'Balance due $450.00']))).toEqual([
+      'Total: $500.00.',
+      'Paid: $200.00.',
+      'It asks for: $450.00.',
+      'Added up, that is $300.00, not $450.00.',
+      'Ask the company to explain the numbers before you pay. Use the phone number on an older bill.',
+    ]);
   });
 });

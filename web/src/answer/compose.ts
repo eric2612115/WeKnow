@@ -4,7 +4,8 @@
 import type { BillFlag, BillVerdict, KnownPayee, LineVerdict } from '../core/verdict';
 import type { Guide, Pack, PriceItem } from '../core/packs';
 import type { PIIKind } from '../core/pii';
-import { t, words, money, longDate, type StringId } from '../strings';
+import type { BillMath, SumMiss } from '../core/billMath';
+import { t, words, money, cents, longDate, type StringId } from '../strings';
 import type { LineItem, Receipt, SourceRow, Verdict, WhereRan } from './types';
 
 // ---------- quotes ----------
@@ -108,13 +109,46 @@ export interface BillAnswer {
 }
 
 // A letter announcing a new bank or account is said first and plainly; then anything else that is wrong.
-const ORDER: BillFlag[] = ['account-change-notice', 'changed-account', 'instruction-to-ai', 'new-payee', 'urgency'];
-const STOP: BillFlag[] = ['account-change-notice', 'changed-account', 'instruction-to-ai'];
+const ORDER: BillFlag[] = ['account-change-notice', 'changed-account', 'numbers-dont-add-up', 'two-accounts', 'instruction-to-ai', 'new-payee', 'urgency'];
+const STOP: BillFlag[] = ['account-change-notice', 'changed-account', 'numbers-dont-add-up', 'instruction-to-ai'];
+
+/** One relation that did not hold, said plainly with its numbers. */
+export function sumWhy(m: SumMiss): string {
+  if (m.rule === 'tax') return t('math.why.tax', { subtotal: cents(m.subtotal), tax: cents(m.tax), sum: cents(m.expected), total: cents(m.total) });
+  if (m.rule === 'balance')
+    return t('math.why.balance', { previous: cents(m.previous), paid: cents(m.paid), charges: cents(m.charges), sum: cents(m.expected), due: cents(m.due) });
+  return t('math.why.paid', { total: cents(m.total), paid: cents(m.paid), sum: cents(m.expected), due: cents(m.due) });
+}
+
+/** "The numbers on this bill don’t add up: ..." Undefined when they do (or nothing could be checked). */
+export function sumSentence(m: BillMath | null | undefined): string | undefined {
+  return m?.misses.length ? t('letter.sign.sum', { why: sumWhy(m.misses[0]) }) : undefined;
+}
+
+/** "This bill shows two different account numbers (ending 1234 and 5678). ..." Last four digits only. */
+export function accountsSentence(m: BillMath | null | undefined): string | undefined {
+  return m && m.accounts.length >= 2 ? t('letter.sign.twoacct', { a: m.accounts[0], b: m.accounts[1] }) : undefined;
+}
+
+/** The amounts behind "the numbers don’t add up", one per line, for "Which numbers?". */
+export function sumLines(m: BillMath): string[] {
+  const miss = m.misses[0];
+  if (!miss) return [];
+  const row = (id: StringId, n: number) => t(id, { amount: cents(n) });
+  const rows =
+    miss.rule === 'tax'
+      ? [row('math.row.subtotal', miss.subtotal), row('math.row.tax', miss.tax), row('math.row.total', miss.total)]
+      : miss.rule === 'balance'
+        ? [row('math.row.previous', miss.previous), row('math.row.paid', miss.paid), row('math.row.charges', miss.charges), row('math.row.due', miss.due)]
+        : [row('math.row.total', miss.total), row('math.row.paid', miss.paid), row('math.row.due', miss.due)];
+  const said = miss.rule === 'tax' ? miss.total : miss.due;
+  return [...rows, t('math.row.sum', { sum: cents(miss.expected), said: cents(said) }), t('math.row.do')];
+}
 
 /** A name inside a sentence never breaks at its hyphen ("Co-op"). */
 export const keepTogether = (s: string) => s.replace(/(\w)-(\w)/g, '$1\u2011$2');
 
-export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPayee[], payTo: string | null = null): BillAnswer {
+export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPayee[], payTo: string | null = null, math?: BillMath | null): BillAnswer {
   const match = known.find((k) => payee && k.name.toLowerCase() === payee.toLowerCase());
   const digits = (payTo ?? '').replace(/\D/g, '');
   const has = (f: BillFlag) => v.flags.includes(f);
@@ -126,6 +160,8 @@ export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPay
       if (match) raw.push({ text: t('note.payee', { old: match.payTo }), fromNote: true });
       else if (!has('account-change-notice')) raw.push({ text: t('letter.sign.account') });
     }
+    if (f === 'numbers-dont-add-up') raw.push({ text: sumSentence(math) ?? t('letter.sign.sum.plain') });
+    if (f === 'two-accounts') raw.push({ text: accountsSentence(math) ?? t('letter.sign.twoacct.plain') });
     if (f === 'instruction-to-ai') raw.push({ text: t('letter.sign.ai') });
     if (f === 'new-payee') raw.push({ text: payee ? t('letter.sign.newpayee', { payee: keepTogether(payee) }) : t('letter.sign.nopayee') });
     if (f === 'urgency') raw.push({ text: t('letter.sign.rush') });

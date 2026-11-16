@@ -199,7 +199,10 @@ export function coverDetails(lines: OcrLine[], o: CoverOptions): CoveredDetail[]
       if (boxes.length) details.push({ kind: span.kind, rects: boxes.map(toRect) });
     }
   }
-  details.push(...namesUnderLabels(runs, o.width));
+  // A name under its label that the name rules (pii.ts) already covered is one detail, not two.
+  const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  for (const d of namesUnderLabels(runs, o.width))
+    if (!details.some((e) => e.kind === 'name' && e.rects.some((r) => d.rects.some((q) => hit(r, q))))) details.push(d);
   const k = o.scale ?? 1;
   const pad = o.pad ?? 0.2;
   return details.map((d) => ({

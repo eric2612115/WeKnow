@@ -11,11 +11,11 @@
     ],
     "rewrites": [
       {
-        "source": "/!(packs|assets|fixtures|tessdata)",
+        "source": "/!(packs|assets|fixtures|tessdata|pdfjs)",
         "destination": "/index.html"
       },
       {
-        "source": "/!(packs|assets|fixtures|tessdata)/**",
+        "source": "/!(packs|assets|fixtures|tessdata|pdfjs)/**",
         "destination": "/index.html"
       }
     ],

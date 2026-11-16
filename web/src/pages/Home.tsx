@@ -11,6 +11,7 @@ import { cameraStore, captureStill, startCamera, stopCamera } from '../engine/ca
 import { CameraWindow } from '../home/Window';
 import { Chat, Opening } from '../home/Words';
 import { AskSheet } from '../home/AskSheet';
+import { PaperDrop } from '../home/PaperDrop';
 import { Composer, pressRight, stopNow } from '../home/Composer';
 import { Sheet } from '../ui/Sheet';
 import { PictureViewer } from '../ui/PictureViewer';
@@ -123,6 +124,7 @@ export default function Home() {
       <Viewfinder video={video} />
       <PictureViewer />
       <AskSheet />
+      <PaperDrop />
     </main>
   );
 }

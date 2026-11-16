@@ -69,6 +69,16 @@ export const EN = {
   'box.placeholder.short': 'Ask a question…', // added: the same box on a phone, where the long hint would wrap
   'box.placeholder.picture': 'Ask about this picture…',
   'box.placeholder.picture.short': 'Ask about it…',
+  'box.placeholder.paste': 'Ask, or paste a screenshot', // added: a computer, where a screenshot or a PDF can be pasted
+  'box.attached.pdf': 'PDF added', // added
+  // added: a picture or a PDF pasted or dropped anywhere on Ask (home/PaperDrop.tsx); nothing is sent until Send
+  'drop.title': 'Drop it here',
+  'drop.line': 'A picture or a PDF. It stays on this {device} until you press Send.',
+  'take.type.title': 'I can read pictures and PDFs',
+  'take.type.line': 'This file is neither. Choose a photo, a screenshot or a PDF.',
+  'take.pdf.title': 'I could not open this PDF',
+  'take.pdf.line': 'It may be damaged. Take a screenshot of it instead, and paste it here.',
+  'take.locked.line': 'It is locked with a password. Open it yourself, take a screenshot, and paste it here.',
   'box.listening': 'Listening…',
   'box.camera': 'Take a picture',
   'box.camera.back': 'Back to the camera',
@@ -97,6 +107,8 @@ export const EN = {
   'next.billdo': 'What should I do now?',
   'next.remember': 'Remember this company',
   'next.remind': 'Remind me to pay it',
+  'next.sums': 'Which numbers?', // added: the bill's printed sums do not hold (core/billMath.ts)
+  'next.accounts': 'Where are the account numbers?', // added: two different account numbers (core/billMath.ts)
   'next.steps': 'Show me the steps',
   'next.pro': 'How much would a pro charge?',
   'next.none': 'None of these',
@@ -129,7 +141,7 @@ export const EN = {
   'type.title': 'Type your question',
   'type.line': 'Type it in the box at the bottom. You can ask about a price or a fix.',
   'home.samples': 'No camera handy? Try a picture.',
-  'home.choose': 'Choose a photo', // added: the file picker beside the sample pictures
+  'home.choose': 'Choose a photo or PDF', // added: the file picker beside the sample pictures (a PDF too)
   'home.camera': 'Use the camera', // added: back to the live camera after choosing a picture
   'chip.live': 'Camera on',
   'chip.dark': 'Too dark',
@@ -246,6 +258,27 @@ export const EN = {
   'letter.sign.rush': 'It rushes you to pay.', // added: the general form of "It rushes you: 48 hours."
   'letter.sign.ai': 'It has hidden words that try to tell a reader it is safe.', // added: instruction-to-ai flag
   'letter.fine': 'Same company and same account as last time.', // added
+  // added: two plain-code checks on the bill's own words, on the device (core/billMath.ts)
+  'letter.sign.sum': 'The numbers on this bill don’t add up: {why}',
+  'letter.sign.sum.plain': 'The numbers on this bill don’t add up.',
+  'letter.sign.twoacct': 'This bill shows two different account numbers (ending {a} and {b}). Call the company before paying.',
+  'letter.sign.twoacct.plain': 'This bill shows two different account numbers. Call the company before paying.',
+  'math.why.tax': '{subtotal} plus {tax} tax is {sum}, but the total says {total}.',
+  'math.why.balance': 'the last bill of {previous}, minus {paid} paid, plus {charges} in new charges is {sum}, but it asks for {due}.',
+  'math.why.paid': '{total} minus {paid} already paid is {sum}, but it asks for {due}.',
+  'math.title': 'The numbers I added up',
+  'math.row.subtotal': 'Subtotal: {amount}.',
+  'math.row.tax': 'Tax: {amount}.',
+  'math.row.total': 'Total: {amount}.',
+  'math.row.previous': 'Last bill: {amount}.',
+  'math.row.paid': 'Paid: {amount}.',
+  'math.row.charges': 'New charges: {amount}.',
+  'math.row.due': 'It asks for: {amount}.',
+  'math.row.sum': 'Added up, that is {sum}, not {said}.',
+  'math.row.do': 'Ask the company to explain the numbers before you pay. Use the phone number on an older bill.',
+  'accts.title': 'Two account numbers on one bill',
+  'accts.line': 'One account number ends in {a}. Another one ends in {b}. A real bill shows your same account number everywhere, also on the part you send back.',
+  'accts.do': 'Call the company with the phone number on an older bill, and ask which account is yours before you pay.',
   'letter.do': 'Call the company first. Use the number on an older bill.',
   'letter.call': 'Call {name}',
   'letter.again': 'Say it again',
@@ -358,8 +391,46 @@ export const EN = {
   'ask.item.say': 'May I look that up on the internet? I would send only those words, and your region. Not the picture.',
   'ask.item.price': '“{item}” price',
   'ask.item.region': 'Region: {region}',
-  'ask.thing.title': 'May I send this picture over the internet?',
-  'ask.thing.body': 'This {device} cannot read pictures by itself. This is all I would send:',
+  'ask.thing.title': 'Send this picture to check online?',
+  'ask.thing.body': 'This {device} can’t read it by itself. Only the covered picture below goes.',
+  // added: what was covered, said first in one plain line, on the picture and the words sheets alike
+  // added: the consent sheet for a check online (picture, PDF words, words): short points, two closed sections,
+  // Yes and No always in view (home/AskSheet.tsx)
+  'check.title': 'Check this online?',
+  'check.title.bill': 'Check this bill online?',
+  'check.hidden': 'Hidden here:',
+  'check.hidden.none': 'Nothing personal found to hide.',
+  'check.rest.words': 'Only the rest of the words go online.',
+  'check.rest.picture': 'Only the covered picture and your question go online.',
+  'check.picture.goes': 'Black bars hide your details on it.',
+  'check.picture.stays': 'The picture stays here.',
+  'check.what.hidden': 'What stays hidden',
+  'check.what.goes': 'See exactly what goes',
+  'check.yes': 'Yes, check it',
+  'check.no': 'No',
+  'check.every': 'Ask me every time',
+  'check.first': 'After a yes, I check by myself when it helps. You can change this in Settings.',
+  'hid.name': '{n} name',
+  'hid.name.many': '{n} names',
+  'hid.phone': '{n} phone',
+  'hid.phone.many': '{n} phones',
+  'hid.email': '{n} email',
+  'hid.email.many': '{n} emails',
+  'hid.street': '{n} address',
+  'hid.street.many': '{n} addresses',
+  'hid.account': '{n} account number',
+  'hid.account.many': '{n} account numbers',
+  'hid.card': '{n} card number',
+  'hid.card.many': '{n} card numbers',
+  'hid.ssn': '{n} Social Security number',
+  'hid.ssn.many': '{n} Social Security numbers',
+  'hid.plate': '{n} license plate',
+  'hid.plate.many': '{n} license plates',
+  'hid.vin': '{n} car ID (VIN)',
+  'hid.vin.many': '{n} car IDs (VIN)',
+  'ask.words.more': 'Show all the words ({n} lines)',
+  'ask.words.less': 'Show fewer lines',
+  'ask.mark.title': 'Covered on this device',
   // The words on the picture are read on this device first, and every personal detail is covered in black.
   'ask.thing.covered': 'Names, numbers, addresses and accounts are covered on this {device} before the picture is sent.', // added
   'ask.thing.list': 'Covered: {list}.', // added
@@ -372,6 +443,16 @@ export const EN = {
   'ask.thing.say': 'This {device} cannot read pictures by itself. I covered {list} on it. May I send the covered picture over the internet?',
   'ask.thing.say.none': 'This {device} cannot read pictures by itself. I found no personal details on it. May I send it over the internet?', // added
   'ask.thing.said': 'I covered your details and I am sending the picture over the internet.', // added: after the first yes
+  // added: a PDF with real text is read from its words; only the covered words may go, never its picture
+  'ask.paper.title': 'Send these words to check online?',
+  'ask.paper.body': 'This {device} can’t read it by itself. Only the words below go — not the picture.',
+  'ask.paper.covered': 'Names, numbers, addresses and accounts are covered on this {device} before the words are sent.',
+  'ask.paper.say': 'This {device} cannot read this by itself. I covered {list} in its words. May I send the covered words over the internet?',
+  'ask.paper.say.none': 'This {device} cannot read this by itself. I found no personal details in its words. May I send them over the internet?',
+  'ask.paper.said': 'I covered your details and I am sending the words over the internet.',
+  'where.paper': 'The PDF',
+  'where.paper.original': 'The PDF as you gave it',
+  'where.sent.paper': 'The words of the PDF, with your personal details covered ({n} characters)',
   // Covering personal details on the picture (added: the cloud reading path)
   'cover.name': '{n} name',
   'cover.name.many': '{n} names',
@@ -414,6 +495,11 @@ export const EN = {
   'where.stayed': 'Stayed on this {device}',
   'where.sent': 'Went over the internet',
   'where.nothing': 'Nothing.',
+  'rc.none': 'Nothing left this {device}.',
+  'rc.went': 'Only this went online:',
+  'rc.more': 'and {n} more, with no personal details',
+  'rc.all': 'Everything that went online',
+  'rc.sources': 'Where the facts come from ({n})',
   'where.else': 'Nothing else was sent.',
   'where.kept': 'Kept for next time',
   'where.kept.line': 'That price is now on this {device}. Next time this line works without the internet.',
@@ -683,6 +769,7 @@ export const EN = {
   'route.settings': 'Open Settings',
   'route.why.no-device-model': 'This {device} cannot tell by itself which item your words mean.',
   'route.why.no-device-model.picture': 'This {device} cannot read pictures by itself.',
+  'route.why.no-device-model.paper': 'This {device} cannot read papers by itself.', // added: a PDF read from its own text
   'route.why.no-match': 'Nothing in the books on this {device} clearly matched your words.',
   'route.why.unknown-picture': 'This {device} could not tell what the picture shows.',
   'route.why.no-guide': 'No guide on this {device} fit the problem.',
@@ -716,6 +803,10 @@ export function words(n: number, capital = false): string {
   const w = n >= 0 && n < WORDS.length ? WORDS[n] : String(n);
   return capital ? w.charAt(0).toUpperCase() + w.slice(1) : w;
 }
+
+/** An amount as printed on a bill, always with cents: "$90.75", "$129.90", "$1,500.00". */
+export const cents = (n: number) =>
+  `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const money = (n: number) =>
   `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: Number.isInteger(n) ? 0 : 2 })}`;

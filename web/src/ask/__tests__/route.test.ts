@@ -198,8 +198,12 @@ describe('words this device cannot answer', () => {
     F.send('My phone number is 555-0134, my sink is clogged');
     await vi.waitFor(() => expect(C.view().sheet).toBeTruthy());
     const s = C.view().sheet!;
-    expect(s.title).toBe('When this computer can’t answer, may I use the internet?');
-    expect([s.yes, s.middle, s.no]).toEqual(['Yes, when it helps', 'Ask me every time', 'No']);
+    // A check sheet: short title, what was hidden, Yes and No; the first time, "Ask me every time" and what a yes means.
+    expect(s.title).toBe('Check this online?');
+    expect(s.hidden).toEqual({ phone: 1 });
+    expect(s.goes).toBe('question');
+    expect([s.yes, s.middle, s.no]).toEqual(['Yes, check it', 'Ask me every time', 'No']);
+    expect(s.note).toBe('After a yes, I check by myself when it helps. You can change this in Settings.');
     expect(s.parcel[0]).toBe('“My phone number is [phone], my sink is clogged”');
     C.answerSheet(false);
     await vi.waitFor(() => expect(C.view().head?.text).toBe('I don’t know that one yet'));

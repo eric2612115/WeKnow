@@ -272,12 +272,12 @@ export function ChoosePhoto({ onPicked, className = '' }: { onPicked?: () => voi
       <input
         ref={input}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) {
-            chooseFile(f);
+            void chooseFile(f);
             onPicked?.();
           }
           e.target.value = '';

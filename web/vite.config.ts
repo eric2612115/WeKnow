@@ -60,9 +60,41 @@ function tessdata(): Plugin {
   };
 }
 
+// The PDF reader (src/pdf.ts) also runs from WeKnow's own site: its worker is bundled as an asset by Vite (?url), and
+// the font and image-decoder data it fetches on demand are served at /pdfjs from the npm package in the dev server,
+// and copied there by a build.
+const PDFJS_DIRS = ['standard_fonts', 'wasm'];
+function pdfjsData(): Plugin {
+  const root = resolve(import.meta.dirname, 'node_modules/pdfjs-dist');
+  let outDir = 'dist';
+  let isBuild = false;
+  return {
+    name: 'weknow-pdfjs-data',
+    configResolved(c) {
+      outDir = resolve(c.root, c.build.outDir);
+      isBuild = c.command === 'build';
+    },
+    configureServer(server) {
+      server.middlewares.use('/pdfjs/', (req, res, next) => {
+        const path = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\//, ''));
+        const [dir, file, ...more] = path.split('/');
+        if (!PDFJS_DIRS.includes(dir) || !file || more.length || file.startsWith('.')) return next();
+        const from = resolve(root, dir, file);
+        if (!existsSync(from)) return next();
+        res.setHeader('Content-Type', file.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream');
+        res.end(readFileSync(from));
+      });
+    },
+    closeBundle() {
+      if (!isBuild) return;
+      for (const d of PDFJS_DIRS) cpSync(resolve(root, d), resolve(outDir, 'pdfjs', d), { recursive: true });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), evalFixtures(), tessdata()],
+  plugins: [react(), tailwindcss(), evalFixtures(), tessdata(), pdfjsData()],
   // Pre-bundle the text reader's loader up front, so its first use in the dev server does not reload the page.
   optimizeDeps: { include: ['tesseract.js'] },
   build: {

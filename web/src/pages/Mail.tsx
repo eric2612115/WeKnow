@@ -5,7 +5,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import type { MailItem } from '../gmail';
-import { billVerdict } from '../core/verdict';
+import { billVerdict, withBillMath } from '../core/verdict';
+import { billMath } from '../core/billMath';
 import { knownPayees } from '../core/memory';
 import { billAnswer, type BillAnswer } from '../answer/compose';
 import type { Receipt } from '../answer/types';
@@ -60,8 +61,11 @@ export default function Mail() {
       let v = billVerdict(u, r.masked, known);
       const { matchesPhrase } = await import('../config');
       if (!v.flags.includes('urgency') && matchesPhrase(r.masked, s.urgencyPhrases)) v = { safe: false, flags: [...v.flags, 'urgency'] };
+      // The same plain-code check as a paper bill: printed sums that do not hold (on the covered words, on this device).
+      const math = billMath(`${item.subject}\n${item.text}`);
+      v = withBillMath(v, math);
       const payee = u.payee && !/\[/.test(u.payee) ? u.payee : null;
-      const answer = billAnswer(v, payee, known);
+      const answer = billAnswer(v, payee, known, null, math);
       const receipt: Receipt = {
         w: where === 'cloud' ? 'cloud' : 'local',
         n: 0,

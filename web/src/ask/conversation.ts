@@ -4,6 +4,7 @@
 
 import { createStore, useStore } from '../store/store';
 import type { LineItem, Receipt, Tone } from '../answer/types';
+import type { PIIKind } from '../core/pii';
 import { listenForQuestion, matchWord, quiet, sayAloud, type Ear } from '../engine/speech';
 import { permission } from '../engine/camera';
 
@@ -31,6 +32,21 @@ export interface SheetRequest {
   parcel: string[];
   /** A small copy of the picture that would be sent. */
   picture?: string;
+  /**
+   * A check online (design: the consent sheet): what was hidden on this device, by kind. When set, the sheet shows
+   * short points (hidden here, only the rest goes, the picture), "What stays hidden" and "See exactly what goes"
+   * closed, and Yes and No always in view.
+   */
+  hidden?: Partial<Record<PIIKind, number>>;
+  /**
+   * With `hidden`: what goes. 'words': covered words read from a picture or a PDF (the picture stays here);
+   * 'picture': the covered picture; 'question': covered words typed or said (there is no picture).
+   */
+  goes?: 'words' | 'picture' | 'question';
+  /** A quiet line under the buttons (the first consent: what a yes means from now on). */
+  note?: string;
+  /** The covered words that would be sent, as the paper's own lines; covered details show as small marks. */
+  lines?: string[];
   not: string[];
   yes: string;
   /** A third answer between yes and no (the consent sheet's "Ask me every time"). */
@@ -47,6 +63,16 @@ export interface Picture {
   sample?: string;
   /** Taken with the camera button (not a chosen photo or a sample). */
   camera?: boolean;
+  /** A PDF: the picture is its first pages, drawn on this device; this is its own text (src/pdf.ts). */
+  paper?: Paper;
+}
+
+/** A PDF's own text, taken out on this device. Never sent as it is: only covered, and only after a yes. */
+export interface Paper {
+  text: string;
+  /** Real words: read the text, not the picture. */
+  hasText: boolean;
+  pages: number;
 }
 
 /** Something the person said or showed: their words and their picture, on the right. */
@@ -503,10 +529,10 @@ export function finishListening() {
 // ---------- the picture attached to the question box ----------
 
 /** Attach a picture (a camera still, a chosen photo or a sample): it shows in the window and goes with Send. */
-export function attach(blob: Blob, sample?: string, camera = false) {
+export function attach(blob: Blob, sample?: string, camera = false, paper?: Paper) {
   const old = view().chosen;
   if (old) URL.revokeObjectURL(old.url);
-  patch({ chosen: { url: URL.createObjectURL(blob), blob, sample, camera }, still: null, looking: false, dim: false, chip: null, viewfinder: false });
+  patch({ chosen: { url: URL.createObjectURL(blob), blob, sample, camera, ...(paper ? { paper } : {}) }, still: null, looking: false, dim: false, chip: null, viewfinder: false });
 }
 
 /** A picture was attached: whatever WeKnow was saying or waiting for stops; the conversation stays. */

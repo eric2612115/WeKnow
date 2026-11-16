@@ -769,6 +769,48 @@
     width: 0.85rem;
     height: 0.85rem;
   }
+  /* a PDF: its first pages are the picture; a small mark says it is a PDF */
+  .cthumb .cbadge {
+    position: absolute;
+    left: 0.25rem;
+    bottom: 0.25rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.35rem;
+    background: var(--key);
+    color: var(--on-key);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    pointer-events: none;
+  }
+  /* a picture or a PDF dragged over Ask: the whole page says where it goes */
+  .paper-drop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--card-2) 82%, transparent);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+  }
+  .paper-drop > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    width: min(32rem, 100%);
+    padding: 2.5rem 1.5rem;
+    border: 3px dashed var(--key);
+    border-radius: 1.5rem;
+    background: var(--card-2);
+    text-align: center;
+  }
+  .paper-drop svg {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
   .cfield {
     flex: 1 1 0;
     min-width: 0;
@@ -1210,6 +1252,177 @@
   .parcel.note {
     border: 1.5px solid var(--go);
     background: var(--ok-bg);
+  }
+  /* a check online: three short points, two closed sections, Yes and No always in view (home/AskSheet.tsx) */
+  .check-points {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0.25rem 0 1.1rem;
+    font: 500 1.1875rem/1.35 var(--font-sans);
+  }
+  .check-points > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+  .check-points > li > p,
+  .check-points > li > div > p {
+    padding-top: 0.3rem;
+  }
+  .check-ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 9999px;
+    background: var(--fill-2);
+    color: var(--ink);
+  }
+  .check-ico.net {
+    background: var(--net-bg);
+    color: var(--net);
+  }
+  .check-ico svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+  .check-thumb {
+    flex: none;
+    width: 3.6rem;
+    height: 3.6rem;
+    border-radius: 0.6rem;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 0 0 1px var(--hair);
+  }
+  .check-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .hid-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+  }
+  .hid-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem 0.35rem 0.6rem;
+    border: 1px solid var(--hair);
+    border-radius: 9999px;
+    background: var(--fill-2);
+    color: var(--ink);
+    font: 600 1.0625rem/1.2 var(--font-sans);
+  }
+  .hid-pill svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    color: var(--ink-2);
+  }
+  .fold {
+    border-top: 1px solid var(--hair);
+  }
+  .fold:last-of-type {
+    border-bottom: 1px solid var(--hair);
+  }
+  .fold > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.2rem;
+    cursor: pointer;
+    list-style: none;
+    font: 600 1.125rem/1.3 var(--font-sans);
+  }
+  .fold > summary::-webkit-details-marker {
+    display: none;
+  }
+  .fold > summary svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--ink-2);
+    transition: transform 0.2s var(--ease-wk);
+  }
+  .fold[open] > summary svg {
+    transform: rotate(180deg);
+  }
+  .fold-body {
+    padding-bottom: 0.9rem;
+  }
+  .hid-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    font: 500 1.125rem/1.3 var(--font-sans);
+  }
+  .hid-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .hid-list svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--ink-2);
+  }
+  .goes-box {
+    max-height: 15rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .check-foot {
+    position: sticky;
+    bottom: calc(-1.4rem - env(safe-area-inset-bottom));
+    margin: 1.1rem -1.25rem calc(-1.4rem - env(safe-area-inset-bottom));
+    padding: 0.9rem 1.25rem calc(1.1rem + env(safe-area-inset-bottom));
+    background: var(--card);
+    border-top: 1px solid var(--hair);
+  }
+  .check-note {
+    margin-top: 0.4rem;
+    text-align: center;
+    color: var(--ink-2);
+    font: 400 1rem/1.4 var(--font-sans);
+  }
+  /* covered words as the paper's own short lines; a covered detail is a small neutral mark */
+  .parcel.lines {
+    gap: 0.2rem;
+    font: 500 1.0625rem/1.45 var(--font-sans);
+    overflow-wrap: break-word;
+  }
+  .pline {
+    display: block;
+  }
+  .ctoken {
+    display: inline-block;
+    margin: 0 0.1em;
+    padding: 0 0.45em;
+    border: 1px solid var(--hair);
+    border-radius: 0.45em;
+    background: var(--fill-2);
+    color: var(--ink-2);
+    font-size: 0.8em;
+    font-weight: 600;
+    line-height: 1.5;
+    vertical-align: 0.05em;
+  }
+  .pmore {
+    align-self: flex-start;
+    margin-top: 0.35rem;
+    padding: 0.35rem 0;
+    border: 0;
+    background: none;
+    color: var(--net);
+    font: 600 1rem/1.3 var(--font-sans);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   /* ---------- cards and rows ---------- */

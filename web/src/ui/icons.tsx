@@ -44,6 +44,13 @@ import {
   Volume2,
   VolumeX,
   X,
+  House,
+  CreditCard,
+  Lock,
+  IdCard,
+  Car,
+  Image as ImageIcon,
+  ChevronDown,
 } from 'lucide-react';
 import type { Tone, WhereRan } from '../answer/types';
 
@@ -148,4 +155,12 @@ export const I = {
   book: () => <BookOpen {...base} />,
   how: () => <Layers {...base} />,
   minus: () => <Minus {...base} />,
+  // added: the consent sheet's hidden-detail marks
+  house: () => <House {...base} />,
+  card: () => <CreditCard {...base} />,
+  lock: () => <Lock {...base} />,
+  idCard: () => <IdCard {...base} />,
+  car: () => <Car {...base} />,
+  picture: () => <ImageIcon {...base} />,
+  down: () => <ChevronDown {...base} />,
 };

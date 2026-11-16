@@ -17,6 +17,8 @@ export interface Covered {
   counts: Partial<Record<PIIKind, number>>;
   /** Words the recognizer found (0: no text on the picture). */
   words: number;
+  /** The recognized words, one printed line per entry. They stay on this device (core/billMath.ts reads them). */
+  text: string[];
   ms: { load: number; read: number; total: number };
 }
 
@@ -141,5 +143,39 @@ export async function coverPicture(small: Blob, original?: Blob): Promise<Covere
   const words = lines.reduce((n, l) => n + l.words.length, 0);
   const ms = { load: Math.round(t1 - t0), read: Math.round(t2 - t1), total: Math.round(t3 - t0) };
   console.info('[WeKnow] covered on this device', { words, counts: coveredCounts(details), ms, sentBytes: blob.size });
-  return { blob, url: URL.createObjectURL(blob), details, counts: coveredCounts(details), words, ms };
+  return { blob, url: URL.createObjectURL(blob), details, counts: coveredCounts(details), words, text: textOf(lines), ms };
+}
+
+const textOf = (lines: OcrLine[]) => lines.map((l) => l.words.map((w) => w.text).join(' ').trim()).filter(Boolean);
+
+/**
+ * Only read the words of a picture, on this device, one printed line per entry (for the plain-code bill checks when
+ * the picture was read by this device's model and nothing was covered). Throws CoverError when it takes too long.
+ */
+export async function readLines(picture: Blob): Promise<string[]> {
+  const worker = await limit(warmCover(), LOAD_LIMIT_MS, 'loading the text reader');
+  const bmp = await createImageBitmap(picture);
+  const long = Math.max(bmp.width, bmp.height);
+  const k = Math.min(2.5, Math.min(READ_SIDE.max, Math.max(READ_SIDE.min, long)) / long);
+  const w = Math.round(bmp.width * k);
+  const h = Math.round(bmp.height * k);
+  const c = new OffscreenCanvas(w, h);
+  const ctx = c.getContext('2d');
+  if (!ctx) {
+    bmp.close();
+    throw new CoverError('failed', 'no canvas');
+  }
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const blob = await c.convertToBlob({ type: 'image/png' });
+  try {
+    const r = await limit(worker.recognize(blob, {}, { blocks: true, text: false }), READ_LIMIT_MS, 'reading the words');
+    return textOf((r.data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines)));
+  } catch (e) {
+    stop();
+    throw e;
+  }
 }

@@ -4,7 +4,9 @@
 import quoteUrl from '../fixtures/quote-brakes.png';
 import billUrl from '../fixtures/bill-changed-account.png';
 import drainUrl from './assets/samples/drain.jpg';
-import { attach, detach, startOver, view } from './ask/conversation';
+import { attach, detach, startOver, view, type Paper } from './ask/conversation';
+import { isPdf, openPdf } from './pdf';
+import { cannotTake } from './ask/flows';
 import { setBox } from './ask/box';
 import { t, type StringId } from './strings';
 
@@ -41,18 +43,46 @@ export async function attachSample(id: Sample['id']) {
 export async function chooseSample(id: Sample['id']) {
   const s = SAMPLES.find((x) => x.id === id);
   if (!s) return;
+  opening++;
   const blob = await fetch(s.url).then((r) => r.blob());
   showPicture(blob, id);
 }
 
-export function chooseFile(file: File) {
-  if (!file.type.startsWith('image/')) return;
-  showPicture(file);
+/** A picture or a PDF this page can take (from Choose, a paste or a drop). */
+export const canTake = (f: { type?: string; name?: string }) => !!f.type?.startsWith('image/') || isPdf(f);
+
+let opening = 0;
+/**
+ * Attach a chosen, pasted or dropped file to the question box. A picture is attached as it is; a PDF is opened on
+ * this device first (src/pdf.ts): its first pages become the picture, and its own text goes with it. Nothing is sent
+ * anywhere until Send, and then only what the normal route decides. Resolves false when the file could not be taken.
+ */
+export async function chooseFile(file: File): Promise<boolean> {
+  if (file.type.startsWith('image/')) {
+    opening++;
+    showPicture(file);
+    return true;
+  }
+  if (!isPdf(file)) {
+    cannotTake('type');
+    return false;
+  }
+  const mine = ++opening;
+  try {
+    const pdf = await openPdf(file);
+    if (mine !== opening) return false;
+    showPicture(pdf.image, undefined, { text: pdf.text, hasText: pdf.hasText, pages: pdf.pages });
+    return true;
+  } catch (e) {
+    console.warn('[WeKnow] could not open the PDF', e);
+    if (mine === opening) cannotTake((e as { reason?: string })?.reason === 'locked' ? 'locked' : 'pdf');
+    return false;
+  }
 }
 
-function showPicture(blob: Blob, sample?: string) {
+function showPicture(blob: Blob, sample?: string, paper?: Paper) {
   startOver();
-  attach(blob, sample);
+  attach(blob, sample, false, paper);
 }
 
 export const backToCamera = detach;

@@ -68,6 +68,24 @@ vi.mock('../../reader', () => ({
   chooseForQuestion: async () => ({ ref: null, offered: 2 }),
 }));
 
+// The words of a picture, read on this device for the plain-code bill checks (core/billMath.ts).
+let ocrLines: string[] = [];
+vi.mock('../../coverPicture', () => ({ warmCover: async () => undefined, readLines: async () => ocrLines }));
+// A PDF's own words are read into the bill form (textReader.ts); the picture is never read for a text PDF.
+const paperReads: Array<{ text: string; where: string; source: string }> = [];
+let paperKind: Understanding['kind'] = 'bill';
+vi.mock('../../textReader', async () => {
+  const { maskText } = await import('../../core/pii');
+  const mailPayload = (t: string) => maskText(t).replace(/\s+/g, ' ').trim().slice(0, 4000);
+  return {
+    mailPayload,
+    readMailText: async (text: string, where: string, _m: string, source: string) => {
+      paperReads.push({ text, where, source });
+      return { understanding: { ...base, kind: paperKind, payee: 'Northfield Water Services', payTo: null }, where, ms: 4, masked: mailPayload(text) };
+    },
+  };
+});
+
 const base: Understanding = { kind: 'unknown', lines: [], problemRef: null, payee: null, payTo: null, urgent: false, addressedToAI: false, accountChange: false };
 const C = await import('../conversation');
 const F = await import('../flows');
@@ -81,6 +99,9 @@ beforeEach(() => {
   C.detach();
   // The local route only: what the device does by itself (ask/__tests__/route.test.ts covers the cloud step).
   setPrefs({ offerNotes: true, offeredReady: true, internet: 'never' });
+  ocrLines = [];
+  paperReads.length = 0;
+  paperKind = 'bill';
 });
 
 describe('a picture answer in the conversation', () => {
@@ -115,6 +136,77 @@ describe('a picture answer in the conversation', () => {
     F.send('Should I pay this?');
     await vi.waitFor(() => expect(nextLabels()).toEqual(['What should I do now?', 'Remember this company', 'Remind me to pay it']));
     expect(C.view().head?.tone).toBe('warn');
+  });
+
+  it('a bill whose printed numbers do not add up: Stop, the numbers said, and "Which numbers?"', async () => {
+    understanding = { ...base, kind: 'bill', payee: 'Riverbend Electric Co-op', payTo: '9917' };
+    readingPack = sub([]);
+    ocrLines = ['Previous balance $84.20', 'Payment received - thank you -$84.2O', 'New charges $96.15', 'Amount due $312.40'];
+    C.attach(new Blob(['b'], { type: 'image/png' }), 'bill');
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(nextLabels()).toContain('Which numbers?'));
+    expect(C.view().head).toMatchObject({ tone: 'stop', text: 'Don’t pay this bill yet.' });
+    expect(C.view().lines.map((l) => l.text)).toContain(
+      'One. The numbers on this bill don’t add up: the last bill of $84.20, minus $84.20 paid, plus $96.15 in new charges is $96.15, but it asks for $312.40.',
+    );
+    // A stop is never offered a payment reminder; the new payee is still said (nothing was cleared).
+    expect(nextLabels()).toEqual(['Which numbers?', 'What should I do now?']);
+    expect(C.view().lines.map((l) => l.text).some((x) => /no note of paying Riverbend/.test(x))).toBe(true);
+    press('Which numbers?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('The numbers I added up'));
+    expect(C.view().lines.map((l) => l.text)).toEqual([
+      'Last bill: $84.20.',
+      'Paid: $84.20.',
+      'New charges: $96.15.',
+      'It asks for: $312.40.',
+      'Added up, that is $96.15, not $312.40.',
+      'Ask the company to explain the numbers before you pay. Use the phone number on an older bill.',
+    ]);
+    expect(nextLabels()).toEqual(['What should I do now?']);
+  });
+
+  it('a bill with partial numbers raises no number warning', async () => {
+    understanding = { ...base, kind: 'bill', payee: 'Riverbend Electric Co-op', payTo: '9917' };
+    readingPack = sub([]);
+    ocrLines = ['Basic service charge $18.00', 'Total due $90.75'];
+    C.attach(new Blob(['b'], { type: 'image/png' }), 'bill');
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(nextLabels()).toEqual(['What should I do now?', 'Remember this company', 'Remind me to pay it']));
+    expect(C.view().head?.tone).toBe('warn');
+  });
+
+  it('a text PDF is read from its own words, not its picture; two account numbers are a Careful with their own question', async () => {
+    understanding = { ...base, kind: 'unknown' }; // the picture reading, which must not be used
+    readingPack = sub([]);
+    const text = ['Northfield Water Services', 'Account number: 3301-4478-1234', 'Current charges $42.10', 'Amount due $42.10', 'PAYMENT STUB', 'Account # 3301-4478-5678'].join('\n');
+    C.attach(new Blob(['pdf page'], { type: 'image/jpeg' }), undefined, false, { text, hasText: true, pages: 1 });
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(nextLabels()).toContain('Where are the account numbers?'));
+    expect(paperReads).toHaveLength(1);
+    expect(paperReads[0]).toMatchObject({ where: 'device', source: 'paper' });
+    // Only the covered words are read, even on this device.
+    expect(paperReads[0].text).toContain('[account]');
+    expect(paperReads[0].text).not.toMatch(/3301|4478/);
+    expect(C.view().head?.tone).toBe('warn');
+    expect(C.view().lines.map((l) => l.text)).toContain(
+      'One. This bill shows two different account numbers (ending 1234 and 5678). Call the company before paying.',
+    );
+    // Last four only: the whole number is never said.
+    expect(C.view().lines.some((l) => /3301|4478/.test(l.text))).toBe(false);
+    expect(C.view().receipt?.stayed[0]).toBe('The PDF');
+    press('Where are the account numbers?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('Two account numbers on one bill'));
+    expect(C.view().lines[0].text).toMatch(/ends in 1234\. Another one ends in 5678/);
+  });
+
+  it('a text PDF that is not a bill is read from its picture, the usual way', async () => {
+    paperKind = 'quote';
+    understanding = { ...base, kind: 'unknown' };
+    readingPack = sub([]);
+    C.attach(new Blob(['pdf page'], { type: 'image/jpeg' }), undefined, false, { text: 'Brake job estimate, front pads and rotors, labor two hours, total $540.00', hasText: true, pages: 1 });
+    F.send('Is this fair?');
+    await vi.waitFor(() => expect(nextLabels()).toEqual(['It’s a quote or a bill', 'Something is broken', 'Something else']));
+    expect(paperReads).toHaveLength(1);
   });
 
   it('a picture it cannot place asks what it is, with buttons', async () => {

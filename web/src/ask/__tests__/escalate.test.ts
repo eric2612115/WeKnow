@@ -46,7 +46,8 @@ describe('escalate', () => {
 
   it('the on-device review holds back what the guard missed: nothing is sent', async () => {
     const { d, cloud } = deps({ ref: 'diy-faucet-drip' }, async () => true);
-    const r = await escalate('I am Margaret Ellis and my sink is clogged', d);
+    // Written without capitals, the name rules (core/names.ts) cannot see it; the on-device review is the second look.
+    const r = await escalate('i am margaret ellis and my sink is clogged', d);
     expect(r).toEqual({ kind: 'blocked', by: 'review', found: [] });
     expect(cloud).not.toHaveBeenCalled();
   });

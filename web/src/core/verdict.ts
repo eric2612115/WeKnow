@@ -3,6 +3,7 @@
 import type { Pack, PriceItem } from './packs';
 import { priceByRef } from './packs';
 import type { Understanding } from './understanding';
+import type { BillMath } from './billMath';
 
 export type LineVerdict =
   | { kind: 'fair'; ref: string; amount: number; item: PriceItem }
@@ -31,7 +32,16 @@ export interface KnownPayee {
   payTo: string; // fingerprint the user confirmed before, e.g. last four digits
 }
 
-export type BillFlag = 'account-change-notice' | 'new-payee' | 'changed-account' | 'urgency' | 'instruction-to-ai';
+export type BillFlag =
+  | 'account-change-notice'
+  | 'new-payee'
+  | 'changed-account'
+  | 'urgency'
+  | 'instruction-to-ai'
+  /** The printed amounts do not add up (core/billMath.ts). */
+  | 'numbers-dont-add-up'
+  /** Two different account numbers are labelled as the customer's (core/billMath.ts). */
+  | 'two-accounts';
 
 export interface BillVerdict {
   safe: boolean;
@@ -57,4 +67,16 @@ export function billVerdict(u: Understanding, maskedText: string, known: KnownPa
   if (u.urgent || URGENCY.test(maskedText)) flags.push('urgency');
   if (u.addressedToAI || AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
   return { safe: flags.length === 0, flags };
+}
+
+/**
+ * Add the two plain-code checks on the bill's own words (core/billMath.ts) to a verdict. They can only add a
+ * flag: every flag already raised stays, and a bill that was not safe never becomes safe.
+ */
+export function withBillMath(v: BillVerdict, m: BillMath | null | undefined): BillVerdict {
+  if (!m) return v;
+  const flags = [...v.flags];
+  if (m.misses.length && !flags.includes('numbers-dont-add-up')) flags.push('numbers-dont-add-up');
+  if (m.accounts.length >= 2 && !flags.includes('two-accounts')) flags.push('two-accounts');
+  return { safe: v.safe && flags.length === v.flags.length, flags };
 }
