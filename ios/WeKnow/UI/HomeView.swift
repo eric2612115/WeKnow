@@ -232,6 +232,24 @@ struct PictureWindow: View {
                 .transition(.scale(scale: 0, anchor: .leading))
             }
             ForEach(model.marks) { mark in MarkView(mark: mark, fit: fit) }
+            // A bill read part by part: the part being read now, framed, with "Part 3 of 6".
+            if let part = model.scanPart {
+              let r = CGRect(x: fit.minX + part.minX * fit.width - 4, y: fit.minY + part.minY * fit.height - 4,
+                             width: part.width * fit.width + 8, height: part.height * fit.height + 8)
+              RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.accentColor.opacity(0.10))
+                .strokeBorder(Color.accentColor, lineWidth: 2)
+                .frame(width: r.width, height: r.height)
+                .position(x: r.midX, y: r.midY)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: part)
+              if let label = model.scanPartLabel {
+                Text(label).font(.caption.weight(.semibold)).foregroundStyle(.white)
+                  .padding(.horizontal, 8).padding(.vertical, 3)
+                  .background(Capsule().fill(Color.accentColor))
+                  .position(x: min(max(r.midX, fit.minX + 50), fit.maxX - 50), y: max(r.minY - 10, fit.minY + 10))
+                  .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: part)
+              }
+            }
             if model.scanning && !reduceMotion {
               Rectangle().fill(.white).frame(width: fit.width, height: 2).shadow(color: .black.opacity(0.25), radius: 3)
                 .position(x: fit.midX, y: fit.minY + (sweep ? fit.height : 0))

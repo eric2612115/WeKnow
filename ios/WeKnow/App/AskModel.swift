@@ -62,6 +62,9 @@ final class AskModel {
   var barsShown = 0
   var scanning = false
   var marks: [Mark] = []
+  /// While a bill is read part by part: the part being read (normalized, top-left origin) and "Part 3 of 6".
+  var scanPart: CGRect?
+  var scanPartLabel: String?
   var verdict: Verdict?
   var sentences: [Sentence] = []
   var speaking: Int?
@@ -701,10 +704,48 @@ final class AskModel {
       // member number the model copied by mistake never stands in for it.
       let printedRows = paper.rows.map(\.masked)
       if let to = BillMath.payTo(printedRows, lastTime: Verdicts.knownPayee(u.payee, in: known)?.payTo) { u.payTo = to }
-      let v = Verdicts.bill(u, maskedText: paper.masked, known: known)
+      var v = Verdicts.bill(u, maskedText: paper.masked, known: known)
+      // Then part by part, on this phone only (Reading/Sections.swift): plain code cuts the page, Apple's model
+      // answers three yes/no questions per part in two wordings, and an answer counts only when both agree.
+      var foundIn: [String] = []
+      if reading.where_ == .device {
+        let parts = Sections.split(paper.rows)
+        let f = await Sections.check(parts) { i in
+          self.scanPartLabel = "Part \(i + 1) of \(parts.count)"
+          self.scanPart = parts[i].rect
+        }
+        scanPart = nil
+        scanPartLabel = nil
+        func add(_ flag: Verdicts.BillFlag, _ names: [String]) {
+          guard !names.isEmpty else { return }
+          if !v.flags.contains(flag) { v.flags.append(flag) }
+          for n in names where !foundIn.contains(n) { foundIn.append(n) }
+        }
+        add(.urgency, f.urgent)
+        add(.instructionToAI, f.addressedToAI)
+        // A part that says the account is new counts only with an account printed in it; when WeKnow has a note
+        // of this payee, only an account other than the one in the note is a change.
+        let lastTime = Verdicts.knownPayee(u.payee, in: known)?.payTo
+        for hit in f.newAccount {
+          guard hit.endings.contains(where: { $0 != lastTime }) else { continue }
+          // The account to pay is still the one printed after "payment account" or "new account" in that part;
+          // a meter or invoice number in the same part is not it.
+          let partRows = parts.filter { $0.name == hit.part }.flatMap { $0.rows.map(\.masked) }
+          if lastTime != nil, let to = BillMath.payToEndings(partRows).first(where: { $0 != lastTime }) { u.payTo = to }
+          add(.changedAccount, [hit.part])
+        }
+        v.safe = v.flags.isEmpty
+        tech.append("Read part by part on this \(S.device): \(f.parts) parts, \(f.asks) yes/no questions in \(f.ms) ms"
+          + "; urgent in: \(f.urgent.joined(separator: ", ").ifEmpty("none"))"
+          + "; words to an AI in: \(f.addressedToAI.joined(separator: ", ").ifEmpty("none"))"
+          + "; new account in: \(f.newAccount.map { "\($0.part) (\($0.endings.joined(separator: ", ")))" }.joined(separator: ", ").ifEmpty("none"))")
+      }
       let b = Compose.bill(v, payee: u.payee, known: known)
       verdict = b.verdict
       answer = b.reasons + (b.doLine.map { [Sentence(text: $0)] } ?? [])
+      if !foundIn.isEmpty {
+        answer.insert(Sentence(text: "I found it in \(S.list(foundIn))."), at: min(b.reasons.count, answer.count))
+      }
       // Plain-code checks on the words themselves: numbers that don't add up, two account numbers.
       let math = BillMath.check(paper.rows.map(\.masked))
       if !math.isEmpty {
