@@ -20,6 +20,8 @@ struct WeKnowApp: App {
       HomeView(model: model, theme: Binding(get: { ThemeChoice(rawValue: themeRaw) ?? .light }, set: { themeRaw = $0.rawValue }))
         .preferredColorScheme(ThemeChoice(rawValue: themeRaw)?.scheme)
         .task {
+          Voice.shared.warmUp()
+          _ = Knowledge.shared
           // For recordings and screenshots: `-WeKnowSample quote` or `-WeKnowSample bill` starts that sample.
           if let id = UserDefaults.standard.string(forKey: "WeKnowSample"), let s = Sample.all.first(where: { $0.id == id }) {
             try? await Task.sleep(for: .milliseconds(600))

@@ -47,19 +47,6 @@ struct Consent: Identifiable {
   let answer: (Bool) -> Void
 }
 
-/// Notes kept only on this phone. The demo household already pays Riverbend Electric Co-op at an account ending
-/// 4821, the way the prototype's household "has used WeKnow for some months" (UI-SPEC section 13).
-enum Notes {
-  private static let key = "notes.payees.v1"
-  static var payees: [Verdicts.KnownPayee] {
-    get {
-      if let d = UserDefaults.standard.data(forKey: key), let p = try? JSONDecoder().decode([Verdicts.KnownPayee].self, from: d) { return p }
-      return [Verdicts.KnownPayee(name: "Riverbend Electric Co-op", payTo: "4821")]
-    }
-    set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: key) }
-  }
-  static let paidOn = "October 2026"
-}
 
 @MainActor
 @Observable
@@ -83,22 +70,22 @@ final class AskModel {
   var consent: Consent?
   var showWhere = false
 
-  private let pack: Pack?
-  private let matcher: Matcher?
+  /// The installed knowledge sections, merged (Menu › Knowledge packs). The matcher is rebuilt when they change.
+  var pack: Pack? { Knowledge.shared.active }
+  @ObservationIgnored private var matcherKey = ""
+  @ObservationIgnored private var cachedMatcher: Matcher?
+  private var matcher: Matcher? {
+    guard let p = pack else { return nil }
+    let key = Knowledge.shared.signature
+    if key != matcherKey || cachedMatcher == nil {
+      cachedMatcher = Matcher(pack: p)
+      matcherKey = key
+    }
+    return cachedMatcher
+  }
+
   private var task: Task<Void, Never>?
   private var toldLocal = UserDefaults.standard.bool(forKey: "toldLocal")
-
-  init() {
-    do {
-      let p = try Pack.bundled()
-      pack = p
-      matcher = Matcher(pack: p)
-    } catch {
-      pack = nil
-      matcher = nil
-      readerLog.error("pack failed to load: \(String(describing: error), privacy: .public)")
-    }
-  }
 
   var packVersion: String { pack.map { "\($0.id) \($0.version)" } ?? "none" }
 
@@ -147,7 +134,7 @@ final class AskModel {
   }
 
   private func run(_ image: UIImage, question: String) async {
-    guard let pack, let matcher else { return fail("I can’t open my price book.", tech: "The bundled pack did not load.") }
+    guard let pack, let matcher else { return fail("There is no price book on this \(S.device). Add one in Menu, Knowledge packs.", tech: "No knowledge sections installed.") }
     phase = .looking
     scanning = true
     guard let cg = image.uprightCGImage else { return fail("I can’t read this picture.", tech: "No CGImage.") }
@@ -243,7 +230,7 @@ final class AskModel {
         "Line \(i.n): \(i.state) \(i.amount.map(S.money) ?? "-")" + (i.item.map { " vs \(S.money($0.low))–\(S.money($0.high)) (\($0.ref))" } ?? "")
       })
     case .bill:
-      let known = Notes.payees
+      let known = Household.shared.known
       let v = Verdicts.bill(u, maskedText: paper.masked, known: known)
       let b = Compose.bill(v, payee: u.payee, known: known)
       verdict = b.verdict
@@ -280,6 +267,7 @@ final class AskModel {
       sources: sources.map { (label: $0.0, date: $0.1, url: $0.2) },
       tech: tech)
     if verdict?.tone == .stop { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+    let filedUnder = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: reading.where_ == .device)
 
     // 5. Say it.
     answerFrom = sentences.count
@@ -297,7 +285,44 @@ final class AskModel {
     } else if reading.where_ == .cloud {
       await say(Sentence(text: "I checked the covered words on the internet. The picture stayed on this \(S.device)."))
     }
+    if let filedUnder { await say(Sentence(text: "It is in My checks, under \(filedUnder).")) }
     phase = .done
+  }
+
+  private static let carWords = ["brake", "rotor", "oil", "tire", "tyre", "alignment", "transmission", "coolant", "battery",
+                                 "cabin filter", "air filter", "wiper", "spark", "muffler", "suspension", "strut", "engine"]
+
+  /// Files the check in My checks, on this phone only, unless Settings turned that off. Returns the project name.
+  private func keep(_ u: Understanding, answer: [Sentence], picture: UIImage, onDevice: Bool) -> String? {
+    guard !UserDefaults.standard.bool(forKey: Prefs.dontKeepChecks), u.kind != .unknown, let verdict else { return nil }
+    let labels = u.lines.map { $0.label.lowercased() }.joined(separator: " ")
+    let project: String
+    let title: String
+    switch u.kind {
+    case .quote:
+      project = Self.carWords.contains { labels.contains($0) } ? "The car" : "My home"
+      let total = u.lines.compactMap(\.amount).reduce(0, +)
+      title = total > 0 ? "Repair quote, \(S.money(total))" : "Repair quote"
+    case .bill:
+      project = "My home"
+      title = u.payee.map { "Bill from \($0)" } ?? "A bill"
+    case .problem:
+      project = "My home"
+      title = u.problemRef.flatMap { pack?.guide($0)?.name } ?? "A problem at home"
+    case .unknown:
+      return nil
+    }
+    let tone: String = switch verdict.tone {
+    case .ok: "ok"
+    case .warn: "warn"
+    case .stop: "stop"
+    case .plain: "plain"
+    }
+    Household.shared.add(
+      CheckRecord(date: .now, kind: u.kind, project: project, title: title, verdict: verdict.text, tone: tone,
+                  sentences: answer.map(\.text), onDevice: onDevice),
+      picture: picture.covered(by: bars.map(\.rect)))
+    return project
   }
 
   private func fail(_ line: String, tech: String) {
@@ -356,6 +381,22 @@ extension String {
 }
 
 extension UIImage {
+  /// The same picture with black bars over the personal details (normalized rects, origin top-left), so the copy
+  /// kept in My checks never shows a name, phone, address, plate or account number.
+  func covered(by rects: [CGRect]) -> UIImage {
+    guard !rects.isEmpty else { return self }
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = scale
+    return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+      draw(at: .zero)
+      UIColor(hex: 0x14211C).setFill()
+      for r in rects {
+        let box = CGRect(x: r.minX * size.width, y: r.minY * size.height, width: r.width * size.width, height: r.height * size.height)
+        ctx.fill(box.insetBy(dx: -3, dy: -2))
+      }
+    }
+  }
+
   /// The pixels upright, whatever orientation the camera wrote.
   var uprightCGImage: CGImage? {
     if imageOrientation == .up, let cg = cgImage { return cg }

@@ -208,34 +208,3 @@ struct WhereSheet: View {
     }
   }
 }
-
-struct NotesSheet: View {
-  var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("What WeKnow remembers").font(.system(size: 26, weight: .bold)).foregroundStyle(Color.ink)
-      HStack(alignment: .top, spacing: 12) {
-        Image(systemName: "iphone").font(.system(size: 22, weight: .semibold)).foregroundStyle(Color.go)
-        VStack(alignment: .leading, spacing: 4) {
-          Text("Only on this \(S.device)").font(.system(size: 19, weight: .bold))
-          Text("WeKnow keeps these notes on this \(S.device) and nowhere else. Not in your account. Not on the internet.")
-            .font(.system(size: 17, weight: .medium))
-        }
-        .foregroundStyle(Color.ink)
-      }
-      .padding(16)
-      .background(RoundedRectangle(cornerRadius: 16).fill(Color.okBg))
-      Text("People you pay").font(.system(size: 21, weight: .bold)).foregroundStyle(Color.ink)
-      ForEach(Notes.payees, id: \.name) { p in
-        VStack(alignment: .leading, spacing: 2) {
-          Text(p.name).font(.system(size: 19, weight: .bold))
-          Text("Account ending \(p.payTo). Paid \(Notes.paidOn).").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
-        }
-        .foregroundStyle(Color.ink)
-      }
-      Spacer()
-    }
-    .padding(20)
-    .background(Color.bg.ignoresSafeArea())
-    .presentationDetents([.medium])
-  }
-}

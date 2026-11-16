@@ -51,7 +51,8 @@ struct Pack: Codable, Sendable {
   func price(_ ref: String) -> PriceItem? { prices.first { $0.ref == ref } }
   func guide(_ ref: String) -> Guide? { guides.first { $0.ref == ref } }
 
-  /// The pack bundled with the app (a copy of web/public/packs/us-home.json at build time).
+  /// The pack bundled with the app (a copy of web/public/packs/us-home.json at build time). Knowledge installs
+  /// its sections on first launch; the reader answers from the installed sections (App/Knowledge.swift).
   static func bundled(_ bundle: Bundle = .main) throws -> Pack {
     guard let url = bundle.url(forResource: "us-home", withExtension: "json") else {
       throw CocoaError(.fileNoSuchFile)

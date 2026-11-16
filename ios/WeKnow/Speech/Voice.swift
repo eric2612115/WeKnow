@@ -10,17 +10,48 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
   private var done: CheckedContinuation<Void, Never>?
 
   /// `-WeKnowMute YES` silences the voice (captions still pace through), for recordings.
-  var muted: Bool { UserDefaults.standard.bool(forKey: "WeKnowMute") }
+  /// Settings › Voice off also silences it; the words still show.
+  var muted: Bool { UserDefaults.standard.bool(forKey: "WeKnowMute") || UserDefaults.standard.bool(forKey: Prefs.voiceOff) }
 
+  /// The most natural English voice on the phone. Novelty voices (Bad News, Bubbles, Zarvox...) are never picked;
+  /// a Premium or Enhanced voice the person downloaded wins; otherwise the voice they chose in Spoken Content.
+  /// Siri's own voices are not open to apps.
   private lazy var voice: AVSpeechSynthesisVoice? = {
-    let en = AVSpeechSynthesisVoice.speechVoices().filter { $0.language == "en-US" }
-    return en.max { $0.quality.rawValue < $1.quality.rawValue } ?? AVSpeechSynthesisVoice(language: "en-US")
+    let fallback = AVSpeechSynthesisVoice(language: "en-US")
+    let natural = AVSpeechSynthesisVoice.speechVoices().filter {
+      $0.language == "en-US" && !$0.voiceTraits.contains(.isNoveltyVoice) && !$0.voiceTraits.contains(.isPersonalVoice)
+    }
+    func rank(_ v: AVSpeechSynthesisVoice) -> Int {
+      v.quality.rawValue * 10 + (v.identifier == fallback?.identifier ? 5 : 0) + (Self.preferred.contains(v.name) ? 2 : 0)
+    }
+    let pick = natural.max { rank($0) < rank($1) } ?? fallback
+    print("WeKnow voice: \(pick?.name ?? "none") (\(pick?.identifier ?? "-"))")
+    return pick
   }()
+
+  private static let preferred: Set<String> = ["Ava", "Zoe", "Evan", "Nathan", "Samantha", "Allison", "Susan", "Tom"]
 
   override init() {
     super.init()
     synth.delegate = self
+    for v in AVSpeechSynthesisVoice.speechVoices() where v.language.hasPrefix("en") {
+      print("WeKnow voices: \(v.name) \(v.language) q\(v.quality.rawValue) novelty=\(v.voiceTraits.contains(.isNoveltyVoice)) \(v.identifier)")
+    }
     try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+  }
+
+  /// Chooses the voice now, so the first answer starts at once and Settings can name it.
+  func warmUp() { _ = voice }
+
+  /// The voice WeKnow speaks with, for Settings ("Zoe (Premium)").
+  var voiceLabel: String {
+    guard let v = voice else { return "System voice" }
+    if v.name.contains("(") { return v.name }
+    switch v.quality {
+    case .premium: return "\(v.name) (Premium)"
+    case .enhanced: return "\(v.name) (Enhanced)"
+    default: return v.name
+    }
   }
 
   /// Speak one sentence; returns when it has been said or stopped.
@@ -34,7 +65,7 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
     try? AVAudioSession.sharedInstance().setActive(true)
     let u = AVSpeechUtterance(string: spoken)
     u.voice = voice
-    u.rate = AVSpeechUtteranceDefaultSpeechRate * 0.92
+    u.rate = AVSpeechUtteranceDefaultSpeechRate * Prefs.rate
     u.postUtteranceDelay = 0.3
     await withCheckedContinuation { c in
       done = c

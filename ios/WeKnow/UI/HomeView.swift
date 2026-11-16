@@ -3,11 +3,16 @@
 import PhotosUI
 import SwiftUI
 
+enum MenuPage: String, Identifiable {
+  case checks, remembers, priceBook, settings
+  var id: String { rawValue }
+}
+
 struct HomeView: View {
   @Bindable var model: AskModel
   @Binding var theme: ThemeChoice
   @State private var picking = false
-  @State private var showNotes = false
+  @State private var page: MenuPage?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private var answering: Bool { model.phase != .ready || model.picture != nil }
@@ -48,16 +53,23 @@ struct HomeView: View {
     .sheet(item: $model.consent) { c in
       ConsentSheet(consent: c).presentationDetents([.large]).interactiveDismissDisabled()
     }
-    .sheet(isPresented: $showNotes) { NotesSheet() }
+    .sheet(item: $page) { p in
+      switch p {
+      case .checks: ChecksPage()
+      case .remembers: RemembersPage()
+      case .priceBook: PriceBookPage(model: model)
+      case .settings: SettingsPage(theme: $theme, model: model)
+      }
+    }
   }
 
   private var appBar: some View {
     HStack(spacing: 12) {
       Menu {
-        Picker("Screen", selection: $theme) {
-          ForEach(ThemeChoice.allCases) { Text($0.rawValue).tag($0) }
-        }
-        Button { showNotes = true } label: { Label("What WeKnow remembers", systemImage: "book.closed") }
+        Button { page = .checks } label: { Label("My checks", systemImage: "folder") }
+        Button { page = .remembers } label: { Label("What WeKnow remembers", systemImage: "book.closed") }
+        Button { page = .priceBook } label: { Label("Knowledge packs", systemImage: "books.vertical") }
+        Button { page = .settings } label: { Label("Settings", systemImage: "gearshape") }
         if model.picture != nil {
           Button { model.stop(); model.reset() } label: { Label("Start again", systemImage: "arrow.counterclockwise") }
         }
