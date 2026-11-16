@@ -43,17 +43,44 @@ enum BillMath {
     return out
   }
 
+  /// The last money amount printed on a row: on a quote that is the line's own total, after quantity and rate.
+  static func lastMoney(_ row: String) -> Double? {
+    let all = row.matches(of: /\$?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})/)
+    guard let m = all.last else { return nil }
+    return Double(String(m.1).replacingOccurrences(of: ",", with: ""))
+  }
+
+  /// "Due date Dec 01, 2026", "Pay by 12/01/2026", "Due Dec 1".
+  static func dueDate(_ rows: [String]) -> String? {
+    for r in rows {
+      if let m = r.firstMatch(of: /(?i)(?:due date|due by|pay by|payment due|due)\s*:?\s*([A-Z][a-z]{2,8}\.? \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/) {
+        return String(m.1)
+      }
+    }
+    return nil
+  }
+
+  /// Amount due and minimum due as printed, for "This bill says".
+  static func dueAmounts(_ rows: [String]) -> (due: Double?, minimum: Double?) {
+    var minimum: Double?
+    for r in rows where r.lowercased().contains("minimum") { if let v = lastMoney(r) { minimum = v; break } }
+    return (amounts(rows)[.due], minimum)
+  }
+
   static func check(_ rows: [String]) -> [Finding] {
     var found: [Finding] = []
     let a = amounts(rows)
-    func off(_ x: Double, _ y: Double) -> Bool { abs(x - y) > 1.0 }
+    // A reading can misplace a number; only a clear gap counts.
+    func off(_ x: Double, _ y: Double) -> Bool { abs(x - y) > 5.0 }
     if let s = a[.subtotal], let t = a[.tax], let total = a[.total], off(s + t, total) {
-      found.append(Finding(text: "The numbers on this bill don’t add up: \(S.money(s)) plus \(S.money(t)) tax is \(S.money(s + t)), but it says the total is \(S.money(total)).", stop: true))
+      found.append(Finding(text: "The numbers on this bill don’t add up: \(S.money(s)) plus \(S.money(t)) tax is \(S.money(s + t)), but it says the total is \(S.money(total)).", stop: false))
     }
     if let p = a[.previous], let paid = a[.paid], let n = a[.newCharges], let due = a[.due], off(p - paid + n, due) {
-      found.append(Finding(text: "The numbers on this bill don’t add up: the last balance, payments and new charges come to \(S.money(p - paid + n)), but it asks for \(S.money(due)).", stop: true))
-    } else if let total = a[.total], let paid = a[.paid], let due = a[.due], off(total - paid, due) {
-      found.append(Finding(text: "The numbers on this bill don’t add up: \(S.money(total)) minus \(S.money(paid)) already paid is \(S.money(total - paid)), but it asks for \(S.money(due)).", stop: true))
+      found.append(Finding(text: "The numbers on this bill don’t add up: the last balance, payments and new charges come to \(S.money(p - paid + n)), but it asks for \(S.money(due)).", stop: false))
+    } else if a[.previous] == nil, a[.newCharges] == nil,
+              !rows.contains(where: { $0.range(of: #"(?i)previous balance|last bill|balance forward"#, options: .regularExpression) != nil }),
+              let total = a[.total], let paid = a[.paid], let due = a[.due], off(total - paid, due) {
+      found.append(Finding(text: "The numbers on this bill don’t add up: \(S.money(total)) minus \(S.money(paid)) already paid is \(S.money(total - paid)), but it asks for \(S.money(due)).", stop: false))
     }
     // Account numbers: masking keeps only the last four ("[account ending 4821]").
     // Only rows that label the customer's own account number count (a "pay to" bank account is something else).

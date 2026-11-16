@@ -143,8 +143,16 @@ enum Reader {
     readerLog.notice("read by \(engine, privacy: .public) in \(Int(t1.timeIntervalSince(t0) * 1000)) ms: kind=\(form.kind.docKind.rawValue, privacy: .public) lines=\(form.lines.count)")
 
     // B. Local candidates, plain code on this phone. A reading is capped at 30 lines of 120 characters.
-    let lines = form.lines.prefix(30).map { PrintedLine(label: String($0.label.prefix(120)), amount: $0.amount) }
-      .filter { !$0.label.trimmingCharacters(in: .whitespaces).isEmpty }
+    // A line with no real amount (a negative discount, a stray "0.5" read off a barcode, a total) is not a priced
+    // job: it is dropped here rather than failing the whole reading.
+    let notPriced = #"(?i)^\s*(sub\s?-?total|total|tax|balance|amount due|payment|discount)"#
+    var lines: [PrintedLine] = []
+    for l in form.lines.prefix(30) {
+      let label = String(l.label.prefix(120))
+      guard !label.trimmingCharacters(in: .whitespaces).isEmpty, l.amount.isFinite, l.amount >= 1,
+            label.range(of: notPriced, options: .regularExpression) == nil else { continue }
+      lines.append(PrintedLine(label: label, amount: l.amount))
+    }
     var items: [Item] = []
     if form.kind == .quote {
       for (i, l) in lines.enumerated() {

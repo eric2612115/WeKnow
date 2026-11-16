@@ -81,6 +81,8 @@ final class AskModel {
   var topic: Topic?
   /// Google's search-suggestion chip for an answer grounded in Google Search (it must be shown with it).
   var searchChips: String?
+  /// "This bill says" / the quote's lines: what the phone read, listed so nobody has to read the paper.
+  var facts: [String] = []
   var inConversation: Bool { !thread.isEmpty || question != nil || picture != nil }
 
   struct Exchange: Identifiable {
@@ -92,6 +94,7 @@ final class AskModel {
     var sentences: [String]
     var tag: WhereRan?
     var receipt: Receipt?
+    var facts: [String] = []
   }
 
   struct NextQ: Identifiable {
@@ -472,6 +475,7 @@ final class AskModel {
     receipt = nil
     choices = []
     searchChips = nil
+    facts = []
     phase = .ready
   }
 
@@ -480,7 +484,7 @@ final class AskModel {
     if question != nil || picture != nil {
       thread.append(Exchange(
         question: question, picture: picture.map { annotated($0, bars: bars, marks: marks) }, head: verdict?.text,
-        tone: verdict?.tone ?? .plain, sentences: sentences.map(\.text), tag: tag, receipt: receipt))
+        tone: verdict?.tone ?? .plain, sentences: sentences.map(\.text), tag: tag, receipt: receipt, facts: facts))
     }
     reset()
   }
@@ -530,10 +534,16 @@ final class AskModel {
     guard let pack, let matcher else { return fail("There is no price book on this \(S.device). Add one in Menu, Knowledge packs.", tech: "No knowledge sections installed.") }
     phase = .looking
     scanning = true
-    guard let cg = image.uprightCGImage else { return fail("I can’t read this picture.", tech: "No CGImage.") }
+    guard var cg = image.uprightCGImage else { return fail("I can’t read this picture.", tech: "No CGImage.") }
 
     // 1. Read the words and cover personal details, here on the phone.
     let paper: PaperText
+    // Pull the paper flat first (a photo is rarely square-on); the flat copy is what is read, covered and shown.
+    if let flat = Straighten.document(cg) {
+      cg = flat
+      picture = UIImage(cgImage: flat)
+      print("[WeKnow] paper straightened")
+    }
     do { paper = try await PaperText.read(cg) } catch {
       return fail("I can’t read the small words. Move closer to the top half.", tech: "Vision: \(error)")
     }
@@ -569,7 +579,16 @@ final class AskModel {
     // 3. Read the masked words into the fixed form, find candidates, let the model choose.
     let reading: Reading
     do {
-      reading = try await Reader.read(paper, image: cg, question: question, matcher: matcher, where: place)
+      do {
+        reading = try await Reader.read(paper, image: cg, question: question, matcher: matcher, where: place)
+      } catch where place == .device && "\(error)".localizedCaseInsensitiveContains("unsafe") && Cloud.isConfigured {
+        // Apple's on-device model declined this paper (its safety filter): the covered words go to the cloud
+        // instead, by the same rules as any other step up (design/HYBRID-ROUTING.md).
+        print("[WeKnow] on-device model declined; stepping up to the cloud with the covered words")
+        guard await mayUseInternet(paper.rows.map(\.masked)) else { throw error }
+        phase = .looking
+        reading = try await Reader.read(paper, question: question, matcher: matcher, where: .cloud)
+      }
     } catch {
       readerLog.error("reading failed on \(place.rawValue, privacy: .public): \(String(describing: error), privacy: .public)")
       print("[WeKnow] reading failed on \(place.rawValue): \(error)")
@@ -593,6 +612,13 @@ final class AskModel {
     // A quote line counts only if its amount is printed on the paper; a photo with no prices (earbuds, a sink) is
     // not a quote, whatever the model filled in.
     if u.kind == .quote {
+      // The line's own total is the last amount printed on its row (after quantity, hours and rate); plain code
+      // takes it from the paper rather than trusting which number the model copied.
+      u.lines = u.lines.map { line in
+        var l = line
+        if let row = paper.row(for: l.label), let v = BillMath.lastMoney(row.masked), v >= 1 { l.amount = v }
+        return l
+      }
       let printed = paper.masked.replacingOccurrences(of: ",", with: "")
       u.lines = u.lines.filter { line in
         guard let a = line.amount else { return false }
@@ -646,6 +672,15 @@ final class AskModel {
       tech.append(contentsOf: items.map { i in
         "Line \(i.n): \(i.state) \(i.amount.map(S.money) ?? "-")" + (i.item.map { " vs \(S.money($0.low))–\(S.money($0.high)) (\($0.ref))" } ?? "")
       })
+      facts = items.map { i in
+        let amount = i.amount.map(S.money) ?? "—"
+        let state: String = switch i.state {
+        case .high: "\(S.money(i.over ?? 0)) above usual"
+        case .fair, .low: "usual price"
+        case .pending: "not in my price book"
+        }
+        return "\(i.label) — \(amount) — \(state)"
+      }
       topic = .quote(items)
       if items.contains(where: { $0.state == .high }) { next.append(NextQ(label: "What should I say to the shop?", action: .sayShop)) }
       if items.contains(where: { $0.state == .pending }) { next.append(NextQ(label: "Which lines did you not check?", action: .unchecked)) }
@@ -674,6 +709,14 @@ final class AskModel {
       sources.append(("Bill checks on this \(S.device)", "checked \(S.longDate(pack.version))", ""))
       tech.append("Bill flags: \(v.flags.map(\.rawValue).joined(separator: ", ").ifEmpty("none"))")
       tech.append("Read: payee \(u.payee ?? "-"), pays to account ending \(u.payTo ?? "-"), urgent \(u.urgent), addressed to AI \(u.addressedToAI)")
+      let rowsText = paper.rows.map(\.masked)
+      let amountsDue = BillMath.dueAmounts(rowsText)
+      facts = [
+        u.payee.map { "From: \($0)" },
+        amountsDue.due.map { "Amount due: \(S.money($0))" + (amountsDue.minimum.map { " (minimum \(S.money($0)))" } ?? "") },
+        BillMath.dueDate(rowsText).map { "Due: \($0)" },
+        u.payTo.map { to in "Pay to: account ending \(to)" + (Verdicts.knownPayee(u.payee, in: known).map { $0.payTo != to ? " (last time: \($0.payTo))" : " (same as last time)" } ?? "") },
+      ].compactMap { $0 }
       topic = .bill(stop: verdict?.tone == .stop, warn: verdict?.tone == .warn)
       if v.flags == [.newPayee], let name = u.payee, let to = u.payTo {
         next.append(NextQ(label: "Remember this company", action: .rememberPayee(name, to)))

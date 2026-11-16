@@ -17,7 +17,7 @@ struct ConversationView: View {
         LazyVStack(alignment: .leading, spacing: 18) {
           ForEach(model.thread) { ex in
             PersonBubble(text: ex.question, picture: ex.picture) { viewing = ViewedPicture(image: $0) }
-            AnswerBubble(head: ex.head, tone: ex.tone, sentences: ex.sentences, speaking: nil, tag: ex.tag) { showWhere(ex) }
+            AnswerBubble(head: ex.head, tone: ex.tone, facts: ex.facts, sentences: ex.sentences, speaking: nil, tag: ex.tag) { showWhere(ex) }
           }
           // The question in progress.
           if model.picture != nil {
@@ -91,6 +91,7 @@ struct PersonBubble: View {
 struct AnswerBubble: View {
   let head: String?
   let tone: Tone
+  var facts: [String] = []
   let sentences: [String]
   let speaking: Int?
   let tag: WhereRan?
@@ -108,6 +109,20 @@ struct AnswerBubble: View {
       if let head {
         Text(head).font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink)
           .fixedSize(horizontal: false, vertical: true)
+      }
+      if !facts.isEmpty {
+        // What the paper says, listed, so nobody has to read the small print themselves.
+        VStack(alignment: .leading, spacing: 6) {
+          ForEach(facts, id: \.self) { f in
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+              Circle().fill(Color.ink2).frame(width: 5, height: 5).offset(y: -3)
+              Text(f).font(.system(size: 16)).foregroundStyle(Color.ink).fixedSize(horizontal: false, vertical: true)
+            }
+          }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.card2))
       }
       ForEach(Array(sentences.enumerated()), id: \.offset) { i, s in
         Text(s).font(.system(size: 17)).lineSpacing(4)
@@ -142,7 +157,7 @@ struct LiveAnswer: View {
         Text("May I check this on the internet?").font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink)
       }
       if model.verdict != nil || !model.sentences.isEmpty {
-        AnswerBubble(head: model.verdict?.text, tone: model.verdict?.tone ?? .plain, sentences: model.sentences.map(\.text),
+        AnswerBubble(head: model.verdict?.text, tone: model.verdict?.tone ?? .plain, facts: model.facts, sentences: model.sentences.map(\.text),
                      speaking: model.speaking, tag: model.phase == .done ? model.tag : nil) { model.showWhere = true }
       }
       if model.phase == .done, let html = model.searchChips {

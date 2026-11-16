@@ -24,6 +24,7 @@
 		4F997C2D95C12E76E2DC7421 /* Voice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C72F42C38B0B9E2F1E9F80A /* Voice.swift */; };
 		577CB63A1852864B67A91705 /* PhotoViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B693556928517354101753C3 /* PhotoViewer.swift */; };
 		65BE65FBE2B101F0E6B43A79 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277F60625D448ED672A27153 /* Matcher.swift */; };
+		714026EB715E1F41B9C7BB3E /* Straighten.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C19C7EA8A6134A04FD674DE /* Straighten.swift */; };
 		8968B40B8C8B21AEB4EF4139 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41FFDDB63A22B55479421D60 /* Session.swift */; };
 		8C3005F17FCE5AB69076D259 /* Reader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CF733B3374849CB155AB9B /* Reader.swift */; };
 		93631ABAF1A1F95393FED156 /* BillMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC5F341B909302B135AD694 /* BillMath.swift */; };
@@ -64,6 +65,7 @@
 		6603D92E9EA7B7D9A691D74A /* PaperText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperText.swift; sourceTree = "<group>"; };
 		67AFF952BB1FAE10BC094258 /* Composer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Composer.swift; sourceTree = "<group>"; };
 		69C8DD1C71891C6D16731D8D /* Pack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pack.swift; sourceTree = "<group>"; };
+		6C19C7EA8A6134A04FD674DE /* Straighten.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Straighten.swift; sourceTree = "<group>"; };
 		70BC71D911FDC590F76B7E29 /* Ear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ear.swift; sourceTree = "<group>"; };
 		764951B7374AAF0E621C2054 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		84579391ABB492E985122024 /* WeKnowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeKnowApp.swift; sourceTree = "<group>"; };
@@ -126,6 +128,7 @@
 				6603D92E9EA7B7D9A691D74A /* PaperText.swift */,
 				E0CF733B3374849CB155AB9B /* Reader.swift */,
 				41FFDDB63A22B55479421D60 /* Session.swift */,
+				6C19C7EA8A6134A04FD674DE /* Straighten.swift */,
 			);
 			path = Reading;
 			sourceTree = "<group>";
@@ -353,6 +356,7 @@
 				8C3005F17FCE5AB69076D259 /* Reader.swift in Sources */,
 				8968B40B8C8B21AEB4EF4139 /* Session.swift in Sources */,
 				1191542822C7E8F4C2E577C6 /* Sheets.swift in Sources */,
+				714026EB715E1F41B9C7BB3E /* Straighten.swift in Sources */,
 				C34D43738259DDBE69741B28 /* Theme.swift in Sources */,
 				DEB0C51CA85567B7907DCE0D /* Understanding.swift in Sources */,
 				BA580C990E46F4D875A9E6A2 /* Verdict.swift in Sources */,

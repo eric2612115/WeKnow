@@ -32,10 +32,19 @@ enum PII {
     // Any 17 letters and digits with both in it: text recognition often reads 0 as O, so I, O and Q are allowed.
     (.vin, re(#"\b(?=[A-Z0-9]*[0-9])(?=[A-Z0-9]*[A-Z])[A-Z0-9]{17}\b"#, false)),
     // Labelled account / routing / IBAN numbers, and any long digit run.
-    (.account, re(#"\b(?:acct|account|routing|aba|iban|a\/c)\b[#:\s.-]*[A-Z0-9][A-Z0-9 -]{5,}"#, true)),
+    // "Account number: 3301-4478-1234": the label's own word is not the number (same as web/src/core/pii.ts).
+    (.account, re(#"\b(?:acct|account|routing|aba|iban|a\/c)\.?\s*(?:(?:number|num|nr|no|id)\b\.?|#)[#:\s.-]*(?=[A-Z -]*\d)[A-Z0-9][A-Z0-9 -]{3,}"#, true)),
+    // A heading such as "ACCOUNT HOLDER" or "Account summary" is not a number.
+    (.account, re(#"\b(?:acct|account|routing|aba|iban|a\/c)\b[#:\s.-]*(?!(?:holders?|members?(?:hip)?|services?|summary|information|info|details?|number|no|type|status|name|balance|activity|overview|settings|statement|history|charges|total)\b)[A-Z0-9][A-Z0-9 -]{5,}"#, true)),
     (.account, re(#"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b"#, false)),
     (.account, re(#"\b\d{8,}\b"#, false)),
     (.phone, re(#"(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b"#, false)),
+    // A ZIP+4 narrows an address to a few homes; a five-digit ZIP (a region) stays.
+    (.street, re(#"\b\d{5}-\d{4}\b"#, false)),
+    // A meter, invoice, statement, reference, policy or order number, and any code with seven or more digits that
+    // is not a date, a phone or a ZIP+4 (same as web/src/core/pii.ts).
+    (.account, re(#"\b(?:meter|invoice|inv|statement|reference|ref|e-?receipt|receipt|order|policy|claim|premise|service id|confirmation|ticket|case|file)\b\.?\s*(?:no\.?|number|num|#|id)?[#:\s.-]*(?=[A-Z0-9-]*\d{3})[A-Z0-9][A-Z0-9-]{4,}"#, true)),
+    (.account, re(#"\b(?!\d{4}-\d{2}-\d{2}\b)(?!(?:1-)?\d{3}-\d{3}-\d{4}\b)(?!\d{3}-\d{4}\b)(?!\d{5}-\d{4}\b)(?=(?:[A-Z-]*\d){7})[A-Z0-9][A-Z0-9-]{6,}\b"#, true)),
     // A local number without the area code, "555-0134" (same as web/src/core/pii.ts).
     (.phone, re(#"(?<![\d-])\b\d{3}[\s.-]\d{4}\b(?![\d-])"#, false)),
     (.plate, re(#"\b(?:plate|lic(?:ense)?\.?\s*(?:no|#)?)\b[#:\s.-]*[A-Z0-9-]{4,8}\b"#, true)),
@@ -44,6 +53,11 @@ enum PII {
 
   static let labelledName = re(
     #"\b(?i:customer|account holder|holder|name|bill to|billed to|sold to|ship to|attn|attention|client|owner|insured|patient|member|tenant|resident)\s*[:#]\s*([A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3})"#,
+    false)
+
+  /// A strong label with the name right after it and no colon, as in a table: "Customer Theodora Quillfeather".
+  static let labelledNameNoColon = re(
+    #"\b(?i:customer name|customer|account holder|cardholder|policyholder|bill to|billed to|sold to|ship to|insured|homeowner|tenant|resident|patient)\s+([A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){1,3})"#,
     false)
 
   /// Every personal-data match in `text`, patterns first, then personal names from the on-device tagger.
@@ -58,7 +72,7 @@ enum PII {
     }
     if names {
       // A name after a label ("Customer: Margaret Ellis", "Account holder: Harold Brooks").
-      for m in labelledName.matches(in: text, range: ns) where m.numberOfRanges > 1 {
+      for m in labelledName.matches(in: text, range: ns) + labelledNameNoColon.matches(in: text, range: ns) where m.numberOfRanges > 1 {
         guard let r = Range(m.range(at: 1), in: text) else { continue }
         hits.append(PIIHit(kind: .name, range: r, text: String(text[r])))
       }
