@@ -10,6 +10,8 @@ struct Composer: View {
   /// The camera (full screen, only when pressed) and the photo library; the picture goes into the bar.
   let takePhoto: () -> Void
   let choosePhoto: () -> Void
+  /// A PDF or picture from Files (a bill that came by email, a screenshot).
+  let chooseFile: () -> Void
   @State private var ear = Ear()
   @FocusState private var focused: Bool
 
@@ -56,18 +58,16 @@ struct Composer: View {
           .disabled(busy)
           .accessibilityLabel("Take a picture")
           .accessibilityIdentifier("composer-camera")
-          Button {
-            ear.stop()
-            focused = false
-            choosePhoto()
+          Menu {
+            Button { ear.stop(); focused = false; choosePhoto() } label: { Label("Choose a photo", systemImage: "photo") }
+            Button { ear.stop(); focused = false; chooseFile() } label: { Label("Choose a file (PDF or picture)", systemImage: "doc") }
           } label: {
-            Image(systemName: "photo").font(.system(size: 19, weight: .regular))
+            Image(systemName: "plus.circle").font(.system(size: 20, weight: .regular))
               .foregroundStyle(Color.ink)
               .frame(width: 38, height: 44)
           }
-          .buttonStyle(.plain)
           .disabled(busy)
-          .accessibilityLabel("Choose a photo")
+          .accessibilityLabel("Add a photo or a file")
           .accessibilityIdentifier("composer-photo")
 
           TextField(ear.listening ? "Listening…" : model.draft == nil ? "Ask WeKnow" : "What is wrong?", text: $model.draftText, axis: .vertical)

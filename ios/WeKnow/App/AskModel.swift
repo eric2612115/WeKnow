@@ -658,6 +658,15 @@ final class AskModel {
       let b = Compose.bill(v, payee: u.payee, known: known)
       verdict = b.verdict
       answer = b.reasons + (b.doLine.map { [Sentence(text: $0)] } ?? [])
+      // Plain-code checks on the words themselves: numbers that don't add up, two account numbers.
+      let math = BillMath.check(paper.rows.map(\.masked))
+      if !math.isEmpty {
+        let stop = math.contains(where: \.stop) || verdict?.tone == .stop
+        verdict = Verdict(tone: stop ? .stop : .warn, text: stop ? "Don’t pay this yet" : "Check this bill first")
+        answer = math.map { Sentence(text: $0.text) } + answer.filter { !$0.text.hasPrefix("Call the company first") }
+        if b.doLine == nil { answer.append(Sentence(text: "Call the company first. Use the number on an older bill.")) }
+        tech.append("Bill math: \(math.map(\.text).joined(separator: " / "))")
+      }
       marks = billMarks(v, u: u, paper: paper)
       if let match = Verdicts.knownPayee(u.payee, in: known) {
         stayed.append("Your note about this payee: account ending \(match.payTo)")
@@ -665,7 +674,7 @@ final class AskModel {
       sources.append(("Bill checks on this \(S.device)", "checked \(S.longDate(pack.version))", ""))
       tech.append("Bill flags: \(v.flags.map(\.rawValue).joined(separator: ", ").ifEmpty("none"))")
       tech.append("Read: payee \(u.payee ?? "-"), pays to account ending \(u.payTo ?? "-"), urgent \(u.urgent), addressed to AI \(u.addressedToAI)")
-      topic = .bill(stop: b.verdict.tone == .stop, warn: b.verdict.tone == .warn)
+      topic = .bill(stop: verdict?.tone == .stop, warn: verdict?.tone == .warn)
       if v.flags == [.newPayee], let name = u.payee, let to = u.payTo {
         next.append(NextQ(label: "Remember this company", action: .rememberPayee(name, to)))
       }

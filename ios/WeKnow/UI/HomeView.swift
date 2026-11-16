@@ -14,6 +14,7 @@ struct HomeView: View {
   @State private var page: MenuPage?
   @State private var shooting = false
   @State private var choosingPhoto = false
+  @State private var choosingFile = false
   @State private var photoItem: PhotosPickerItem?
   @AppStorage(Prefs.voiceOff) private var voiceOff = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -33,7 +34,7 @@ struct HomeView: View {
           StartView(model: model, trySample: trySample, suggest: suggest)
             .frame(maxHeight: .infinity)
         }
-        Composer(model: model, takePhoto: takePhoto, choosePhoto: { choosingPhoto = true })
+        Composer(model: model, takePhoto: takePhoto, choosePhoto: { choosingPhoto = true }, chooseFile: { choosingFile = true })
           .padding(.bottom, 4)
       }
       .padding(.horizontal, 16)
@@ -62,6 +63,10 @@ struct HomeView: View {
       .ignoresSafeArea()
     }
     .photosPicker(isPresented: $choosingPhoto, selection: $photoItem, matching: .images)
+    .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.pdf, .image]) { result in
+      guard case let .success(url) = result else { return }
+      attach(PaperFile.image(from: url))
+    }
     .onChange(of: photoItem) { _, item in
       guard let item else { return }
       Task {
