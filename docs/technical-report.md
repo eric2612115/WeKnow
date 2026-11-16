@@ -10,7 +10,8 @@ judges it against a sourced knowledge pack and the person's own household memory
 Firebase AI Logic hybrid inference, the reading happens on the device when a local model is available (Gemini Nano in
 Chrome, Apple's on-device model on iOS), so personal details never leave it; elsewhere the cloud reads the photo only after
 the person agrees, and says so. On 50 labelled fictional quotes and bills the cloud path judged every line and every
-bill warning correctly and leaked none of the planted names (§6); on-device numbers are TODO. The design rests on one rule:
+bill warning correctly and leaked none of the planted names; on an iPhone, ten photos of printed test sheets were all
+judged right with no personal detail left in the words any model saw (§6). The design rests on one rule:
 the model reads, plain code decides, and text inside a document can raise a warning but never clear one.
 
 ## 2. Problem
@@ -49,6 +50,16 @@ knowledge in the cloud: they send the whole page, cite no source, and give no ve
 7. **Leave the device only as a masked line item.** `buildCloudLookup` admits only an item name and a region and refuses
    any personal pattern; Firestore rules refuse anything else.
 
+8. **A bill, part by part (iPhone).** After the whole-page reading, plain code cuts the page (cut line, wide gaps,
+   headings; small parts joined, long ones cut with overlap, at most eight). The on-device model answers three yes/no
+   questions per part (rushes you, words to an AI, a new account) in two wordings; an answer counts only when both
+   agree, and a new account needs an account number printed in that part. Plain code adds the answers up.
+9. **Ask the web only what the device cannot know.** A bill from a company with no note and with a warning already
+   raised: plain code builds a question of the company and the charge names only (no amounts, numbers or covered
+   names), the payload guard and the on-device review check it, and Gemini answers it with Google Search grounding
+   through AI Logic, sorted into one of four findings. Only an answer with web sources is used, and only to raise a
+   warning.
+
 Firebase pieces: AI Logic (hybrid inference, structured output), App Check (reCAPTCHA Enterprise), Authentication
 (anonymous, upgraded in place by Google sign-in), Firestore (offline cache, deny-by-default rules), Remote Config (cloud
 model, pack version, warning phrases), Hosting.
@@ -64,6 +75,7 @@ Every way hostile text can travel, and where it stops:
 | The payee or account | What the bill says | Compared with payees the person confirmed on this device; a change raises `changed-account` (wall test 3) |
 | The warning flags | The model's reading of "urgent" and "addressed to AI" | Flags can only be added; omitting them counts as a warning (wall test 3) |
 | A cloud lookup | A masked line item | Personal patterns refused on the client and by Firestore rules (wall test 1, rules tests) |
+| A bill check online | The company name and charge names printed | Built by plain code with numbers and covered names removed; the finding can only raise a warning, and only with web sources (`billCheck.test.ts`) |
 
 What a fooled reader can still do: misread a line (the person sees the line and the verdict), or miss a warning that
 the rules also miss. It cannot clear a warning, invent a price, or move money; WeKnow moves no money at all.
@@ -76,6 +88,7 @@ the rules also miss. It cannot clear a warning, invent a price, or move money; W
 | Same reader, first set | 50 | 50 | 0 | 2.8 s | `docs/eval/cloud-templates-2026-11-16.json` |
 | On-device, Apple model, iOS Simulator, 2026-11-16 | 2 fixtures (brake quote x4, changed-account bill), plus the brake quote on an iPhone 17 Pro in airplane mode | all | 0 | 25–50 s in the simulator | `design/screens/ios/` |
 | On-device, Apple model, iOS Simulator, questions in words, 2026-11-16 | 5 questions (brake pads, new water heater, running toilet, cracked phone screen, an unknown job) | 5 | 0 | 4–10 s in the simulator | `docs/claims.md` C17 |
+| On-device, Apple model, iPhone 17 Pro, photos of printed test sheets, 2026-11-17 | 10 photos (4 bills, 1 quote, two angles each) | 10 | 0 | 6–15 s per bill with the part-by-part read | `docs/claims.md` C19–C21 |
 | On-device, Chrome Gemini Nano | TODO | TODO | TODO | TODO | TODO |
 
 The set is synthetic: fictional quotes built from pack items at fair, high and low prices plus unknown lines, and bills
@@ -90,8 +103,7 @@ on a second model (`FALLBACK_MODEL` in `web/src/reader.ts`); verdicts are the sa
 - Chrome's model needs about 22 GB of free disk and a capable GPU or 16 GB RAM; most judges will see the cloud path.
 - On devices without a local model the cloud reads the photo (after consent), so the personal-details guarantee holds
   on the device path only.
-- The free cloud tier is slow and does not allow search-grounded lookups; unknown lines are marked "not checked yet".
-- The evaluation set is synthetic; real photos (glare, handwriting, folds) are TODO.
+- The 50-case evaluation set is synthetic; printed sheets photographed on a desk are the real-photo check so far.
 - Packs cover US household repairs and bills today; a wrong source would give a wrong range, so every item keeps its source.
 
 ## 8. Related work

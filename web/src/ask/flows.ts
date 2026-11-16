@@ -1863,7 +1863,9 @@ async function billFlow(c: Ctx) {
         : `Plain-code checks on the paper's own words: none (no words could be read on this ${dev()}).`,
     ]),
   };
-  const reasons: Said[] = [...ans.reasons.map((r) => ({ text: r.text, noteTag: !!r.fromNote })), ...onlineLines, ...(ans.doLine ? [ans.doLine] : [])];
+  // Calling the company makes no sense when the company is the trap.
+  const doLine = found?.finding === 'known-scam-pattern' ? tr('billcheck.do.scam') : ans.doLine;
+  const reasons: Said[] = [...ans.reasons.map((r) => ({ text: r.text, noteTag: !!r.fromNote })), ...onlineLines, ...(doLine ? [doLine] : [])];
   const lines: Said[] = [...reasons, ...firstTimeHere(where), ...(where === 'device' ? [tr('letter.stays', { device: dev() })] : [])];
 
   clearLines();
@@ -1891,7 +1893,7 @@ async function billFlow(c: Ctx) {
   const tone = verdict.tone;
   const whatNow = (t2: number) => {
     const p = getPrefs();
-    setHead('plain', ans.doLine ?? tr('bill.do.ok'));
+    setHead('plain', doLine ?? tr('bill.do.ok'));
     patch({ receipt });
     if (tone !== 'ok' && p.trustedName && p.trustedNumber)
       patch({ links: [{ value: 'call', label: tr('letter.call', { name: p.trustedName }), href: `tel:${p.trustedNumber.replace(/[^\d+]/g, '')}`, icon: 'phone' }] });

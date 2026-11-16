@@ -761,6 +761,17 @@ export default function How() {
                 device.
               </Fold>
             </Cross>
+            <Cross
+              icon={Search}
+              title="A check on a suspicious bill"
+              line="A company you never paid, and something on the bill already wrong."
+              code={'Who asks to be paid: Palisade Sovereign Reserve Trust\nCharges: Government processing fee\n  (Federal Release Stamp); …'}
+            >
+              <Fold q="What happens to it?">
+                Plain code builds it: the company and the names of the charges, no amounts, numbers or names. Gemini searches Google and says whether charges
+                like these are a known scam. Used only with web sources. It can make the warning stronger, never weaker.
+              </Fold>
+            </Cross>
             <Cross icon={Plus} title="“Please add this item”" line="A request to Firestore. The rules refuse anything else." code={'{ item, region }'} />
             <Cross
               down
@@ -780,8 +791,8 @@ export default function How() {
               <p className="mt-2">Reviewed learned prices come from one Firestore document per pack, read-only for clients.</p>
               <p className="mt-2">Settings come from Remote Config: the cloud model, the pack version, the warning phrases, the lookup switch.</p>
             </SyncCard>
-            <SyncCard tone="up" icon={Lock} title="Up, only after a yes" items={['A masked line name + region']} q="For what?">
-              A price lookup, or a “please add this item” request. Firestore rules make requests write-only and accept only that shape.
+            <SyncCard tone="up" icon={Lock} title="Up, only after a yes" items={['A masked line name + region', 'A covered question: no names, no numbers']} q="For what?">
+              A price lookup, a “please add this item” request, or a check the device cannot do by itself (is this company real?). Firestore rules make requests write-only and accept only the line-and-region shape.
             </SyncCard>
             <SyncCard tone="stay" icon={Smartphone} title="Never synced" items={['Pictures', 'Names and numbers', 'Your checks', 'The payees you remembered']} q="Where do they stay?">
               On the device: iPhone files with data protection, browser storage on the web.

@@ -787,6 +787,7 @@ export const EN = {
   'billcheck.known-scam-pattern': 'I also checked online: charges like these are a known scam.',
   'billcheck.not-found': 'I also checked online: I could not find this company.',
   'billcheck.real': 'I also checked online: this company can be found. Still check the account before you pay.',
+  'billcheck.do.scam': 'Don’t pay it, and don’t call the numbers on this paper.',
   'billcheck.unclear': 'I also checked online, and found nothing clear about it.',
   'route.web.none': 'I also searched the web, but I could not find a reliable answer.',
   'web.intro': 'I don’t have this in my guides. From {n} sources on the web:',

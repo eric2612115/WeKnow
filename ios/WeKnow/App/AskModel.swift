@@ -776,6 +776,9 @@ final class AskModel {
             answer.append(contentsOf: c.points.map { Sentence(text: $0) })
             if c.finding == .knownScamPattern {
               verdict = Verdict(tone: .stop, text: "Don’t pay this yet")
+              // Calling the company makes no sense when the company is the trap.
+              answer.removeAll { $0.text.hasPrefix("Call the company first") }
+              answer.append(Sentence(text: "Don’t pay it, and don’t call the numbers on this paper."))
             } else if c.finding == .notFound, verdict?.tone != .stop {
               verdict = Verdict(tone: .warn, text: "Check this bill first")
             }
