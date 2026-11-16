@@ -755,6 +755,44 @@ final class AskModel {
         if b.doLine == nil { answer.append(Sentence(text: "Call the company first. Use the number on an older bill.")) }
         tech.append("Bill math: \(math.map(\.text).joined(separator: " / "))")
       }
+      // A company WeKnow has no note of, and something already wrong: the phone cannot know whether this company
+      // or these charges are real, so it asks the web (design/HYBRID-ROUTING.md). Only the company and the names
+      // of the charges go, built by plain code; the answer can make the warning stronger, never weaker.
+      if v.flags.contains(.newPayee), v.flags.count > 1 || !math.isEmpty,
+         let q = CloudPick.billQuestion(payee: u.payee, rows: printedRows, coveredNames: paper.coveredNames) {
+        print("[WeKnow] bill check online, would send: \(q.replacingOccurrences(of: "\n", with: " / "))")
+        if await mayUseInternet([q]) {
+          phase = .looking
+          switch await CloudPick.checkOnline(q) {
+          case let .found(c):
+            escalated = (c.ms, c.sent)
+            let said: String = switch c.finding {
+            case .knownScamPattern: "I also checked online: charges like these are a known scam."
+            case .notFound: "I also checked online: I could not find this company."
+            case .real: "I also checked online: this company can be found. Still check the account before you pay."
+            case .unclear: "I also checked online, and found nothing clear about it."
+            }
+            answer.append(Sentence(text: said))
+            answer.append(contentsOf: c.points.map { Sentence(text: $0) })
+            if c.finding == .knownScamPattern {
+              verdict = Verdict(tone: .stop, text: "Don’t pay this yet")
+            } else if c.finding == .notFound, verdict?.tone != .stop {
+              verdict = Verdict(tone: .warn, text: "Check this bill first")
+            }
+            for src in c.sources { sources.append(("From the web: \(src.title)", "found just now", src.url)) }
+            searchChips = c.entryHTML
+            tech.append("Checked online with Google Search grounding through Firebase AI Logic: \(c.finding.rawValue), \(c.sources.count) web sources, \(c.ms) ms. Sent: “\(c.sent)”.")
+          case let .nothing(ms, sent):
+            escalated = (ms, sent)
+            tech.append("Online check came back without usable sources (\(ms) ms).")
+          case let .blocked(why):
+            answer.append(Sentence(text: "I did not check online, because \(why)."))
+            tech.append("Online check stopped on the phone: \(why).")
+          case let .failed(e):
+            tech.append("Online check failed: \(e)")
+          }
+        }
+      }
       marks = billMarks(v, u: u, paper: paper)
       if let match = Verdicts.knownPayee(u.payee, in: known) {
         stayed.append("Your note about this payee: account ending \(match.payTo)")

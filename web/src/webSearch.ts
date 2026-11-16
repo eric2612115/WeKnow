@@ -6,6 +6,7 @@ import { getGenerativeModel, InferenceMode, type GenerativeModel } from 'firebas
 import { ai, CLOUD_MODEL } from './firebase';
 import { buildCloudQuestion } from './core/cloudPayload';
 import { parseWebAnswer, webSources, type WebAnswer } from './core/webAnswer';
+import { onlineCheckPrompt, parseOnlineCheck, type OnlineCheck } from './core/billCheck';
 
 let searchModel: GenerativeModel | undefined;
 
@@ -32,6 +33,29 @@ async function ask(prompt: string) {
   const res = await model().generateContent(prompt);
   const sources = webSources(res.response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []);
   return parseWebAnswer(res.response.text(), sources);
+}
+
+export interface BillCheckResult {
+  check: OnlineCheck | null;
+  sent: string;
+  ms: number;
+  model: string;
+  tries: number;
+}
+
+/** A suspicious bill from someone new: what the web knows (core/billCheck.ts). Up to three tries without sources. */
+export async function checkBillOnline(question: string): Promise<BillCheckResult> {
+  const { text } = buildCloudQuestion({ text: question });
+  const started = performance.now();
+  let tries = 0;
+  let check: OnlineCheck | null = null;
+  while (!check && tries < 3) {
+    tries += 1;
+    const res = await model().generateContent(onlineCheckPrompt(text));
+    const sources = webSources(res.response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []);
+    check = parseOnlineCheck(res.response.text(), sources);
+  }
+  return { check, sent: text, ms: Math.round(performance.now() - started), model: CLOUD_MODEL, tries };
 }
 
 export async function searchWeb(covered: string): Promise<WebSearchResult> {

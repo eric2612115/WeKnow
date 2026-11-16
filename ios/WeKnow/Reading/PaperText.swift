@@ -22,6 +22,9 @@ struct PaperRow: Sendable, Hashable, Identifiable {
 struct PaperText: Sendable {
   let rows: [PaperRow]
   let bars: [CoverBar]
+  /// The words of the names covered on this page, lowercased (kept on the phone), so nothing built from the paper
+  /// for the internet can carry one, even if a model copied it from the picture.
+  var coveredNames: Set<String> = []
   /// The only text any model is given: every row, masked, top to bottom.
   var masked: String { rows.map(\.masked).joined(separator: "\n") }
   /// The kinds that were covered, for "I covered your name, phone, address and plate."
@@ -130,7 +133,7 @@ struct PaperText: Sendable {
       let rect = ordered.dropFirst().reduce(ordered[0].rect) { $0.union($1.rect) }
       return PaperRow(masked: ordered.map(\.masked).joined(separator: "   "), rect: rect)
     }
-    return PaperText(rows: paperRows, bars: bars)
+    return PaperText(rows: paperRows, bars: bars, coveredNames: nameWords)
   }
 
   /// Labels that put a person's name on the next line down or beside them, as forms and quotes print them.

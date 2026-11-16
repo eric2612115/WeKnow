@@ -155,3 +155,109 @@ extension CloudPick {
     }
   }
 }
+
+// MARK: - A bill from someone new, with warnings: what the web knows about it
+
+/// What Google Search, through Firebase AI Logic, found about who asks for the money and what for. Kept only with
+/// web sources. The model only sorts what it found into one of four findings; plain code decides what that changes.
+struct OnlineCheck: Sendable {
+  enum Finding: String, Sendable { case knownScamPattern = "known-scam-pattern", real, notFound = "not-found", unclear }
+  var finding: Finding
+  var points: [String]
+  var sources: [(title: String, url: String)]
+  var entryHTML: String?
+  var ms: Int
+  var sent: String
+}
+
+extension CloudPick {
+  enum CheckOutcome { case found(OnlineCheck), nothing(ms: Int, sent: String), blocked(String), failed(String) }
+
+  /// The words that may go out, built by plain code from the covered rows: who asks to be paid (a company, never a
+  /// covered name) and the names of the charges, with every amount and number taken out.
+  static func billQuestion(payee: String?, rows: [String], coveredNames: Set<String>) -> String? {
+    func clean(_ s: String) -> String {
+      s.replacingOccurrences(of: #"\[[a-z ]+(\d{4})?\]"#, with: "", options: .regularExpression)
+        .replacingOccurrences(of: #"[-(]?\$?\s?\d[\d,.]*%?\)?"#, with: "", options: .regularExpression)
+        .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+        .trimmingCharacters(in: CharacterSet(charactersIn: " .,:;-–—•|"))
+    }
+    func personal(_ s: String) -> Bool {
+      s.lowercased().split { !$0.isLetter }.contains { coveredNames.contains(String($0)) }
+    }
+    var who = payee.map(clean) ?? ""
+    if who.contains("[") || who.count < 3 || personal(who) { who = "" }
+    let feeWords = #"(?i)\b(fee|charge|certificate|clearance|bond|processing|release|deposit|handling|courier|insurance|tax)\b"#
+    var charges: [String] = []
+    for row in rows {
+      for cell in row.components(separatedBy: "   ") where cell.range(of: feeWords, options: .regularExpression) != nil {
+        let c = clean(cell)
+        guard c.count >= 6, c.count <= 70, !personal(c), !charges.contains(c),
+              c.range(of: #"(?i)^(sub-?total|total|amount|balance|includes tax|sales tax|paid)"#, options: .regularExpression) == nil else { continue }
+        charges.append(c)
+      }
+      if charges.count >= 4 { break }
+    }
+    let story = rows.first { $0.range(of: #"(?i)\b(inheritance|unclaimed|lottery|prize|winnings|release of (funds|your fund))\b"#, options: .regularExpression) != nil }
+      .map { String(clean($0).prefix(140)) }
+    guard !who.isEmpty || !charges.isEmpty else { return nil }
+    var lines: [String] = []
+    if !who.isEmpty { lines.append("Who asks to be paid: \(who)") }
+    if !charges.isEmpty { lines.append("Charges: " + charges.joined(separator: "; ")) }
+    if let story, !personal(story) { lines.append("It says: \(story)") }
+    return lines.joined(separator: "\n")
+  }
+
+  /// The model sometimes answers without searching; up to two more tries then, since an answer without sources is
+  /// never shown.
+  static func checkOnline(_ question: String) async -> CheckOutcome {
+    var last = await checkOnlineOnce(question)
+    for _ in 0..<2 {
+      guard case .nothing = last else { break }
+      last = await checkOnlineOnce(question)
+    }
+    return last
+  }
+
+  private static func checkOnlineOnce(_ question: String) async -> CheckOutcome {
+    let covered = String(PII.mask(question).prefix(500)).trimmingCharacters(in: .whitespacesAndNewlines)
+    if let why = guardText(covered) { return .blocked(why) }
+    if await reviewOnDevice(covered) == true { return .blocked("the check on this phone thought a personal detail was left") }
+    let prompt = """
+    A person received a paper asking for money:
+    \(covered)
+    Search Google before you answer: search for the organisation's name, and search for the charges together with \
+    "scam" or a government or consumer-protection site. Answer only from the pages you find.
+    Is this organisation a real business or agency? Are charges like these real, or a known scam pattern?
+    Then end your answer with one line of JSON:
+    {"finding": "known-scam-pattern" or "real" or "not-found" or "unclear", "points": [at most 3 short plain sentences \
+    for an older reader, no prices]}
+    """
+    let t0 = Date()
+    do {
+      let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
+        modelName: Cloud.modelName, generationConfig: GenerationConfig(temperature: 0), tools: [.googleSearch()])
+      let r = try await model.generateContent(prompt)
+      let ms = Int(Date().timeIntervalSince(t0) * 1000)
+      let meta = r.candidates.first?.groundingMetadata
+      let sources: [(title: String, url: String)] = (meta?.groundingChunks ?? []).compactMap { c in
+        guard let u = c.web?.uri, u.hasPrefix("https://") else { return nil }
+        return (title: c.web?.title ?? c.web?.domain ?? "Web page", url: u)
+      }
+      #if DEBUG
+      print("[WeKnow] online check raw (\(sources.count) sources): \((r.text ?? "-").replacingOccurrences(of: "\n", with: " ").prefix(600))")
+      #endif
+      guard !sources.isEmpty, let text = r.text,
+            let jsonText = text.ranges(of: /\{[^{}]*\}/).last.map({ String(text[$0]) }),
+            let obj = try? JSONSerialization.jsonObject(with: Data(jsonText.utf8)) as? [String: Any],
+            let finding = (obj["finding"] as? String).flatMap(OnlineCheck.Finding.init(rawValue:)) else { return .nothing(ms: ms, sent: covered) }
+      let points = ((obj["points"] as? [String]) ?? []).prefix(3).map {
+        $0.replacingOccurrences(of: #"\$\s?\d[\d,.]*"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+      }
+      return .found(OnlineCheck(finding: finding, points: Array(points), sources: Array(sources.prefix(5)),
+                                entryHTML: meta?.searchEntryPoint?.renderedContent, ms: ms, sent: covered))
+    } catch {
+      return .failed("\(error)")
+    }
+  }
+}

@@ -19,6 +19,8 @@ import { afterConsent, gate, route, type Reason } from './router';
 import { coverWords, escalate } from './escalate';
 import type { PIIKind } from '../core/pii';
 import type { WebAnswer } from '../core/webAnswer';
+import { billQuestion } from '../core/billCheck';
+import type { BillCheckResult } from '../webSearch';
 import { findPII, maskText } from '../core/pii';
 import { coverPaperText } from '../core/paperText';
 import { buildCloudLookup } from '../core/cloudPayload';
@@ -1805,6 +1807,39 @@ async function billFlow(c: Ctx) {
   const match = known.find((k) => payee && k.name.toLowerCase() === payee.toLowerCase());
   const usedNote = ans.reasons.some((r) => r.fromNote) || (v.safe && !!match);
 
+  // A company WeKnow has no note of, and something already wrong: this device cannot know whether the company or
+  // these charges are real, so the web is asked (core/billCheck.ts). Only the company and the names of the charges
+  // go; the answer can make the warning stronger, never weaker.
+  let online: BillCheckResult | null = null;
+  const q =
+    v.flags.includes('new-payee') && v.flags.length > 1 && deviceStore.get().online && getPrefs().internet !== 'never'
+      ? billQuestion(u.payee, words?.length ? words : u.lines.map((l) => l.label))
+      : null;
+  if (q) {
+    const sheet: SheetRequest = { kind: 'net', title: tr('check.title'), hidden: {}, goes: 'words', parcel: [`“${q}”`], not: [], yes: tr('check.yes'), no: tr('check.no') };
+    const go = await mayUseInternet(t, sheet, [tr('billcheck.ask')]);
+    alive(t);
+    if (go === 'go') {
+      void narrate(t, [tr('billcheck.looking')]);
+      try {
+        const { checkBillOnline } = await import('../webSearch');
+        online = await withWaits(t, withTimeout(checkBillOnline(q), READ_TIMEOUT));
+      } catch (e) {
+        if (e instanceof Cancel) throw e;
+        console.warn('[WeKnow] bill check online failed', e);
+      }
+      alive(t);
+    }
+  }
+  const found = online?.check ?? null;
+  const verdict =
+    found?.finding === 'known-scam-pattern'
+      ? { tone: 'stop' as const, text: tr('letter.stop.title') }
+      : found?.finding === 'not-found' && ans.verdict.tone !== 'stop'
+        ? { tone: 'warn' as const, text: tr('letter.check.title') }
+        : ans.verdict;
+  const onlineLines: Said[] = found ? [tr(`billcheck.${found.finding}`), ...found.points] : [];
+
   const receipt: Receipt = {
     w: whereRan({ where, online: deviceStore.get().online, sent: 0, pending: 0 }),
     n: 0,
@@ -1812,27 +1847,34 @@ async function billFlow(c: Ctx) {
       where === 'device'
         ? [c.paper ? tr('where.paper') : tr('where.picture'), tr('where.covered.letter'), ...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })]
         : [...stayedCovered(c), ...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })],
-    ...sentCovered(c),
-    sources: [{ label: tr('where.src.rules', { device: dev() }), date: tr('where.checked', { date: longDate(c.kb.version.slice(0, 10)) }) }],
+    ...sentCovered(c, online ? [online.sent] : []),
+    ...(online && where === 'device' ? { w: 'mixed' as const, n: 1, why: tr('billcheck.why') } : {}),
+    sources: [
+      { label: tr('where.src.rules', { device: dev() }), date: tr('where.checked', { date: longDate(c.kb.version.slice(0, 10)) }) },
+      ...(found?.sources ?? []).map((src) => ({ label: tr('where.src.web', { name: src.title ?? new URL(src.url).hostname }), date: '', url: src.url, title: src.title })),
+    ],
     tech: tech(c, [
+      ...(online
+        ? [`Checked online with Google Search grounding through Firebase AI Logic (${online.model}): ${found ? `${found.finding}, ${found.sources.length} web sources` : 'no answer with web sources'}, ${online.tries} ${online.tries === 1 ? 'try' : 'tries'}, ${online.ms} ms.`]
+        : []),
       `Bill flags: ${v.flags.join(', ') || 'none'}.`,
       math
         ? `Plain-code checks on the paper's own words (${words?.length ?? 0} lines, on this ${dev()}): ${math.checked} printed ${math.checked === 1 ? 'sum' : 'sums'} checked, ${math.misses.length} off by more than $1; ${math.accounts.length} customer account ${math.accounts.length === 1 ? 'number' : 'numbers'} found.`
         : `Plain-code checks on the paper's own words: none (no words could be read on this ${dev()}).`,
     ]),
   };
-  const reasons: Said[] = [...ans.reasons.map((r) => ({ text: r.text, noteTag: !!r.fromNote })), ...(ans.doLine ? [ans.doLine] : [])];
+  const reasons: Said[] = [...ans.reasons.map((r) => ({ text: r.text, noteTag: !!r.fromNote })), ...onlineLines, ...(ans.doLine ? [ans.doLine] : [])];
   const lines: Said[] = [...reasons, ...firstTimeHere(where), ...(where === 'device' ? [tr('letter.stays', { device: dev() })] : [])];
 
   clearLines();
-  setHead(ans.verdict.tone, ans.verdict.text);
+  setHead(verdict.tone, verdict.text);
   patch({ receipt });
   await keep(c, {
     kind: 'Bill',
     family: 'bill',
     title: payee ? `Bill from ${payee}` : tr('kind.Bill'),
-    tone: ans.verdict.tone,
-    verdict: ans.verdict.text,
+    tone: verdict.tone,
+    verdict: verdict.text,
     lines,
     receipt,
   });
@@ -1846,7 +1888,7 @@ async function billFlow(c: Ctx) {
     const old = mem.find((m): m is PayeeMemory => m.kind === 'payee' && m.name === match.name);
     if (old) await putMemory({ ...old, date: today() });
   }
-  const tone = ans.verdict.tone;
+  const tone = verdict.tone;
   const whatNow = (t2: number) => {
     const p = getPrefs();
     setHead('plain', ans.doLine ?? tr('bill.do.ok'));
@@ -1858,7 +1900,7 @@ async function billFlow(c: Ctx) {
     offerNext(billNext('do'));
   };
   const again = () => {
-    setHead(ans.verdict.tone, ans.verdict.text);
+    setHead(verdict.tone, verdict.text);
     patch({ receipt });
     settle();
     void narrate(current(), reasons);
