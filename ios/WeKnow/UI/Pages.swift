@@ -254,9 +254,22 @@ struct SettingsPage: View {
   @AppStorage(Prefs.voiceOff) private var voiceOff = false
   @AppStorage(Prefs.speed) private var speed = 0
   @State private var showBook = false
+  @AppStorage(Prefs.internet) private var internet = ""
 
   var body: some View {
     Page(title: "Settings") {
+      PageCard {
+        CardTitle(text: "Using the internet")
+        Picker("Use the internet", selection: $internet) {
+          Text("When it helps").tag("auto")
+          Text("Ask me every time").tag("every")
+          Text("Never").tag("never")
+          if internet.isEmpty { Text("Ask me the first time").tag("") }
+        }
+        .pickerStyle(.inline)
+        .labelsHidden()
+        Fine(text: "Everything starts on this \(S.device), with your details covered. When it can’t answer, WeKnow can ask a larger model online. Only covered words go, and every answer shows what went.")
+      }
       PageCard {
         CardTitle(text: "Voice")
         Toggle(isOn: Binding(get: { !voiceOff }, set: { voiceOff = !$0 })) {

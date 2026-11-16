@@ -28,7 +28,9 @@ struct WeKnowApp: App {
             model.start(s)
           }
           // `-WeKnowImage /path/to/sheet.png -WeKnowQuestion "Is this fair?"` reads a picture file (simulator tests).
-          if let path = UserDefaults.standard.string(forKey: "WeKnowImage"), let img = UIImage(contentsOfFile: path) {
+          if let path = UserDefaults.standard.string(forKey: "WeKnowImage"),
+             let img = UIImage(contentsOfFile: path.hasPrefix("/") ? path
+               : FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(path).path) {
             try? await Task.sleep(for: .milliseconds(600))
             // The picture goes into the input bar with the words; `-WeKnowSend YES` presses Send as well.
             model.draft = img

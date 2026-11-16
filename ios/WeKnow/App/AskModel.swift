@@ -44,6 +44,8 @@ struct Receipt: Sendable {
 struct Consent: Identifiable {
   let id = UUID()
   let lines: [String]
+  /// The first time: a yes also lets WeKnow use the internet by itself next time (Settings can change it).
+  var once = false
   let answer: (Bool) -> Void
 }
 
@@ -77,6 +79,8 @@ final class AskModel {
   var choices: [NextQ] = []
   /// What the conversation is about now, so a follow-up such as "How much to fix it?" needs no name.
   var topic: Topic?
+  /// Google's search-suggestion chip for an answer grounded in Google Search (it must be shown with it).
+  var searchChips: String?
   var inConversation: Bool { !thread.isEmpty || question != nil || picture != nil }
 
   struct Exchange: Identifiable {
@@ -194,7 +198,49 @@ final class AskModel {
       found = await WordsAnswer.find("\(name) \(q)", matcher: matcher, pack: pack, useModel: Device.canRead)
       found.tech.insert("Follow-up: searched again with the topic “\(name)”.", at: 0)
     }
-    print("[WeKnow] words answer in \(Int(Date().timeIntervalSince(t0) * 1000)) ms: " + found.tech.joined(separator: " | "))
+    if Task.isCancelled { return }
+    // The phone found nothing: step up to the cloud by itself (after the one-time yes), covered words only.
+    var cloud: (ms: Int, sent: String)?
+    var cloudNote: String?
+    var web: WebGuide?
+    // Words with nothing personal in them go online by themselves when the phone can't answer (unless the person
+    // chose Never); anything personal is covered first and needs the one-time yes.
+    let mode = UserDefaults.standard.string(forKey: Prefs.internet) ?? ""
+    let plain = PII.spans(q).isEmpty
+    let online: Bool
+    if found.hit != nil || !Cloud.isConfigured || mode == "never" { online = false }
+    else if plain { online = true }
+    else { online = await mayUseInternet([PII.mask(q)]) }
+    if online {
+      phase = .looking
+      switch await CloudPick.pick(q, pack: pack) {
+      case let .found(ref, ms, sent):
+        found.hit = pack.guide(ref).map(WordsAnswer.Hit.guide) ?? pack.price(ref).map(WordsAnswer.Hit.price)
+        cloud = (ms, sent)
+        found.tech.append("The phone found no close match, so Gemini through Firebase AI Logic looked at the whole pack index and chose \(ref) in \(ms) ms. Sent: “\(sent)”.")
+      case let .nothing(ms, sent):
+        cloud = (ms, sent)
+        found.tech.append("Gemini through Firebase AI Logic found nothing in the pack either (\(ms) ms). Sent: “\(sent)”.")
+        // Not in WeKnow's own guides: a sourced answer from the web (Google Search grounding).
+        switch await CloudPick.searchGuide(q) {
+        case let .found(g):
+          web = g
+          cloud = (ms + g.ms, g.sent)
+          found.tech.append("Google Search grounding through Firebase AI Logic: \(g.sources.count) web sources, \(g.ms) ms.")
+        case let .nothing(ms2, _): found.tech.append("Web search came back without usable sources (\(ms2) ms).")
+        case let .blocked(why): cloudNote = "I did not use the internet, because \(why)."
+        case let .failed(e): found.tech.append("Web search failed: \(e)")
+        }
+      case let .blocked(why):
+        cloudNote = "I did not use the internet, because \(why)."
+        found.tech.append("Cloud step stopped on the phone: \(why).")
+      case let .failed(e):
+        found.tech.append("Cloud step failed: \(e)")
+      }
+    }
+    let ran: WhereRan = cloud == nil ? .local : .cloud
+    let sentLines = cloud.map { [$0.sent] } ?? []
+    print("[WeKnow] words answer in \(Int(Date().timeIntervalSince(t0) * 1000)) ms (\(cloud == nil ? "on device" : "cloud")): " + found.tech.joined(separator: " | "))
     if Task.isCancelled { return }
 
     var lines: [String] = []
@@ -227,22 +273,33 @@ final class AskModel {
       if let p = ps.first { keepWords(kind: .quote, title: "Price of \(S.lower(p.name))", car: isCar(p.name, p.category), head: head!, lines: lines) }
     case let .guide(g):
       let when = WordsAnswer.checked(g.sources)
-      receipt = Receipt(stayed: ["Your question", "The answer"], sent: [],
+      receipt = Receipt(stayed: cloud == nil ? ["Your question", "The answer"] : ["Your question as you said it", "The answer"], sent: sentLines,
                         sources: [(label: "Home repair guide: \(g.name)", date: when.map { "checked \($0)" } ?? "", url: g.sources.first?.url ?? "")],
                         tech: found.tech + ["On-device model: \(Device.status)", "Knowledge pack: \(packVersion)", "Nothing was sent to the internet."])
       keepWords(kind: .problem, title: g.name, car: isCar(g.name, g.category), head: "This sounds like: \(S.lower(g.name)).", lines: [])
-      return await guideIntro(g, tag: .local)
+      return await guideIntro(g, tag: ran)
+    case nil where web != nil:
+      let g = web!
+      head = "I don’t have this in my guides."
+      lines.append("From \(S.words(g.sources.count)) \(g.sources.count == 1 ? "source" : "sources") on the web, about \(S.lower(g.title)):")
+      if let caution = g.safety { lines.append("First, be careful: \(caution)") }
+      for (i, step) in g.steps.enumerated() { lines.append("Step \(i + 1). \(step)") }
+      if let pro = g.callPro { lines.append("Call a professional if: \(S.lower(pro))") }
+      for src in g.sources { sources.append((label: "From the web: \(src.title)", date: "found just now", url: src.url)) }
+      searchChips = g.entryHTML
+      keepWords(kind: .problem, title: g.title, car: false, head: head!, lines: lines)
     case nil:
       head = "I don’t know this one yet."
       lines = [
-        "None of the knowledge packs on this \(S.device) covers it.",
+        cloud == nil ? "None of the knowledge packs on this \(S.device) covers it." : "I looked in the knowledge packs on this \(S.device) and online, and none covers it.",
         "Try a repair price, like “brake pads”, or a problem at home, like “a clogged sink”. A picture helps too.",
       ]
     }
+    if let cloudNote { lines.append(cloudNote) }
     receipt = Receipt(
-      stayed: ["Your question", "The answer"], sent: [], sources: sources,
-      tech: found.tech + ["On-device model: \(Device.status)", "Knowledge pack: \(packVersion)", "Nothing was sent to the internet."])
-    await answer(head, lines, next: next, tag: .local)
+      stayed: cloud == nil ? ["Your question", "The answer"] : ["Your question as you said it", "The answer"], sent: sentLines, sources: sources,
+      tech: found.tech + ["On-device model: \(Device.status)", "Knowledge pack: \(packVersion)"] + (cloud == nil ? ["Nothing was sent to the internet."] : []))
+    await answer(head, lines, next: next, tag: ran)
   }
 
   // MARK: Answers in the conversation
@@ -414,6 +471,7 @@ final class AskModel {
     tag = nil
     receipt = nil
     choices = []
+    searchChips = nil
     phase = .ready
   }
 
@@ -433,6 +491,24 @@ final class AskModel {
     reset()
     thread = []
     topic = nil
+  }
+
+  /// Whether the internet may be used for this step (design/HYBRID-ROUTING.md): asked once, then by itself.
+  private func mayUseInternet(_ lines: [String]) async -> Bool {
+    guard Cloud.isConfigured else { return false }
+    let mode = UserDefaults.standard.string(forKey: Prefs.internet) ?? ""
+    switch mode {
+    case "never": return false
+    case "auto": return true
+    default:
+      let before = phase
+      phase = .asking
+      let yes = await withCheckedContinuation { c in consent = Consent(lines: lines, once: mode.isEmpty) { c.resume(returning: $0) } }
+      consent = nil
+      phase = before
+      if yes && mode.isEmpty { UserDefaults.standard.set("auto", forKey: Prefs.internet) }
+      return yes
+    }
   }
 
   /// A next-question button: shown as the person's message, then answered.
@@ -475,10 +551,7 @@ final class AskModel {
     if Device.canRead {
       place = .device
     } else if Cloud.isConfigured {
-      phase = .asking
-      let lines = paper.rows.map(\.masked)
-      let yes = await withCheckedContinuation { c in consent = Consent(lines: lines) { c.resume(returning: $0) } }
-      consent = nil
+      let yes = await mayUseInternet(paper.rows.map(\.masked))
       if !yes {
         scanning = false
         verdict = Verdict(tone: .plain, text: "Nothing was sent")
@@ -500,7 +573,14 @@ final class AskModel {
     } catch {
       readerLog.error("reading failed on \(place.rawValue, privacy: .public): \(String(describing: error), privacy: .public)")
       print("[WeKnow] reading failed on \(place.rawValue): \(error)")
-      return fail("I could not finish reading this. Nothing else was sent.", tech: "\(place == .device ? Device.engine : Cloud.engine): \(error)")
+      fail("I could not finish reading this. Nothing else was sent.", tech: "\(place == .device ? Device.engine : Cloud.engine): \(error)")
+      if "\(error)".localizedCaseInsensitiveContains("unsafe") || "\(error)".localizedCaseInsensitiveContains("sensitive") {
+        // The on-device model's safety filter declined the picture: never a dead end.
+        verdict = Verdict(tone: .plain, text: "I couldn’t read this picture")
+        sentences = [Sentence(text: "Tell me in a few words what is wrong, and I will look it up.")]
+      }
+      choices = [NextQ(label: "Something is broken", action: .broken), NextQ(label: "It’s a quote or a bill", action: .quoteOrBill)]
+      return
     }
     if Task.isCancelled { return }
     let source = "[WeKnow] inference source: \(reading.where_ == .device ? "ON-DEVICE" : "CLOUD") — \(reading.engine) — read \(reading.readMs) ms, choose \(reading.chooseMs) ms — on-device status: \(Device.status)"
@@ -521,6 +601,14 @@ final class AskModel {
       }
       if u.lines.isEmpty { u.kind = .unknown }
     }
+    // A thing, not a paper (a sink, a filter, a pipe): when the model could not name the kind, what it saw and what
+    // was asked still lead to the likely problems, offered as choices.
+    if u.kind == .unknown,
+       !reading.problem.trimmingCharacters(in: .whitespaces).isEmpty
+         || !matcher.candidates("\(reading.problem) \(question)", kind: .guide, minCoverage: 0.2).isEmpty {
+      u.kind = .problem
+    }
+    var escalated: (ms: Int, sent: String)?
     var answer: [Sentence] = []
     var stayed = ["The picture", "The words read from it"]
     var sources: [(String, String, String)] = []
@@ -586,7 +674,15 @@ final class AskModel {
       let said = reading.problem.trimmingCharacters(in: .whitespacesAndNewlines)
       var refs: [String] = u.problemRef.map { [$0] } ?? []
       for c in matcher.candidates("\(said) \(question)", kind: .guide, minCoverage: 0.2) where !refs.contains(c.ref) { refs.append(c.ref) }
-      let guides = refs.prefix(3).compactMap { pack.guide($0) }
+      var guides = refs.prefix(3).compactMap { pack.guide($0) }
+      // Nothing on the phone fits: the covered description goes to the cloud by itself (after the one-time yes).
+      if guides.isEmpty, reading.where_ == .device, await mayUseInternet([PII.mask("\(said) \(question)")]) {
+        if case let .found(ref, ms, sent) = await CloudPick.pick("\(said) \(question)", pack: pack), let g = pack.guide(ref) {
+          guides = [g]
+          escalated = (ms, sent)
+          tech.append("The phone found no guide, so Gemini through Firebase AI Logic chose \(ref) from the whole pack index in \(ms) ms. Sent: “\(sent)”.")
+        }
+      }
       let echo = said.lowercased().trimmingCharacters(in: .punctuationCharacters) == question.lowercased().trimmingCharacters(in: .punctuationCharacters)
       let looks = said.isEmpty ? "This looks like a problem at home." : echo ? "Here is what I have that might fit." : "This looks like: \(S.lower(said).trimmingCharacters(in: CharacterSet(charactersIn: ".")))."
       tech.append("Problem read: \(said.isEmpty ? "-" : said); guides offered: \(guides.map(\.ref).joined(separator: ", ").ifEmpty("none"))")
@@ -604,10 +700,10 @@ final class AskModel {
       next = [NextQ(label: "It’s a quote or a bill", action: .quoteOrBill), NextQ(label: "Something is broken", action: .broken)]
     }
 
-    tag = reading.where_ == .device ? .local : .cloud
+    tag = reading.where_ == .device && escalated == nil ? .local : .cloud
     receipt = Receipt(
       stayed: stayed,
-      sent: reading.where_ == .cloud ? paper.rows.map(\.masked) : [],
+      sent: reading.where_ == .cloud ? paper.rows.map(\.masked) : escalated.map { [$0.sent] } ?? [],
       sources: sources.map { (label: $0.0, date: $0.1, url: $0.2) },
       tech: tech)
     if verdict?.tone == .stop { UINotificationFeedbackGenerator().notificationOccurred(.warning) }

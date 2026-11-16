@@ -45,6 +45,11 @@ enum Cloud {
   static var engine: String { "Gemini (\(modelName)) through Firebase AI Logic" }
 }
 
+/// The cloud model on its own, for the step up (Reading/CloudPick.swift).
+enum FirebaseCloud {
+  static var model: some LanguageModel { FirebaseAI.firebaseAI(backend: .googleAI()).geminiLanguageModel(name: Cloud.modelName) }
+}
+
 enum Device {
   static var model: SystemLanguageModel { .default }
 

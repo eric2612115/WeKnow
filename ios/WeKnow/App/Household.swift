@@ -123,6 +123,8 @@ final class Household {
 /// Settings kept on this phone (UserDefaults keys shared with Voice and AskModel).
 enum Prefs {
   static let voiceOff = "voiceOff"
+  /// Using the internet when the phone cannot answer: "" (ask once), "auto", "every" (ask every time), "never".
+  static let internet = "internet"
   static let speed = "voiceSpeedStep" // -1 slower, 0 normal (default), 1 faster
   static let dontKeepChecks = "dontKeepChecks" // stored inverted so the default (false) keeps checks
 

@@ -3,6 +3,7 @@
 // and under the latest answer the next questions as big buttons. It scrolls; nothing needs managing.
 
 import SwiftUI
+import WebKit
 
 struct ConversationView: View {
   @Bindable var model: AskModel
@@ -144,6 +145,9 @@ struct LiveAnswer: View {
         AnswerBubble(head: model.verdict?.text, tone: model.verdict?.tone ?? .plain, sentences: model.sentences.map(\.text),
                      speaking: model.speaking, tag: model.phase == .done ? model.tag : nil) { model.showWhere = true }
       }
+      if model.phase == .done, let html = model.searchChips {
+        SearchChips(html: html).frame(height: 70)
+      }
       if !model.choices.isEmpty {
         FlowLayout(spacing: 8) {
           ForEach(model.choices) { c in Pill(text: c.label) { model.choose(c) } }
@@ -153,5 +157,27 @@ struct LiveAnswer: View {
       }
     }
     .animation(.weknow(0.25), value: model.choices.count)
+  }
+}
+
+/// Google's search-suggestion chip, shown with an answer grounded in Google Search, as Google asks.
+struct SearchChips: UIViewRepresentable {
+  let html: String
+  func makeUIView(context: Context) -> WKWebView {
+    let v = WKWebView()
+    v.isOpaque = false
+    v.backgroundColor = .clear
+    v.scrollView.isScrollEnabled = false
+    v.navigationDelegate = context.coordinator
+    v.loadHTMLString("<meta name=viewport content='width=device-width,initial-scale=1'>" + html, baseURL: nil)
+    return v
+  }
+  func updateUIView(_ v: WKWebView, context: Context) {}
+  func makeCoordinator() -> Coordinator { Coordinator() }
+  final class Coordinator: NSObject, WKNavigationDelegate {
+    /// A tap on a suggestion opens Google in Safari, not inside the chip.
+    func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+      if a.navigationType == .linkActivated, let u = a.request.url { UIApplication.shared.open(u); decisionHandler(.cancel) } else { decisionHandler(.allow) }
+    }
   }
 }

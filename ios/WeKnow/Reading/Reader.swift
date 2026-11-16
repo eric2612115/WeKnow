@@ -124,7 +124,16 @@ enum Reader {
     // words on it (a sink, a pair of earbuds) is still recognised. The photo never leaves the phone on this path.
     let text = readPrompt(paper.masked, question: question)
     let form: PaperForm
-    if let image, let seen = try? await session().respond(to: Prompt { text; Attachment(image) }, generating: PaperForm.self, options: options).content {
+    var seen: PaperForm?
+    if let image {
+      do {
+        seen = try await session().respond(to: Prompt { text; Attachment(image) }, generating: PaperForm.self, options: options).content
+        print("[WeKnow] picture given to the model: yes")
+      } catch {
+        print("[WeKnow] picture given to the model: failed (\(error)); reading the words only")
+      }
+    }
+    if let seen {
       form = seen
     } else {
       // No picture input on this device (or it failed): the masked words alone, as before.

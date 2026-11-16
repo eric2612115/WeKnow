@@ -104,10 +104,10 @@ struct ConsentSheet: View {
     VStack(alignment: .leading, spacing: 14) {
       HStack(spacing: 10) {
         Image(systemName: "globe").foregroundStyle(Color.net)
-        Text("May I check this on the internet?").foregroundStyle(Color.ink)
+        Text(consent.once ? "May I use the internet when this phone can’t answer?" : "May I check this on the internet?").foregroundStyle(Color.ink)
       }
       .font(.system(size: 24, weight: .bold))
-      Text("This \(S.device) cannot check papers by itself. I read the words here, on this \(S.device), and cover your details first. This is all I would send:")
+      Text("This \(S.device) couldn’t answer this by itself. I covered your details here first. This is all I would send:")
         .font(.system(size: 19, weight: .medium)).foregroundStyle(Color.ink)
       ScrollView {
         Text(consent.lines.joined(separator: "\n"))
@@ -118,9 +118,13 @@ struct ConsentSheet: View {
       .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.net, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])))
       Text("Not sent: the picture, your name, phone, address, plate or account number.")
         .font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.ink2)
+      if consent.once {
+        Text("If you say yes, next time I will do this by myself when it helps, and always show you what went. You can change this in Settings.")
+          .font(.system(size: 16)).foregroundStyle(Color.ink2).fixedSize(horizontal: false, vertical: true)
+      }
       HStack(spacing: 12) {
         Button { consent.answer(true) } label: {
-          Text("Yes, check it").font(.system(size: 19, weight: .bold)).foregroundStyle(Color.onGo)
+          Text(consent.once ? "Yes, when it helps" : "Yes, check it").font(.system(size: 19, weight: .bold)).foregroundStyle(Color.onGo)
             .frame(maxWidth: .infinity, minHeight: 56).background(RoundedRectangle(cornerRadius: 16).fill(Color.go))
         }
         .accessibilityIdentifier("consent-yes")
