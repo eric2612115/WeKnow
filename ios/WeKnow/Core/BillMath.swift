@@ -22,7 +22,8 @@ enum BillMath {
     (.total, #"^total\b(?! (current|new|amount|due))"#),
   ]
 
-  static let money = #"\$?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})"#
+  /// A money amount; a rate such as "(2.00%)" is not one.
+  static let money = #"\$?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})(?!\d|\s?%)"#
 
   /// The labelled amounts on the paper (first one wins), from rows like "Subtotal ........ $324.99".
   static func amounts(_ rows: [String]) -> [Field: Double] {
@@ -30,14 +31,21 @@ enum BillMath {
     for raw in rows {
       // OCR often reads 0 as O inside numbers.
       let row = raw.replacingOccurrences(of: #"(?<=\d)[Oo](?=[\d.,])|(?<=[\d.,])[Oo](?=\d|\b)"#, with: "0", options: .regularExpression)
-      let lower = row.lowercased().trimmingCharacters(in: .whitespaces)
-      if lower.contains("minimum") { continue }
-      for (field, pattern) in labels where out[field] == nil {
-        guard lower.range(of: pattern, options: .regularExpression) != nil,
-              let m = row.range(of: money, options: .regularExpression) else { continue }
-        let n = Double(row[m].replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces))
-        if let n { out[field] = n }
-        break
+      if row.lowercased().contains("minimum") { continue }
+      // A row can hold several columns ("Beneficiary: …   Includes tax (2.00%)   $21.00"): each cell may be the
+      // label, and its amount is the first one in that cell or the cells to its right.
+      let cells = row.components(separatedBy: "   ")
+      for (i, cell) in cells.enumerated() {
+        var lower = cell.lowercased().trimmingCharacters(in: .whitespaces)
+        if lower.contains("[") { continue } // "Payment [account ending 0931]" is not a label
+        if lower.hasPrefix("includes ") { lower.removeFirst("includes ".count) }
+        guard let (field, _) = labels.first(where: { lower.range(of: $0.1, options: .regularExpression) != nil }),
+              out[field] == nil else { continue }
+        let rest = cells[i...].joined(separator: "   ")
+        guard let m = rest.range(of: money, options: .regularExpression),
+              let n = Double(rest[m].replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces))
+        else { continue }
+        out[field] = n
       }
     }
     return out
@@ -65,6 +73,27 @@ enum BillMath {
     var minimum: Double?
     for r in rows where r.lowercased().contains("minimum") { if let v = lastMoney(r) { minimum = v; break } }
     return (amounts(rows)[.due], minimum)
+  }
+
+  /// The accounts the paper asks you to pay into ("Payment account 3305 7719 4821" → "[account ending 4821]"),
+  /// in the order printed. A member or customer number is not one of them.
+  static func payToEndings(_ rows: [String]) -> [String] {
+    var out: [String] = []
+    for r in rows {
+      for m in r.matches(of: /(?i)(?:payment|pay to|pay into|remit to|deposit to|transfer to|new)\s+(?:account\s+)?(?:number\s+)?(?:\[)?account ending (\d{4})/) {
+        let e = String(m.1)
+        if !out.contains(e) { out.append(e) }
+      }
+    }
+    return out
+  }
+
+  /// Which of them the bill means: the one that differs from the account you paid last time (that is the change
+  /// the person must see), else the first printed.
+  static func payTo(_ rows: [String], lastTime: String?) -> String? {
+    let all = payToEndings(rows)
+    if let lastTime, let other = all.first(where: { $0 != lastTime }) { return other }
+    return all.first
   }
 
   static func check(_ rows: [String]) -> [Finding] {

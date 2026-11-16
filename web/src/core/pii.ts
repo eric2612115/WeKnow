@@ -38,7 +38,16 @@ const PATTERNS: Array<[PIIKind, RegExp]> = [
     'street',
     /\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace)\b\.?/g,
   ],
+  // The same street in capitals, as an envelope window prints it: "512 BRAMBLE CT".
+  ['street', /\b\d{1,6}\s+(?:[A-Z]+\s){1,3}(?:ST|STREET|AVE|AVENUE|RD|ROAD|BLVD|DR|DRIVE|LN|LANE|CT|COURT|WAY|PL|PLACE|TER)\b\.?/g],
+  // A phone number already half hidden on the paper, "555-***-0134": the rest is still covered.
+  ['phone', /\b\d{3}[\s.-]?\*{2,4}[\s.-]?\d{4}\b/g],
 ];
+
+/** A name after a title or a greeting: "Mr. Alaric Venn-Hollis", "To: Theodora Quillfeather" (as PII.swift). */
+const TITLED_NAME = /(?:\b(?:Mr|Mrs|Ms|Miss|Mx|Dr)\.?\s+|^(?:[Tt]o|TO|[Dd]ear|DEAR|[Aa]ttn|ATTN)\s*[:,]\s*)([A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3})/gm;
+/** A signature on a line of its own: an initial and a family name, "A. Venn-Hollis", "#07 D. Marrow". */
+const SIGNATURE = /^[ \t]*(?:#?\d+[ \t]+)?([A-Z]\.[ \t]?[A-Z][a-z'’]+(?:-[A-Z][a-z'’]+)?)[ \t]*$/gm;
 
 /** Labels that put a person's name after them ("Customer: Margaret Ellis") or on the next line down ("CUSTOMER"). */
 const NAME_LABELS = [
@@ -51,7 +60,8 @@ const NAME_LABELS = [
 const LABEL_THEN = new RegExp(`\\b(?:${NAME_LABELS})\\s*[:#]\\s*`, 'gi');
 /** Two to four capitalised words, the way a name is printed (also all capitals). */
 export const LOOKS_LIKE_NAME = /^[A-Z][A-Za-z'’.-]+(?:\s+[A-Z][A-Za-z'’.-]+){1,3}$/;
-const NAME_AFTER_LABEL = /^[A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3}/;
+// An optional staff number first, as a technician line prints it ("Technician #07 D. Marrow").
+const NAME_AFTER_LABEL = /^(?:\d+[ \t]+)?[A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3}/;
 /** A whole piece of text that is only a name label ("CUSTOMER", "Bill to:", "Account holder"). */
 export const NAME_LABEL_ONLY = new RegExp(`^(?:${NAME_LABELS})\\s*:?$`, 'i');
 
@@ -78,6 +88,12 @@ function labelledNames(text: string): PIISpan[] {
     const at = (m.index ?? 0) + m[0].length;
     const name = TWO_WORDS.exec(text.slice(at));
     if (name && !out.some((o) => o.start === at)) out.push({ kind: 'name', start: at, end: at + name[0].length, text: name[0] });
+  }
+  for (const re of [TITLED_NAME, SIGNATURE]) {
+    for (const m of text.matchAll(re)) {
+      const at = (m.index ?? 0) + m[0].indexOf(m[1]);
+      if (!out.some((o) => o.start === at)) out.push({ kind: 'name', start: at, end: at + m[1].length, text: m[1] });
+    }
   }
   return out;
 }
@@ -136,7 +152,11 @@ export function piiSpans(text: string): PIISpan[] {
 export function maskText(text: string): string {
   let out = text;
   for (const [kind, re] of PATTERNS) out = out.replace(re, `[${kind}]`);
-  for (const n of labelledNames(out).reverse()) out = out.slice(0, n.start) + '[name]' + out.slice(n.end);
+  // Right to left, one cover per stretch of text (the label rules can find the same name twice).
+  const labelled = labelledNames(out)
+    .sort((a, b) => a.start - b.start || b.end - a.end)
+    .filter((n, i, all) => !all.slice(0, i).some((m) => overlaps(m, n)));
+  for (const n of labelled.reverse()) out = out.slice(0, n.start) + '[name]' + out.slice(n.end);
   // Then the names beside what is now covered ([account], [street], ...) and the listed given names.
   const tokens = [...out.matchAll(TOKEN)].map((m) => ({ start: m.index ?? 0, end: (m.index ?? 0) + m[0].length, kind: m[0] }));
   const anchors = tokens.filter((x) => x.kind !== '[name]' && x.kind !== '[vin]' && x.kind !== '[plate]');

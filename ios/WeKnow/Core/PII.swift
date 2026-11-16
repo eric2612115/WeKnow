@@ -49,7 +49,19 @@ enum PII {
     (.phone, re(#"(?<![\d-])\b\d{3}[\s.-]\d{4}\b(?![\d-])"#, false)),
     (.plate, re(#"\b(?:plate|lic(?:ense)?\.?\s*(?:no|#)?)\b[#:\s.-]*[A-Z0-9-]{4,8}\b"#, true)),
     (.street, re(#"\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace)\b\.?"#, false)),
+    // The same street in capitals, as an envelope window prints it: "512 BRAMBLE CT".
+    (.street, re(#"\b\d{1,6}\s+(?:[A-Z]+\s){1,3}(?:ST|STREET|AVE|AVENUE|RD|ROAD|BLVD|DR|DRIVE|LN|LANE|CT|COURT|WAY|PL|PLACE|TER)\b\.?"#, false)),
+    // A phone number already half hidden on the paper, "555-***-0134": the rest is still covered.
+    (.phone, re(#"\b\d{3}[\s.-]?\*{2,4}[\s.-]?\d{4}\b"#, false)),
   ]
+
+  /// A name after a title or a greeting: "Mr. Alaric Venn-Hollis", "To: Theodora Quillfeather".
+  static let titledName = re(
+    #"(?:\b(?:Mr|Mrs|Ms|Miss|Mx|Dr)\.?\s+|^(?i:to|dear|attn)\s*[:,]\s*)([A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3})"#,
+    false)
+
+  /// A signature on its own: an initial and a family name, "A. Venn-Hollis", "W. Farthingale".
+  static let signature = re(#"^\s*(?:#?\d+\s+)?([A-Z]\.\s?[A-Z][a-z'’]+(?:-[A-Z][a-z'’]+)?)\s*$"#, false)
 
   static let labelledName = re(
     #"\b(?i:customer|account holder|holder|name|bill to|billed to|sold to|ship to|attn|attention|client|owner|insured|patient|member|tenant|resident)\s*[:#]\s*([A-Z][A-Za-z'’.-]+(?:[ \t]+[A-Z][A-Za-z'’.-]+){0,3})"#,
@@ -72,7 +84,9 @@ enum PII {
     }
     if names {
       // A name after a label ("Customer: Margaret Ellis", "Account holder: Harold Brooks").
-      for m in labelledName.matches(in: text, range: ns) + labelledNameNoColon.matches(in: text, range: ns) where m.numberOfRanges > 1 {
+      let named = labelledName.matches(in: text, range: ns) + labelledNameNoColon.matches(in: text, range: ns)
+        + titledName.matches(in: text, range: ns) + signature.matches(in: text, range: ns)
+      for m in named where m.numberOfRanges > 1 {
         guard let r = Range(m.range(at: 1), in: text) else { continue }
         hits.append(PIIHit(kind: .name, range: r, text: String(text[r])))
       }

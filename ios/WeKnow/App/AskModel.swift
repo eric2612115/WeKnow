@@ -548,6 +548,10 @@ final class AskModel {
       return fail("I can’t read the small words. Move closer to the top half.", tech: "Vision: \(error)")
     }
     if Task.isCancelled { return }
+    #if DEBUG
+    // Covered rows only (never the picture or the words as taken), for checking the reading in test runs.
+    for r in paper.rows { print("[WeKnow] row \(String(format: "%.3f", r.rect.midY)): \(r.masked)") }
+    #endif
     bars = paper.bars
     for i in paper.bars.indices {
       try? await Task.sleep(for: .milliseconds(120))
@@ -655,6 +659,10 @@ final class AskModel {
       verdict = q.verdict
       // The point first, then which lines are not in the price book.
       answer = (q.sentences + Compose.notKnown(items)).map { Sentence(text: $0) }
+      // Most lines not matched: often the item names came out blurred, or they are not in the price book.
+      if items.count >= 3, items.filter({ $0.state == .pending }).count * 2 > items.count {
+        answer.append(Sentence(text: "If the photo is blurred, hold the phone still over the paper and take it again."))
+      }
       marks = items.compactMap { item in
         guard let row = paper.row(for: item.label) else { return nil }
         switch item.state {
@@ -689,6 +697,10 @@ final class AskModel {
       }
     case .bill:
       let known = Household.shared.known
+      // Which account to pay into is printed next to "payment account"; plain code takes it from the paper, so a
+      // member number the model copied by mistake never stands in for it.
+      let printedRows = paper.rows.map(\.masked)
+      if let to = BillMath.payTo(printedRows, lastTime: Verdicts.knownPayee(u.payee, in: known)?.payTo) { u.payTo = to }
       let v = Verdicts.bill(u, maskedText: paper.masked, known: known)
       let b = Compose.bill(v, payee: u.payee, known: known)
       verdict = b.verdict

@@ -132,6 +132,10 @@ enum Compose {
       let title = highs.count == 1 ? "One price is higher than usual" : "\(S.words(highs.count, capital: true)) prices are higher than usual"
       return (Verdict(tone: .warn, text: title), sentences + lows)
     }
+    // Most lines unchecked: "normal" would claim more than was checked.
+    if pending > fair {
+      return (Verdict(tone: .plain, text: "I could check only \(S.words(fair, capital: false)) of \(items.count) lines"), ["\(fairSentence) \(pendingSentence)"] + lows)
+    }
     let sentences = pending > 0 ? ["\(fairSentence) \(pendingSentence)"] : ["Every line is inside the usual range."]
     return (Verdict(tone: .ok, text: "These prices look normal"), sentences + lows)
   }
