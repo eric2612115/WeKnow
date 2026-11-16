@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" role="img" aria-label="WeKnow">
+  <!-- WeKnow horizontal lockup for dark backgrounds. The word uses the system font, like the app. -->
+  <g transform="translate(8 -2) scale(0.2)">
+    <path d="M222 452 A330 330 0 0 1 802 420 L436 752 L272 600" fill="none" stroke="#3ECF92" stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="500" cy="486" r="92" fill="#3ECF92"/>
+  </g>
+  <text x="212" y="136" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="108" font-weight="650" letter-spacing="-3" fill="#F1F5F3">WeKnow</text>
+</svg>
