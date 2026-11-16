@@ -1,12 +1,12 @@
-// The frame round every page: the app bar (Menu, wordmark, the sound switch; on a desktop also the status and account pills) and the
-// Menu drawer. Welcome and Allow have no app bar.
+// The frame round every page: a quiet app bar (the menu, the name, a new conversation, the sound switch; on a desktop
+// also the status and the account) and the Menu drawer. Welcome and Allow have no app bar.
 
 import { Dialog } from 'radix-ui';
 import { Suspense, useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { DeviceIcon, I } from '../ui/icons';
 import { Seg, Wordmark } from '../ui/controls';
-import { setDrawer, useUi } from '../ui/uiStore';
+import { openSheet, setDrawer, useUi } from '../ui/uiStore';
 import { t } from '../strings';
 import { getPrefs, setPrefs, usePrefs, type Theme } from '../store/prefs';
 import { notesOf, useData } from '../store/data';
@@ -49,7 +49,7 @@ function StatusPill() {
   }
   if (d.model === 'checking' && d.online) return null;
   return (
-    <span className="flex h-[2.6rem] items-center gap-[0.45rem] rounded-full bg-card-2 px-[0.9rem] text-small font-semibold text-ink-2 [&_svg]:size-[1.35rem]">
+    <span className="flex h-11 items-center gap-[0.4rem] px-2 text-[0.9375rem] font-medium text-ink-2 [&_svg]:size-[1.15rem]">
       {icon}
       <span>{text}</span>
     </span>
@@ -61,10 +61,14 @@ function AccountPill() {
   const nav = useNavigate();
   const name = firstName(a);
   return (
-    <button type="button" className="pill-btn px-4" onClick={() => nav('/settings#set-account')}>
+    <button
+      type="button"
+      className="inline-flex h-11 items-center gap-2 rounded-full px-3 text-[0.9375rem] font-semibold text-ink transition-colors hover:bg-card-2"
+      onClick={() => nav('/settings#set-account')}
+    >
       {name ? (
         <>
-          <b className="-ml-[0.45rem] grid size-[1.9rem] place-items-center rounded-full bg-go text-small text-on-go">{name[0].toUpperCase()}</b>
+          <b className="-ml-1 grid size-7 place-items-center rounded-full bg-go text-[0.875rem] text-on-go">{name[0].toUpperCase()}</b>
           {name}
         </>
       ) : (
@@ -81,7 +85,7 @@ function SoundButton() {
   return (
     <button
       type="button"
-      className="pill-btn size-[2.9rem] justify-center p-0 data-[off]:bg-card-2 data-[off]:text-ink-2"
+      className="bar-btn"
       data-off={p.voice ? undefined : ''}
       aria-label={label}
       title={label}
@@ -96,12 +100,32 @@ function SoundButton() {
   );
 }
 
+/** A new conversation: the same as Menu › Start again. */
+function NewButton() {
+  const nav = useNavigate();
+  return (
+    <button
+      type="button"
+      className="bar-btn"
+      aria-label={t('bar.new')}
+      title={t('bar.new')}
+      onClick={() => {
+        startAgain();
+        nav('/');
+      }}
+    >
+      <I.compose />
+    </button>
+  );
+}
+
 function Drawer() {
   const { drawer } = useUi();
   const nav = useNavigate();
   const data = useData();
   const a = useAccount();
   const notes = notesOf(data.memory).length;
+  const recent = [...data.checks].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const row = (to: string, icon: ReactNode, label: string, count?: number) => (
     <NavLink to={to} end className="nav-row" onClick={() => setDrawer(false)}>
       {icon}
@@ -114,22 +138,17 @@ function Drawer() {
       <Dialog.Portal>
         <Dialog.Overlay className="scrim" />
         <Dialog.Content className="drawer" aria-describedby={undefined}>
-          <div className="mt-1 mr-1 mb-[0.9rem] ml-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="mb-2 ml-3 flex items-center justify-between gap-2">
             <Dialog.Title asChild>
-              <span className="min-w-0 text-[min(1.3rem,6.2vw)]">
+              <span className="min-w-0 text-[1.125rem]">
                 <Wordmark />
               </span>
             </Dialog.Title>
-            <Dialog.Close className="btn btn-sm" type="button">
-              {t('close')}
+            <Dialog.Close className="bar-btn" type="button" aria-label={t('close')} title={t('close')}>
+              <I.close />
             </Dialog.Close>
           </div>
-          <nav aria-label={t('menu.button')} className="flex flex-col gap-[0.2rem]">
-            {row('/', <I.cam />, t('menu.ask'))}
-            {row('/checks', <I.folder />, t('menu.checks'), data.checks.length)}
-            {row('/remembers', <I.note />, t('menu.notes'), notes)}
-            {row('/settings', <I.set />, t('menu.settings'))}
-            {row('/help', <I.help />, t('menu.help'))}
+          <nav aria-label={t('menu.button')} className="flex flex-col gap-[0.15rem]">
             <button
               type="button"
               className="nav-row w-full text-left"
@@ -139,26 +158,51 @@ function Drawer() {
                 nav('/');
               }}
             >
-              <I.again />
-              <span>{t('menu.again')}</span>
+              <I.compose />
+              <span>{t('bar.new')}</span>
             </button>
+            {row('/checks', <I.folder />, t('menu.checks'), data.checks.length)}
+            {row('/remembers', <I.note />, t('menu.notes'), notes)}
+            {row('/packs', <I.book />, t('menu.packs'))}
+            {row('/settings', <I.set />, t('menu.settings'))}
+            {row('/help', <I.help />, t('menu.help'))}
           </nav>
-          <div className="mt-auto grid gap-[0.8rem] border-t border-hair px-[0.4rem] pt-[0.9rem] pb-[0.3rem]">
-            <span className="text-small font-semibold text-ink-2">{t('menu.screen')}</span>
+          {recent.length > 0 && (
+            <section className="mt-4 min-h-0" aria-label={t('menu.recent')}>
+              <h2 className="px-3 pb-1 text-[0.9375rem] font-medium text-ink-2">{t('menu.recent')}</h2>
+              <div className="flex flex-col gap-[0.15rem]">
+                {recent.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="nav-row nav-recent w-full"
+                    onClick={() => {
+                      setDrawer(false);
+                      openSheet({ type: 'check', checkId: c.id });
+                    }}
+                  >
+                    <span>{c.title}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          <div className="mt-auto grid gap-[0.6rem] px-[0.4rem] pt-6 pb-[0.3rem]">
+            <span className="text-[0.9375rem] font-medium text-ink-2">{t('menu.screen')}</span>
             <ThemeSeg full />
             <NavLink to="/settings#set-account" className="nav-row px-2" onClick={() => setDrawer(false)}>
               {a?.signedIn ? (
                 <>
-                  <span className="grid size-[2.4rem] place-items-center rounded-full bg-go text-[1.1rem] font-bold text-on-go">
+                  <b className="grid flex-none size-8 place-items-center rounded-full bg-go text-[0.9375rem] font-bold text-on-go">
                     {(a.name ?? a.email ?? '?')[0].toUpperCase()}
-                  </span>
+                  </b>
                   <span>{a.name ?? a.email}</span>
                 </>
               ) : (
                 <>
-                  <span className="grid size-[2.4rem] place-items-center rounded-full bg-card-2 text-ink-2 [&_svg]:size-[1.4rem]">
+                  <b className="grid flex-none size-8 place-items-center rounded-full bg-card-2 text-ink-2 [&_svg]:size-[1.1rem]">
                     <I.user />
-                  </span>
+                  </b>
                   <span>{t('menu.signedout')}</span>
                 </>
               )}
@@ -192,19 +236,19 @@ export default function Shell() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg">
-      <header className="flex h-[3.9rem] flex-none items-center gap-[0.8rem] px-4 lg:h-[4.4rem] lg:px-7">
-        <button type="button" className="pill-btn" aria-haspopup="dialog" onClick={() => setDrawer(true)}>
+      <header className="flex h-14 flex-none items-center gap-1 px-2 lg:px-3">
+        <button type="button" className="bar-btn" aria-haspopup="dialog" aria-label={t('menu.button')} title={t('menu.button')} onClick={() => setDrawer(true)}>
           <I.menu />
-          <span>{t('menu.button')}</span>
         </button>
-        <NavLink to="/" className="inline-flex min-h-11 min-w-0 items-center text-[min(1.3rem,6.2vw)] text-ink no-underline lg:text-[1.45rem]" aria-label="WeKnow, Ask">
+        <NavLink to="/" className="inline-flex min-h-11 min-w-0 items-center px-1 text-[1.125rem] text-ink no-underline" aria-label="WeKnow, Ask">
           <Wordmark />
         </NavLink>
-        <div className="ml-auto flex flex-none items-center gap-[0.6rem]">
-          <span className="hidden items-center gap-[0.6rem] lg:flex">
+        <div className="ml-auto flex flex-none items-center gap-1">
+          <span className="hidden items-center gap-1 lg:flex">
             <StatusPill />
             <AccountPill />
           </span>
+          <NewButton />
           <SoundButton />
         </div>
       </header>

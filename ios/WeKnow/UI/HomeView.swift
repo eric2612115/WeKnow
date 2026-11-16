@@ -11,51 +11,66 @@ enum MenuPage: String, Identifiable {
 struct HomeView: View {
   @Bindable var model: AskModel
   @Binding var theme: ThemeChoice
-  @State private var picking = false
   @State private var page: MenuPage?
-  @State private var camera = LiveCamera()
+  @State private var shooting = false
+  @State private var choosingPhoto = false
+  @State private var photoItem: PhotosPickerItem?
   @AppStorage(Prefs.voiceOff) private var voiceOff = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   @State private var whereShown: AskModel.Exchange?
+  @State private var drawer = false
+  @State private var openRecord: CheckRecord?
 
   var body: some View {
     GeometryReader { geo in
-      VStack(spacing: 12) {
+      VStack(spacing: 8) {
         appBar
         if model.inConversation {
-          ConversationView(model: model, camera: camera, reduceMotion: reduceMotion) { whereShown = $0 }
+          ConversationView(model: model, reduceMotion: reduceMotion) { whereShown = $0 }
             .frame(maxHeight: .infinity)
         } else {
-          // Before the first message: the live camera, as a camera app opens.
-          PictureWindow(model: model, camera: camera, reduceMotion: reduceMotion, openPhotos: { picking = true })
-            .frame(height: geo.size.height * 0.55)
-          Spacer(minLength: 0)
+          StartView(model: model, trySample: trySample, suggest: suggest)
+            .frame(maxHeight: .infinity)
         }
-        Composer(model: model, addPicture: takePicture)
-          .padding(.bottom, 6)
+        Composer(model: model, takePhoto: takePhoto, choosePhoto: { choosingPhoto = true })
+          .padding(.bottom, 4)
       }
       .padding(.horizontal, 16)
     }
     .background(Color.bg.ignoresSafeArea())
-    .task { await camera.start() }
-    .onChange(of: model.inConversation || model.draft != nil) { _, busy in
-      if busy { camera.stop() } else { Task { await camera.start() } }
+    .overlay(alignment: .leading) {
+      // One hand: a swipe in from the left edge opens the drawer, as chat apps do.
+      if !drawer {
+        Color.clear.frame(width: 22).contentShape(Rectangle())
+          .gesture(DragGesture(minimumDistance: 12).onEnded { v in
+            if v.translation.width > 50 && abs(v.translation.height) < 80 { drawer = true }
+          })
+          .ignoresSafeArea()
+      }
+    }
+    .overlay {
+      Drawer(open: $drawer, newConversation: { model.newConversation() }, go: { page = $0 }, openCheck: { openRecord = $0 })
+    }
+    .sheet(item: $openRecord) { r in CheckDetail(record: r) }
+    // The camera opens only when the camera button is pressed, full screen, and closes after the picture.
+    .fullScreenCover(isPresented: $shooting) {
+      CameraView { img in
+        shooting = false
+        attach(img)
+      }
+      .ignoresSafeArea()
+    }
+    .photosPicker(isPresented: $choosingPhoto, selection: $photoItem, matching: .images)
+    .onChange(of: photoItem) { _, item in
+      guard let item else { return }
+      Task {
+        if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) { attach(img) }
+        photoItem = nil
+      }
     }
     .sheet(item: $whereShown) { ex in
       if let receipt = ex.receipt { WhereSheet(tag: ex.tag, receipt: receipt) }
-    }
-    .sheet(isPresented: $picking) {
-      PickSheet { choice in
-        picking = false
-        switch choice {
-        case let .sample(s):
-          attach(s.image)
-          if model.draftText.isEmpty { model.draftText = s.question }
-        case let .image(img): attach(img)
-        }
-      }
-      .presentationDetents([.medium, .large])
     }
     .sheet(isPresented: $model.showWhere) {
       if let receipt = model.receipt { WhereSheet(tag: model.tag, receipt: receipt) }
@@ -73,13 +88,26 @@ struct HomeView: View {
     }
   }
 
-  /// The camera button: a still from the live camera goes into the input bar, next to the words; nothing is read
-  /// until Send. In a conversation (or without a live camera) the camera and photo picker opens instead.
-  private func takePicture() {
-    if model.draft != nil && !model.inConversation { model.draft = nil; return } // take it again: the live camera comes back
-    guard camera.state == .running, !model.inConversation else { picking = true; return }
-    Task {
-      if let img = await camera.capture() { attach(img) } else { picking = true }
+  /// The camera button: the camera opens full screen; the picture goes into the input bar, next to the words, and
+  /// nothing is read until Send. Without a camera (the simulator), the photo picker opens instead.
+  private func takePhoto() {
+    if UIImagePickerController.isSourceTypeAvailable(.camera) { shooting = true } else { choosingPhoto = true }
+  }
+
+  /// A sample picture with its question, ready to send.
+  private func trySample(_ s: Sample) {
+    attach(s.image)
+    model.draftText = s.question
+  }
+
+  /// A suggestion: asked at once, or, when it is about a paper, put in the box until the picture is added.
+  private func suggest(_ q: String) {
+    if WordsAnswer.needsPicture(q) {
+      model.draftText = q
+      if model.draft == nil { model.draftHint = "Add a picture of it with the camera button, then press Send." }
+    } else {
+      model.draftText = q
+      model.send()
     }
   }
 
@@ -91,45 +119,89 @@ struct HomeView: View {
   }
 
   private var appBar: some View {
-    HStack(spacing: 12) {
-      Menu {
-        Button { page = .checks } label: { Label("My checks", systemImage: "folder") }
-        Button { page = .remembers } label: { Label("What WeKnow remembers", systemImage: "book.closed") }
-        Button { page = .priceBook } label: { Label("Knowledge packs", systemImage: "books.vertical") }
-        Button { page = .settings } label: { Label("Settings", systemImage: "gearshape") }
-        if model.inConversation {
-          Button { model.newConversation() } label: { Label("Start again", systemImage: "arrow.counterclockwise") }
-        }
-      } label: {
-        Label("Menu", systemImage: "line.3.horizontal")
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundStyle(Color.ink)
-          .padding(.horizontal, 16)
-          .frame(height: 46)
-          .background(Capsule().fill(Color.card))
-          .overlay(Capsule().stroke(Color.hair, lineWidth: 1))
+    HStack(spacing: 2) {
+      Button { drawer = true } label: {
+        Image(systemName: "line.3.horizontal").font(.system(size: 19, weight: .medium)).frame(width: 44, height: 44)
       }
-      HStack(spacing: 7) {
-        Circle().fill(Color.go).frame(width: 13, height: 13)
-        Text("WeKnow").font(.system(size: 21, weight: .heavy)).tracking(-0.4).foregroundStyle(Color.ink)
-      }
+      .accessibilityLabel("Menu")
+      .accessibilityIdentifier("menu")
+      Text("WeKnow").font(.system(size: 18, weight: .semibold)).tracking(-0.2)
       Spacer()
       // Sound on or off at any moment; off stops the voice now and shows the words only.
       Button {
         voiceOff.toggle()
         if voiceOff { Voice.shared.stop() }
       } label: {
-        Image(systemName: voiceOff ? "speaker.slash.fill" : "speaker.wave.2.fill")
-          .font(.system(size: 19, weight: .semibold))
-          .foregroundStyle(voiceOff ? Color.ink2 : Color.ink)
-          .frame(width: 46, height: 46)
-          .background(Circle().fill(Color.card))
-          .overlay(Circle().stroke(Color.hair, lineWidth: 1))
+        Image(systemName: voiceOff ? "speaker.slash" : "speaker.wave.2").font(.system(size: 18, weight: .medium))
+          .frame(width: 44, height: 44)
       }
       .accessibilityLabel(voiceOff ? "Sound off. Turn sound on" : "Sound on. Turn sound off")
       .accessibilityIdentifier("sound")
+      if model.inConversation {
+        Button { model.newConversation() } label: {
+          Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .medium)).frame(width: 44, height: 44)
+        }
+        .accessibilityLabel("Start a new conversation")
+      }
     }
-    .frame(height: 58)
+    .foregroundStyle(Color.ink)
+    .frame(height: 48)
+  }
+}
+
+// MARK: - Start
+
+/// Before the first message: a greeting, two sample pictures to try, and a few things to ask. The camera stays off
+/// until the camera button is pressed.
+struct StartView: View {
+  let model: AskModel
+  let trySample: (Sample) -> Void
+  let suggest: (String) -> Void
+
+  static let suggestions = ["My kitchen sink is clogged", "How much are brake pads?", "My toilet keeps running", "What does a new water heater cost?"]
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 8) {
+          Text("What can I check for you?").font(.system(size: 28, weight: .semibold)).tracking(-0.5).foregroundStyle(Color.ink)
+          Text("Take a picture of a quote, a bill or something broken with the camera button below. Or just ask.")
+            .font(.system(size: 17)).foregroundStyle(Color.ink2).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 12)
+
+        VStack(alignment: .leading, spacing: 10) {
+          Text("Try a sample").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink2)
+          HStack(spacing: 12) {
+            ForEach(Sample.all) { s in
+              Button { trySample(s) } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                  if let img = s.image {
+                    Image(uiImage: img).resizable().scaledToFill().frame(height: 110).frame(maxWidth: .infinity)
+                      .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                  }
+                  Text(s.title).font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.ink)
+                  Text("“\(s.question)”").font(.system(size: 14)).foregroundStyle(Color.ink2).lineLimit(2)
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.card2))
+              }
+              .buttonStyle(.plain)
+              .accessibilityIdentifier("sample-\(s.id)")
+            }
+          }
+        }
+
+        VStack(alignment: .leading, spacing: 10) {
+          Text("Or ask").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink2)
+          FlowLayout(spacing: 8) {
+            ForEach(Self.suggestions, id: \.self) { q in Pill(text: q) { suggest(q) } }
+          }
+        }
+      }
+      .padding(.bottom, 8)
+    }
+    .scrollIndicators(.hidden)
   }
 }
 
@@ -137,19 +209,17 @@ struct HomeView: View {
 
 struct PictureWindow: View {
   let model: AskModel
-  let camera: LiveCamera
   let reduceMotion: Bool
-  let openPhotos: () -> Void
   @State private var sweep = false
 
   var body: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Color.card2)
       if let image = model.picture {
         GeometryReader { g in
           let fit = fitted(image.size, in: g.size)
           ZStack(alignment: .topLeading) {
-            Image(uiImage: image).resizable().frame(width: fit.width, height: fit.height).position(x: fit.midX, y: fit.midY)
+            Image(uiImage: image).resizable().frame(width: fit.width, height: fit.height)
+              .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous)).position(x: fit.midX, y: fit.midY)
             ForEach(Array(model.bars.prefix(model.barsShown))) { bar in
               Rectangle().fill(Color.markCover)
                 .frame(width: bar.rect.width * fit.width + 4, height: bar.rect.height * fit.height * 0.9 + 1)
@@ -165,54 +235,9 @@ struct PictureWindow: View {
             }
           }
         }
-        .padding(10)
         .accessibilityLabel("The picture, with your personal details covered")
-      } else if let q = model.question {
-        // Asked in words: no picture, the question stands in the window.
-        VStack(spacing: 12) {
-          Image(systemName: "text.bubble").font(.system(size: 34, weight: .regular)).foregroundStyle(Color.ink2)
-          Text("“\(q)”")
-            .font(.system(size: 21, weight: .semibold)).multilineTextAlignment(.center).foregroundStyle(Color.ink)
-            .minimumScaleFactor(0.7)
-          Text("Answered on this \(S.device), from its knowledge packs.").font(.system(size: 16, weight: .medium)).foregroundStyle(Color.ink2)
-            .multilineTextAlignment(.center)
-        }
-        .padding(20)
-      } else if let draft = model.draft {
-        Image(uiImage: draft).resizable().scaledToFit().padding(10)
-          .accessibilityLabel("The picture you added")
-      } else if camera.state == .running {
-        CameraPreview(session: camera.session)
-          .accessibilityLabel("The camera. Point it at a quote, a bill or a problem, then press the camera button")
-      } else {
-        VStack(spacing: 12) {
-          Image(systemName: "doc.viewfinder").font(.system(size: 44, weight: .regular)).foregroundStyle(Color.ink2)
-          Text("Show me a quote, a bill, or a problem at home.")
-            .font(.system(size: 19, weight: .semibold)).multilineTextAlignment(.center).foregroundStyle(Color.ink)
-          Text("Or type or say your question below.").font(.system(size: 17, weight: .medium)).foregroundStyle(Color.ink2)
-            .multilineTextAlignment(.center)
-        }
-        .padding(24)
-      }
-      Corners().padding(16).allowsHitTesting(false)
-      if model.picture == nil && model.question == nil {
-        // Photos and the sample pictures, in the corner of the window.
-        Button(action: openPhotos) {
-          Label("Photos", systemImage: "photo.on.rectangle")
-            .font(.system(size: 16, weight: .bold))
-            .foregroundStyle(Color.ink)
-            .padding(.horizontal, 12).frame(height: 40)
-            .background(Capsule().fill(Color.card.opacity(0.94)))
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .padding(.bottom, 22)
-        .accessibilityLabel("Choose a photo or a sample picture")
-        .accessibilityIdentifier("photos")
       }
     }
-    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-    .shadow(color: .black.opacity(0.12), radius: 15, y: 12)
   }
 
   private func fitted(_ size: CGSize, in box: CGSize) -> CGRect {
@@ -243,6 +268,8 @@ struct Corners: View {
 struct MarkView: View {
   let mark: Mark
   let fit: CGRect
+  /// False when drawn into a still picture (the enlarged view), where the fade-in would never run.
+  var animated = true
   @State private var shown = false
 
   var body: some View {
@@ -273,7 +300,7 @@ struct MarkView: View {
           .position(x: max(fit.minX + 10, r.minX - 2), y: r.minY - 2)
       }
     }
-    .opacity(shown ? 1 : 0)
+    .opacity(!animated || shown ? 1 : 0)
     .onAppear { withAnimation(.easeOut(duration: 0.25)) { shown = true } }
     .accessibilityHidden(true)
   }
@@ -304,16 +331,64 @@ struct WhereTag: View {
   let tag: WhereRan
   var body: some View {
     let cloud = tag == .cloud
-    HStack(spacing: 8) {
-      Image(systemName: cloud ? "globe" : tag == .offline ? "wifi.slash" : "iphone.badge.checkmark")
+    HStack(spacing: 5) {
+      Image(systemName: cloud ? "globe" : tag == .offline ? "wifi.slash" : "lock.iphone")
       Text(tag.text)
-      Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).opacity(0.7)
+      Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).opacity(0.6)
     }
-    .font(.system(size: 17, weight: .semibold))
-    .foregroundStyle(cloud ? Color.net : Color.ink)
-    .padding(.horizontal, 14).frame(minHeight: 44)
-    .background(Capsule().fill(cloud ? Color.netBg : Color.card))
-    .overlay(Capsule().stroke(cloud ? Color.net.opacity(0.35) : Color.line, lineWidth: 1.5))
+    .font(.system(size: 14, weight: .medium))
+    .foregroundStyle(cloud ? Color.net : Color.ink2)
+    .padding(.vertical, 6)
+    .frame(minHeight: 32)
+    .contentShape(Rectangle())
     .accessibilityLabel(tag.text)
+  }
+}
+
+/// Lays its children out left to right, wrapping onto new lines: suggestion and next-question pills.
+struct FlowLayout: Layout {
+  var spacing: CGFloat = 8
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let width = proposal.width ?? .infinity
+    var x: CGFloat = 0, y: CGFloat = 0, row: CGFloat = 0, widest: CGFloat = 0
+    for v in subviews {
+      let s = v.sizeThatFits(ProposedViewSize(width: width, height: nil))
+      if x > 0 && x + s.width > width { x = 0; y += row + spacing; row = 0 }
+      x += s.width + spacing
+      row = max(row, s.height)
+      widest = max(widest, x - spacing)
+    }
+    return CGSize(width: min(widest, width), height: y + row)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    var x = bounds.minX, y = bounds.minY, row: CGFloat = 0
+    for v in subviews {
+      let s = v.sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
+      if x > bounds.minX && x + s.width > bounds.maxX { x = bounds.minX; y += row + spacing; row = 0 }
+      v.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(width: min(s.width, bounds.width), height: s.height))
+      x += s.width + spacing
+      row = max(row, s.height)
+    }
+  }
+}
+
+/// A light pill: a suggestion before the first message, or a next question under an answer.
+struct Pill: View {
+  let text: String
+  let action: () -> Void
+  var body: some View {
+    Button(action: action) {
+      Text(text)
+        .font(.system(size: 16, weight: .medium))
+        .foregroundStyle(Color.ink)
+        .multilineTextAlignment(.leading)
+        .padding(.horizontal, 15).padding(.vertical, 11)
+        .frame(minHeight: 44)
+        .background(Capsule().fill(Color.bg))
+        .overlay(Capsule().stroke(Color.hair, lineWidth: 1))
+    }
+    .buttonStyle(.plain)
   }
 }

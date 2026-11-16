@@ -421,7 +421,7 @@ final class AskModel {
   private func archive() {
     if question != nil || picture != nil {
       thread.append(Exchange(
-        question: question, picture: picture.map { $0.covered(by: bars.map(\.rect)) }, head: verdict?.text,
+        question: question, picture: picture.map { annotated($0, bars: bars, marks: marks) }, head: verdict?.text,
         tone: verdict?.tone ?? .plain, sentences: sentences.map(\.text), tag: tag, receipt: receipt))
     }
     reset()

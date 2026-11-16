@@ -7,8 +7,9 @@ import SwiftUI
 
 struct Composer: View {
   @Bindable var model: AskModel
-  /// Add a picture: from the live camera, or the photo picker when there is none.
-  let addPicture: () -> Void
+  /// The camera (full screen, only when pressed) and the photo library; the picture goes into the bar.
+  let takePhoto: () -> Void
+  let choosePhoto: () -> Void
   @State private var ear = Ear()
   @FocusState private var focused: Bool
 
@@ -25,77 +26,92 @@ struct Composer: View {
         Label(why, systemImage: "mic.slash").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.ink2)
           .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 8)
       }
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: 6) {
         if let img = model.draft {
           // The picture that will go with the words, until Send.
-          HStack(spacing: 10) {
-            ZStack(alignment: .topTrailing) {
-              Image(uiImage: img).resizable().scaledToFill().frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-              Button { model.draft = nil } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .black)).foregroundStyle(.white)
-                  .frame(width: 24, height: 24).background(Circle().fill(Color.key))
-              }
-              .buttonStyle(.plain)
-              .offset(x: 8, y: -8)
-              .accessibilityLabel("Remove the picture")
+          ZStack(alignment: .topTrailing) {
+            Image(uiImage: img).resizable().scaledToFill().frame(width: 60, height: 60)
+              .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            Button { model.draft = nil } label: {
+              Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.onKey)
+                .frame(width: 22, height: 22).background(Circle().fill(Color.key))
             }
-            Text("Picture added. Say or type what you want to know, then press Send.")
-              .font(.system(size: 16, weight: .medium)).foregroundStyle(Color.ink2)
-              .fixedSize(horizontal: false, vertical: true)
+            .buttonStyle(.plain)
+            .offset(x: 7, y: -7)
+            .accessibilityLabel("Remove the picture")
           }
-          .padding(.leading, 8).padding(.top, 8)
+          .padding(.leading, 10).padding(.top, 10)
         }
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .bottom, spacing: 4) {
           Button {
             ear.stop()
             focused = false
-            addPicture()
+            takePhoto()
           } label: {
-            Image(systemName: model.draft == nil ? "camera.fill" : "camera.rotate").font(.system(size: 21, weight: .semibold))
+            Image(systemName: "camera").font(.system(size: 20, weight: .regular))
               .foregroundStyle(Color.ink)
-              .frame(width: 48, height: 48)
-              .background(Circle().fill(Color.card2))
+              .frame(width: 42, height: 44)
           }
           .buttonStyle(.plain)
           .disabled(busy)
-          .accessibilityLabel(model.draft == nil ? "Add a picture" : "Take the picture again")
+          .accessibilityLabel("Take a picture")
           .accessibilityIdentifier("composer-camera")
+          Button {
+            ear.stop()
+            focused = false
+            choosePhoto()
+          } label: {
+            Image(systemName: "photo").font(.system(size: 19, weight: .regular))
+              .foregroundStyle(Color.ink)
+              .frame(width: 38, height: 44)
+          }
+          .buttonStyle(.plain)
+          .disabled(busy)
+          .accessibilityLabel("Choose a photo")
+          .accessibilityIdentifier("composer-photo")
 
-          TextField(ear.listening ? "Listening…" : model.draft == nil ? "Type or say your question" : "What is wrong?", text: $model.draftText, axis: .vertical)
-            .font(.system(size: 19, weight: .medium))
+          TextField(ear.listening ? "Listening…" : model.draft == nil ? "Ask WeKnow" : "What is wrong?", text: $model.draftText, axis: .vertical)
+            .font(.system(size: 17))
             .foregroundStyle(Color.ink)
-            .lineLimit(1...4)
+            .lineLimit(1...5)
             .focused($focused)
             .submitLabel(.send)
             .onSubmit(send)
-            .padding(.vertical, 12)
+            .padding(.vertical, 11)
             .accessibilityIdentifier("composer-field")
 
-          Button(action: right) {
-            ZStack {
-              Circle().fill(busy ? Color.key : Color.go)
-              if busy {
-                RoundedRectangle(cornerRadius: 3).fill(Color.onKey).frame(width: 16, height: 16)
-              } else if ear.listening {
-                Bars(level: ear.level, color: Color.onGo)
-              } else if ready {
-                Image(systemName: "arrow.up").font(.system(size: 21, weight: .bold)).foregroundStyle(Color.onGo)
-              } else {
-                Image(systemName: "mic.fill").font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.onGo)
-              }
+          if !busy && !ready && !ear.listening {
+            Button(action: right) {
+              Image(systemName: "mic").font(.system(size: 20, weight: .regular)).foregroundStyle(Color.ink)
+                .frame(width: 44, height: 44)
             }
-            .frame(width: 48, height: 48)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Speak your question")
+            .accessibilityIdentifier("composer-action")
+          } else {
+            Button(action: right) {
+              ZStack {
+                Circle().fill(Color.key)
+                if busy {
+                  RoundedRectangle(cornerRadius: 2.5).fill(Color.onKey).frame(width: 13, height: 13)
+                } else if ear.listening {
+                  Bars(level: ear.level, color: Color.onKey)
+                } else {
+                  Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).foregroundStyle(Color.onKey)
+                }
+              }
+              .frame(width: 38, height: 38)
+              .padding(3)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(busy ? "Stop" : ear.listening ? "Done speaking" : "Send")
+            .accessibilityIdentifier("composer-action")
           }
-          .buttonStyle(.plain)
-          .accessibilityLabel(busy ? "Stop" : ear.listening ? "Done speaking" : ready ? "Send" : "Speak your question")
-          .accessibilityIdentifier("composer-action")
         }
-        .padding(6)
+        .padding(.horizontal, 4).padding(.vertical, 2)
       }
-      .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Color.card))
-      .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(ear.listening || focused ? Color.go : Color.line, lineWidth: ear.listening ? 2.5 : 1.5))
-      .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
+      .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Color.card2))
+      .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(ear.listening ? Color.go : Color.clear, lineWidth: 2))
     }
     .onDisappear { ear.stop() }
   }

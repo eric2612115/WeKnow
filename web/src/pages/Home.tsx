@@ -1,38 +1,34 @@
-// Ask as one conversation (design/CHAT-SPEC.md). Before the first message the live camera fills the top, with the
-// greeting and the sample pictures under it; after it, the conversation scrolls, newest at the bottom. The question
-// box stays at the bottom the whole time. Phone and desktop are the same column (desktop centres it).
+// Ask as one conversation (design/CHAT-SPEC.md). Before the first message: a short greeting, the sample pictures and
+// a few things to ask; after it, the conversation scrolls, newest at the bottom. The question box stays at the bottom
+// the whole time. The camera is never on by itself: the camera button opens it over the page, its own button takes
+// the picture, and the camera goes off again. Phone and desktop are the same column (desktop centres it, ~720 px).
 
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { hush, patch, pressGuide, useAsk, view, waitingForPress } from '../ask/conversation';
 import { setAskUi, takePicture } from '../ask/flows';
-import { cameraStore, captureStill, permission, startCamera, stopCamera } from '../engine/camera';
+import { cameraStore, captureStill, startCamera, stopCamera } from '../engine/camera';
 import { CameraWindow } from '../home/Window';
 import { Chat, Opening } from '../home/Words';
 import { AskSheet } from '../home/AskSheet';
 import { Composer, pressRight, stopNow } from '../home/Composer';
-import { ChoosePhoto, SampleButtons } from '../app/Sheets';
 import { Sheet } from '../ui/Sheet';
+import { PictureViewer } from '../ui/PictureViewer';
 import { I } from '../ui/icons';
 import { openSheet, uiStore } from '../ui/uiStore';
 import { attachSample, type Sample } from '../samples';
 import { t } from '../strings';
 
-/** Once the conversation has started, the camera button opens the camera over it; its own button takes the picture. */
+/** The camera button opens the camera over the page; its own button takes the picture and closes it. */
 function Viewfinder({ video }: { video: React.RefObject<HTMLVideoElement | null> }) {
   const v = useAsk();
   return (
     <Sheet open={v.viewfinder} onClose={() => patch({ viewfinder: false })} title={t('cam.sheet')} size="wide">
-      <CameraWindow ref={video} liveOnly className="h-[min(52dvh,30rem)]" />
+      <CameraWindow ref={video} liveOnly className="[--win-h:min(40dvh,24rem)]" />
       <button type="button" className="btn btn-yes mt-4 w-full" onClick={takePicture}>
         <I.cam />
         {t('cam.take')}
       </button>
-      <ChoosePhoto className="mt-3 w-full" />
-      <div className="mt-4">
-        <p className="mb-2 text-small font-semibold text-ink-2">{t('home.samples')}</p>
-        <SampleButtons compact onPick={(id) => void attachSample(id)} />
-      </div>
     </Sheet>
   );
 }
@@ -68,15 +64,13 @@ export default function Home() {
     later(() => void import('../reader').catch(() => undefined));
   }, []);
 
-  // The camera runs only while Ask is open; it is never asked for here without a press.
+  // The camera is on only while its view is open; closing it (or taking the picture) turns it off.
   useEffect(() => {
-    let live = true;
-    void permission('camera').then((p) => {
-      if (live && (p === 'granted' || cameraStore.get().state === 'live')) void startCamera();
-      else if (live && p === 'denied') cameraStore.set({ state: 'blocked', stream: null });
-    });
+    if (!v.viewfinder) stopCamera();
+  }, [v.viewfinder]);
+
+  useEffect(() => {
     return () => {
-      live = false;
       const p = view().phase;
       hush();
       if (p === 'listening' || p === 'looking') patch({ phase: view().head ? 'settled' : 'ready', reading: false });
@@ -100,7 +94,7 @@ export default function Home() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const ui = uiStore.get();
-      if (ui.drawer || ui.sheet || view().sheet) return;
+      if (ui.drawer || ui.sheet || view().sheet || view().viewfinder) return;
       const el = e.target as HTMLElement | null;
       const tag = el?.tagName?.toLowerCase() ?? '';
       const free = !/^(button|input|select|textarea|summary|a)$/.test(tag) && !el?.isContentEditable;
@@ -123,17 +117,11 @@ export default function Home() {
   const chatting = v.history.some((m) => m.who === 'me');
 
   return (
-    <main className="mx-auto flex min-h-0 w-full max-w-[46rem] flex-1 flex-col px-4 pt-[0.1rem] lg:px-6">
-      {chatting ? (
-        <Chat />
-      ) : (
-        <>
-          <CameraWindow ref={video} className="h-[max(6rem,min(42dvh,calc(100dvh-27rem)))] flex-none" />
-          <Opening />
-        </>
-      )}
+    <main className="mx-auto flex min-h-0 w-full max-w-[47rem] flex-1 flex-col px-4">
+      {chatting ? <Chat /> : <Opening />}
       <Composer />
-      {chatting && <Viewfinder video={video} />}
+      <Viewfinder video={video} />
+      <PictureViewer />
       <AskSheet />
     </main>
   );

@@ -32,9 +32,28 @@ export const EN = {
   'theme.system': 'System',
   'menu.signedout': 'Not signed in',
   'bar.signin': 'Sign in',
+  'bar.new': 'New conversation', // added: the app bar's button for Menu › Start again
   close: 'Close',
 
   // Ask
+  'home.greeting': 'What can I check for you?', // added: the start screen, before the first message
+  'home.try1': 'My kitchen sink is clogged',
+  'home.try2': 'How much are brake pads?',
+  'home.try3': 'My toilet keeps running',
+  'home.try4': 'What does a new water heater cost?',
+  'home.try.label': 'Or ask',
+  'home.samples.short': 'Try a sample',
+  'pic.open': 'Open the picture large', // added: the full-screen picture viewer
+  'pic.title': 'The picture',
+  'pic.zoom.in': 'Make it bigger',
+  'pic.zoom.out': 'Make it smaller',
+  'menu.packs': 'Knowledge packs', // added: the Menu drawer
+  'menu.recent': 'Recent checks',
+  'packs.title': 'Knowledge packs',
+  'packs.lead': 'Every price and every guide WeKnow uses comes from a pack kept on this {device}. Each one names its sources.',
+  'packs.counts': '{prices} prices, {guides} guides',
+  'packs.asof': 'Checked {date}',
+  'packs.none': 'The packs could not be listed just now.',
   'home.coach': 'Type or say your question, or show me the paper.',
   'home.coach.picture': 'Press Send to ask about this picture. You can change the words first.', // added: a picture is attached
   'btn.ask': 'Ask',

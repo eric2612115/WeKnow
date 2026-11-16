@@ -1,15 +1,20 @@
-// Ask as one conversation (design/CHAT-SPEC.md): the person's messages on the right (their words and picture),
-// WeKnow's on the left, newest at the bottom. An answer has no verdict band: its first sentence is the point, in bold,
-// with a small amber "Careful" or red "Stop" tag only when it matters; then the other sentences, the lines of a
-// quote, the where-it-ran tag, and, under the newest answer only, the buttons: the next questions to ask.
+// Ask as one conversation (design/CHAT-SPEC.md): the person's messages on the right in a soft bubble (their words and
+// picture), WeKnow's as plain text on the page, newest at the bottom. An answer has no verdict band: its first
+// sentence is the point, in a stronger weight, with a small amber "Careful" or red "Stop" tag only when it matters;
+// then the other sentences, the lines of a quote, the quiet where-it-ran tag, and, under the newest answer only, the
+// next questions to ask as light pills.
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { pick, pressGuide, useAsk, type AskView, type Line, type MineMsg, type WkMsg } from '../ask/conversation';
+import { setBox } from '../ask/box';
+import { send } from '../ask/flows';
+import { attachSample, SAMPLES } from '../samples';
 import { deviceWord } from '../engine/device';
 import { I } from '../ui/icons';
 import { WhereTag } from '../ui/Receipt';
 import { openSheet } from '../ui/uiStore';
+import { openPicture } from '../ui/PictureViewer';
 import { t, money } from '../strings';
 import { projectName, useData } from '../store/data';
 import { explainCurrent } from '../app/explainOpen';
@@ -21,14 +26,14 @@ function Head({ head }: { head: AskView['head'] }) {
   if (!head) return null;
   const { tone, text } = head;
   return (
-    <div className="mb-[0.35rem]">
+    <div className="mb-1">
       {(tone === 'warn' || tone === 'stop') && (
         <span className="ctag" data-tone={tone}>
           {tone === 'stop' ? <I.stopSquare /> : <I.warn />}
           {tone === 'stop' ? t('tag.stop') : t('tag.careful')}
         </span>
       )}
-      <p className="text-[1.375rem] leading-[1.3] font-bold tracking-[-0.018em] text-ink lg:text-[1.5rem]">{text}</p>
+      <p className="wk-head">{text}</p>
     </div>
   );
 }
@@ -37,16 +42,14 @@ function Steps({ steps }: { steps: AskView['steps'] }) {
   if (!steps) return null;
   const { label, n, total } = steps;
   return (
-    <div className="mb-2 flex items-center gap-[0.8rem] text-small font-bold text-ink-2">
+    <div className="mb-2 flex items-center gap-3 text-[0.9375rem] font-semibold text-ink-2">
       <span className="flex-none">{label}</span>
       {n > 0 && (
-        <span className="flex flex-1 gap-[0.3rem]" aria-hidden="true">
+        <span className="flex max-w-[16rem] flex-1 gap-1" aria-hidden="true">
           {Array.from({ length: total }, (_, i) => (
             <i
               key={i}
-              className={`h-2 flex-1 rounded-[0.3rem] ${
-                i + 1 < n ? 'bg-go' : i + 1 === n ? 'bg-card shadow-[inset_0_0_0_2px_var(--go)]' : 'bg-card-2 shadow-[inset_0_0_0_1px_var(--line)]'
-              }`}
+              className={`h-1 flex-1 rounded-full ${i + 1 <= n ? 'bg-go' : 'bg-fill-2'} ${i + 1 === n ? 'opacity-55' : ''}`}
             />
           ))}
         </span>
@@ -67,17 +70,17 @@ function Items({ items }: { items: LineItem[] | null }) {
   if (!items?.length) return null;
   return (
     // Every line name wraps, never truncates; the amount stays at the right and the status sits under the name.
-    <ol className="mt-3 mb-1 grid grid-cols-[minmax(0,1fr)] rounded-btn border border-hair bg-bg px-3 py-1" aria-label="Lines on the paper">
+    <ol className="mt-3 mb-1 grid grid-cols-[minmax(0,1fr)] border-y border-hair" aria-label="Lines on the paper">
       {items.map((it) => {
         const s = STATE[it.state];
         const Icon = s.icon;
         return (
-          <li key={it.n} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2 gap-y-1 border-t border-hair py-2 text-small first:border-t-0">
-            <span className="font-semibold text-ink-2 tabular-nums">{it.n}</span>
-            <span className="font-semibold [overflow-wrap:normal] [word-break:normal]">{it.label}</span>
-            <span className="text-right font-semibold whitespace-nowrap tabular-nums">{it.amount !== null ? money(it.amount) : ''}</span>
+          <li key={it.n} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2 gap-y-1 border-t border-hair py-[0.6rem] first:border-t-0">
+            <span className="text-ink-2 tabular-nums">{it.n}</span>
+            <span className="font-medium [overflow-wrap:normal] [word-break:normal]">{it.label}</span>
+            <span className="text-right font-medium whitespace-nowrap tabular-nums">{it.amount !== null ? money(it.amount) : ''}</span>
             <span
-              className={`col-start-2 col-span-2 inline-flex items-center gap-1 justify-self-start rounded-full px-2 py-0.5 font-semibold [&_svg]:size-[1.1rem] [&_svg]:flex-none ${s.cls}`}
+              className={`col-start-2 col-span-2 inline-flex items-center gap-1 justify-self-start rounded-full px-2 py-0.5 text-[0.9375rem] font-medium first:[&_svg]:-ml-0.5 [&_svg]:size-4 [&_svg]:flex-none ${s.cls}`}
             >
               <Icon />
               <span>{s.text(it)}</span>
@@ -94,7 +97,7 @@ function NoteTag() {
   return (
     <button
       type="button"
-      className="mt-[-0.1rem] mb-[0.3rem] inline-flex min-h-11 items-center gap-[0.4rem] rounded-full border border-hair bg-card py-[0.3rem] pr-[0.7rem] pl-2 text-small font-semibold text-ink-2 shadow-d1 hover:brightness-[.97] [&_svg]:size-5 [&_svg]:flex-none [&_svg]:text-go"
+      className="tag tag-quiet -ml-[0.6rem] [&_svg]:text-go"
       onClick={() => nav('/remembers')}
     >
       <I.note />
@@ -108,22 +111,17 @@ function Lines({ lines, now }: { lines: Line[]; now?: number | null }) {
     <>
       {lines.map((l) => {
         if (l.kind === 'heard') return null;
-        // Every sentence stays readable; the one being said carries a green mark at its edge.
-        const mark = l.id === now ? 'shadow-[inset_3px_0_0_var(--go)] pl-3 -ml-3' : '';
         if (l.kind === 'warn')
           return (
-            <p key={l.id} className="my-[0.45rem] flex items-start gap-2 rounded-btn bg-warn-bg px-[0.8rem] py-[0.65rem] text-caption font-semibold tracking-[-0.012em] text-warn-ink [&_svg]:mt-0.5 [&_svg]:size-7 [&_svg]:flex-none">
+            <p key={l.id} className="wk-warn">
               <I.warn />
               <span>{l.text}</span>
             </p>
           );
+        // Every sentence stays readable; the one being said carries a green mark at its edge.
         return (
           <div key={l.id}>
-            <p
-              className={`my-[0.4rem] tracking-[-0.012em] text-ink transition-shadow ${mark} ${
-                l.kind === 'strong' ? 'text-strong font-bold tracking-[-0.02em]' : 'text-caption font-medium'
-              }`}
-            >
+            <p className="wk-line" data-kind={l.kind} data-now={l.id === now ? '' : undefined}>
               <span>{l.text}</span>
             </p>
             {l.noteTag && <NoteTag />}
@@ -137,14 +135,16 @@ function Lines({ lines, now }: { lines: Line[]; now?: number | null }) {
 function LinkButtons({ links }: { links: AskView['links'] }) {
   if (!links.length) return null;
   return (
-    <div className="mt-[0.8rem] grid gap-[0.6rem]">
-      {links.map((o, i) => (
-        <a key={o.value} href={o.href} className={`btn ${i === 0 ? 'btn-yes' : ''}`} {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
-          {o.icon === 'map' ? <I.map /> : <I.phone />}
-          {o.label}
-        </a>
-      ))}
-      {links.some((o) => o.external) && <p className="text-small text-ink-2">{t('maps.open')}</p>}
+    <div className="mt-3">
+      <div className="sugg-row">
+        {links.map((o, i) => (
+          <a key={o.value} href={o.href} className="sugg" data-primary={i === 0 ? '' : undefined} {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+            {o.icon === 'map' ? <I.map /> : <I.phone />}
+            {o.label}
+          </a>
+        ))}
+      </div>
+      {links.some((o) => o.external) && <p className="mt-2 text-[0.9375rem] text-ink-2">{t('maps.open')}</p>}
     </div>
   );
 }
@@ -154,7 +154,7 @@ function KeptChip({ kept }: { kept: AskView['kept'] }) {
   const c = kept ? data.checks.find((x) => x.id === kept.checkId) : undefined;
   if (!c) return null;
   return (
-    <button type="button" className="tag" onClick={() => openSheet({ type: 'move', checkId: c.id })}>
+    <button type="button" className="tag tag-quiet" onClick={() => openSheet({ type: 'move', checkId: c.id })}>
       <I.folder />
       <span>{t('kept.chip', { project: projectName(c.projectId) })}</span>
       <I.chev />
@@ -165,11 +165,11 @@ function KeptChip({ kept }: { kept: AskView['kept'] }) {
 function Tags({ receipt, kept, picture, explain }: { receipt: Receipt | null; kept: AskView['kept']; picture?: string | null; explain?: boolean }) {
   if (!receipt && !kept) return null;
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      {receipt && <WhereTag r={receipt} device={deviceWord()} onOpen={() => openSheet({ type: 'receipt', r: receipt, picture: picture ?? null })} />}
+    <div className="mt-1 -ml-[0.6rem] flex flex-wrap">
+      {receipt && <WhereTag className="tag-quiet" r={receipt} device={deviceWord()} onOpen={() => openSheet({ type: 'receipt', r: receipt, picture: picture ?? null })} />}
       <KeptChip kept={kept} />
       {explain && (
-        <button type="button" className="tag" onClick={() => void explainCurrent()}>
+        <button type="button" className="tag tag-quiet" onClick={() => void explainCurrent()}>
           <I.lang />
           <span>{t('explain.button')}</span>
         </button>
@@ -195,7 +195,13 @@ function MeBubble({ m, looking, reading }: { m: MineMsg; looking: boolean; readi
   return (
     <article className="msg-me" aria-label={t('box.label')}>
       {m.picture && (
-        <div className={`win msg-pic ${looking ? 'looking' : ''} ${reading ? 'reading' : ''}`}>
+        <button
+          type="button"
+          className={`win msg-pic ${looking ? 'looking' : ''} ${reading ? 'reading' : ''}`}
+          aria-label={t('pic.open')}
+          title={t('pic.open')}
+          onClick={() => m.picture && openPicture(m.picture)}
+        >
           <img src={m.picture} alt="" className="block size-full object-contain" />
           {looking && (
             <>
@@ -205,7 +211,7 @@ function MeBubble({ m, looking, reading }: { m: MineMsg; looking: boolean; readi
               <span className="brk br" />
             </>
           )}
-        </div>
+        </button>
       )}
       {m.text && <p>{m.text}</p>}
     </article>
@@ -217,34 +223,32 @@ function Buttons() {
   const v = useAsk();
   if (v.phase === 'guide')
     return (
-      <div className="mt-[0.9rem] grid gap-[0.6rem]">
-        <button type="button" className="btn btn-yes" onClick={() => pressGuide('next')}>
-          <I.next />
+      <div className="sugg-row mt-3">
+        <button type="button" className="sugg" data-primary="" onClick={() => pressGuide('next')}>
           {t('next.step')}
+          <I.next />
         </button>
-        <div className="grid grid-cols-2 gap-[0.6rem]">
-          <button type="button" className="btn" onClick={() => pressGuide('again')}>
-            <I.again />
-            {t('next.again')}
-          </button>
-          <button type="button" className="btn" onClick={() => pressGuide('stop')}>
-            <I.stopSquare />
-            {t('next.stop')}
-          </button>
-        </div>
+        <button type="button" className="sugg" onClick={() => pressGuide('again')}>
+          <I.again />
+          {t('next.again')}
+        </button>
+        <button type="button" className="sugg" onClick={() => pressGuide('stop')}>
+          {t('next.stop')}
+        </button>
       </div>
     );
   if (v.choices) {
     const { options } = v.choices;
     return (
       <>
-        <div className="mt-[0.9rem] grid grid-cols-1 gap-[0.6rem]">
+        <div className="sugg-row mt-3">
           {options.map((o, i) =>
             o.href ? (
               <a
                 key={o.value}
                 href={o.href}
-                className={`btn ${i === 0 ? 'btn-yes' : ''}`}
+                className="sugg"
+                data-primary={i === 0 ? '' : undefined}
                 onClick={() => pick(o.value)}
                 {...(o.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               >
@@ -252,21 +256,21 @@ function Buttons() {
                 {o.label}
               </a>
             ) : (
-              <button key={o.value} type="button" className={`btn ${i === 0 ? 'btn-yes' : ''}`} onClick={() => pick(o.value)}>
+              <button key={o.value} type="button" className="sugg" onClick={() => pick(o.value)}>
                 {o.label}
               </button>
             ),
           )}
         </div>
-        {options.some((o) => o.external) && <p className="mt-2 text-small text-ink-2">{t('maps.open')}</p>}
+        {options.some((o) => o.external) && <p className="mt-2 text-[0.9375rem] text-ink-2">{t('maps.open')}</p>}
       </>
     );
   }
   if (!v.next.length || v.phase === 'looking' || v.phase === 'listening') return null;
   return (
-    <div className="mt-[0.9rem] grid gap-[0.6rem]" aria-label={t('next.label')}>
+    <div className="sugg-row mt-3" role="group" aria-label={t('next.label')}>
       {v.next.map((n) => (
-        <button key={n.label} type="button" className="btn btn-next" onClick={n.act}>
+        <button key={n.label} type="button" className="sugg" onClick={n.act}>
           {n.label}
         </button>
       ))}
@@ -274,36 +278,78 @@ function Buttons() {
   );
 }
 
-/** Phone and desktop: the three sample pictures, each attaching itself with its question. */
+/** Offered inside an answer (no camera, say): the three sample pictures, each attaching itself with its question. */
 export function SamplesRow() {
   return (
-    <div className="mt-3">
-      <p className="mb-2 text-small font-semibold text-ink-2 max-[22.5rem]:sr-only">{t('home.samples')}</p>
+    <div className="mt-4 max-w-[26rem]">
+      <p className="mb-2 text-[0.9375rem] font-medium text-ink-2 max-[22.5rem]:sr-only">{t('home.samples')}</p>
       <SampleButtons compact />
     </div>
   );
 }
 
-/** The newest answer, live: it is being said, and its buttons work. */
-function LiveAnswer({ coach }: { coach: boolean }) {
+/** On the start screen: the sample pictures as small cards. A press attaches the picture and puts its question in
+ * the box, ready for Send. */
+function SampleCards() {
   const v = useAsk();
-  const hasWords = !!(v.head || v.steps || v.lines.some((l) => l.kind !== 'heard' && l.text) || v.items?.length || v.choices || v.next.length);
-  if (!hasWords && !coach) return null;
+  return (
+    <section aria-label={t('home.samples.short')}>
+      <p className="mb-2 text-center text-[0.9375rem] font-medium text-ink-2">{t('home.samples.short')}</p>
+      <div className="mx-auto grid max-w-[34rem] grid-cols-3 gap-2 md:gap-3">
+        {SAMPLES.map((s) => (
+          <button key={s.id} type="button" className="sample-card" aria-pressed={v.chosen?.sample === s.id} onClick={() => void attachSample(s.id)}>
+            <img src={s.url} alt="" />
+            <span>{t(s.q)}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const TRY = ['home.try1', 'home.try2', 'home.try3', 'home.try4'] as const;
+
+/** Things to ask, on the start screen. A press asks it, the same as typing it and pressing Send: words that need a
+ * picture stay in the box until one is added. */
+function Suggestions() {
+  return (
+    <section aria-label={t('home.try.label')}>
+      <p className="mb-2 text-center text-[0.9375rem] font-medium text-ink-2">{t('home.try.label')}</p>
+      <div className="sugg-row justify-center">
+        {TRY.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="sugg"
+            onClick={() => {
+              const q = t(id);
+              if (!send(q)) setBox(q);
+            }}
+          >
+            {t(id)}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const hasWordsOf = (v: AskView) =>
+  !!(v.head || v.steps || v.lines.some((l) => l.kind !== 'heard' && l.text) || v.items?.length || v.choices || v.next.length);
+
+/** The newest answer, live: it is being said, and its buttons work. */
+function LiveAnswer() {
+  const v = useAsk();
+  if (!hasWordsOf(v)) return null;
   const explain = !!v.kept && (v.phase === 'settled' || v.phase === 'waiting');
   return (
     <article className="msg-wk" aria-live="polite">
-      {!hasWords && coach ? (
-        <p className="text-caption font-medium tracking-[-0.012em]">{v.chosen ? t('home.coach.picture') : t('home.coach')}</p>
-      ) : (
-        <>
-          <Steps steps={v.steps} />
-          <Head head={v.head} />
-          <Lines lines={v.lines} now={v.done ? null : v.now} />
-          {v.phase !== 'listening' && <Items items={v.items} />}
-          <LinkButtons links={v.links} />
-          <Tags receipt={v.receipt} kept={v.kept} picture={v.still} explain={explain} />
-        </>
-      )}
+      <Steps steps={v.steps} />
+      <Head head={v.head} />
+      <Lines lines={v.lines} now={v.done ? null : v.now} />
+      {v.phase !== 'listening' && <Items items={v.items} />}
+      <LinkButtons links={v.links} />
+      <Tags receipt={v.receipt} kept={v.kept} picture={v.still} explain={explain} />
       <Buttons />
       {v.offerSamples && v.phase !== 'looking' && !v.chosen && <SamplesRow />}
     </article>
@@ -320,7 +366,7 @@ export function Chat() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [v.history.length, v.lines.length, v.next.length, v.choices, v.head, v.phase, v.items]);
   return (
-    <div ref={box} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-1 pt-2 pb-3 [scrollbar-width:thin]">
+    <div ref={box} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pt-3 pb-6 [scrollbar-width:thin]">
       {v.history.map((m) =>
         m.who === 'me' ? (
           <MeBubble key={m.id} m={m} looking={m === lastMe && v.looking} reading={m === lastMe && v.reading} />
@@ -328,18 +374,35 @@ export function Chat() {
           <WkBubble key={m.id} m={m} />
         ),
       )}
-      <LiveAnswer coach={false} />
+      <LiveAnswer />
     </div>
   );
 }
 
-/** Before the first message: the greeting (or a dead end, such as no camera) under the camera window. */
+/**
+ * Before the first message: a short greeting with one line under it, the sample pictures and a few things to ask.
+ * No camera here: it opens from the camera button. When WeKnow has something to say first (no camera, "Add a picture
+ * first"), its words take the place of the greeting.
+ */
 export function Opening() {
   const v = useAsk();
+  const words = hasWordsOf(v);
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1 pt-1 pb-2">
-      <LiveAnswer coach />
-      {!v.chosen && !v.offerSamples && !v.choices && <SamplesRow />}
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+      <div className="my-auto flex flex-col gap-6 py-3 md:gap-8 lg:pb-12">
+        {words ? (
+          <LiveAnswer />
+        ) : (
+          <div className="text-center">
+            <h1 className="text-[1.75rem] leading-[1.2] font-semibold tracking-[-0.025em] text-ink lg:text-[2rem]">{t('home.greeting')}</h1>
+            <p className="mt-2 text-ink-2" aria-live="polite">
+              {v.chosen ? t('home.coach.picture') : t('home.coach')}
+            </p>
+          </div>
+        )}
+        {!v.offerSamples && <SampleCards />}
+        {!v.chosen && !words && <Suggestions />}
+      </div>
     </div>
   );
 }

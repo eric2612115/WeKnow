@@ -1,18 +1,18 @@
 // The question box at the bottom of Ask, laid out the way chat apps lay it out: the camera and Choose a photo on the
-// left (they attach a picture, shown as a small chip with an x, and in the window; nothing is sent), the words in the
-// middle (always there, Enter sends), and on the right the microphone when the box is empty (it fills the words, it
-// does not send), a send arrow when it holds words or a picture, the level bars while WeKnow listens and Stop while
-// it looks or speaks.
+// left (they attach a picture, shown as a small picture with an x on its corner, and in the window; nothing is sent),
+// the words in the middle (always there, Enter sends), and on the right the microphone when the box is empty (it fills
+// the words, it does not send), a round dark send arrow when it holds words or a picture, the level bars while WeKnow
+// listens and a stop square while it looks or speaks. One soft pill, no border.
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { cutNarration, detach, finishListening, hush, patch, useAsk, view, type AskView } from '../ask/conversation';
 import { boxStore, setBoxFocus, useBox } from '../ask/box';
 import { dictate, send as sendNow, takePicture } from '../ask/flows';
-import { useCamera } from '../engine/camera';
 import { chooseFile } from '../samples';
 import { getPrefs, usePrefs } from '../store/prefs';
 import { createStore, useStore } from '../store/store';
 import { I } from '../ui/icons';
+import { openPicture } from '../ui/PictureViewer';
 import { t } from '../strings';
 
 /** The words have needed more than one line since the box was last empty: they get the whole width. */
@@ -74,7 +74,6 @@ const BARS = [0.5, 0.8, 1, 0.75, 0.55];
 export function Composer() {
   const v = useAsk();
   const text = useBox();
-  const cam = useCamera();
   const ref = useRef<HTMLTextAreaElement>(null);
   const file = useRef<HTMLInputElement>(null);
   const listening = v.phase === 'listening';
@@ -84,8 +83,7 @@ export function Composer() {
   const voice = usePrefs().voice;
   const face = faceOf(v, text, voice);
   const pic = v.chosen;
-  // With a picture in the window and the camera on, the camera button goes back to the live camera first.
-  const camLabel = cam.state === 'live' && (v.still || pic) ? t('box.camera.back') : t('box.camera');
+  const camLabel = t('box.camera');
 
   // The long hint only where it fits on one line; a phone gets the short one.
   const [wide, setWide] = useState(false);
@@ -133,7 +131,7 @@ export function Composer() {
 
   return (
     <form
-      className="px-0 pt-[0.45rem] pb-[calc(0.8rem+env(safe-area-inset-bottom))] lg:pt-0 lg:pb-0"
+      className="flex-none pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:pb-4"
       onSubmit={(e) => {
         e.preventDefault();
         send();
@@ -142,14 +140,18 @@ export function Composer() {
       <div className="composer" data-listening={listening ? '' : undefined} data-tall={tall ? '' : undefined} data-pic={pic ? '' : undefined}>
         {pic && (
           <div className="cchip">
-            <img src={pic.url} alt="" />
-            <span>{t('box.attached')}</span>
-            <button type="button" aria-label={t('box.remove')} title={t('box.remove')} onClick={detach}>
-              <I.close />
-            </button>
+            <span className="cthumb">
+              <button type="button" className="cview" aria-label={t('pic.open')} title={t('pic.open')} onClick={() => openPicture(pic.url)}>
+                <img src={pic.url} alt="" />
+              </button>
+              <button type="button" className="cx" aria-label={t('box.remove')} title={t('box.remove')} onClick={detach}>
+                <I.close />
+              </button>
+            </span>
+            <span className="sr-only">{t('box.attached')}</span>
           </div>
         )}
-        <button type="button" className="cbtn cbtn-cam" aria-label={camLabel} title={camLabel} onClick={takePicture}>
+        <button type="button" className="cbtn" aria-label={camLabel} title={camLabel} onClick={takePicture}>
           <I.cam />
         </button>
         <button type="button" className="cbtn" aria-label={t('home.choose')} title={t('home.choose')} onClick={() => file.current?.click()}>

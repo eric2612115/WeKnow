@@ -18,6 +18,7 @@ const router = createBrowserRouter([
       { index: true, Component: Home },
       { path: 'checks', lazy: page(() => import('../pages/Checks')) },
       { path: 'remembers', lazy: page(() => import('../pages/Remembers')) },
+      { path: 'packs', lazy: page(() => import('../pages/Packs')) },
       { path: 'settings', lazy: page(() => import('../pages/Settings')) },
       { path: 'help', lazy: page(() => import('../pages/Help')) },
       { path: 'mail', lazy: page(() => import('../pages/Mail')) },

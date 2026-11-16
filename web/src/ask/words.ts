@@ -40,6 +40,9 @@ export function lean(question: string): Lean {
   return 'both';
 }
 
+const REPLACE = /\b(new|install\w*|replac\w*)\b/i;
+const REPAIR = /\b(repair\w*|fix\w*|broken|not working)\b/i;
+
 // Words that say nothing about which job it is: question words, price words, and generic job verbs.
 const STOP = new Set(
   (
@@ -88,13 +91,17 @@ export function terms(s: string): string[] {
  */
 export function matchStrength(question: string, phrases: string[]): number {
   const asked = new Set(terms(question));
+  // The job verbs are stop words, but they still break a tie: "a new water heater" means replacing it, "it is
+  // broken" means repairing it.
+  const verb = (t: string) => (REPLACE.test(t) ? 'replace' : REPAIR.test(t) ? 'repair' : null);
+  const wants = verb(question);
   let best = 0;
   for (const p of phrases) {
     const want = terms(p);
     if (!want.length) continue;
     const shared = want.filter((w) => asked.has(w)).length;
     const need = want.length <= 2 ? want.length : Math.max(2, Math.ceil(want.length / 2));
-    if (shared >= need) best = Math.max(best, shared / want.length);
+    if (shared >= need) best = Math.max(best, shared / want.length + (wants && verb(p) === wants ? 0.01 : 0));
   }
   return best;
 }

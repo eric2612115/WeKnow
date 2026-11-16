@@ -186,16 +186,14 @@ export function send(text: string): boolean {
 }
 
 /**
- * The camera button. Before the first message the camera is the window on the page: a press takes a still and
- * attaches it to the box (nothing is sent); with a picture in the window instead it goes back to the live camera
- * first. Once the conversation has started, the camera opens over it, and its own button takes the picture.
- * Without a camera: turn it on, or the ways round it (how to allow it, a picture instead).
+ * The camera button. The camera is never on by itself: a press opens the camera over the page and turns it on;
+ * the camera's own button takes the picture, which closes the camera and attaches the picture to the box (nothing is
+ * sent). Without a camera: the ways round it (how to allow it, a picture instead).
  */
 export function takePicture() {
   void run(async (t) => {
     const v = view();
-    const inline = !started();
-    if (!inline && !v.viewfinder) {
+    if (!v.viewfinder) {
       patch({ viewfinder: true, still: null, looking: false });
       if (ui.cameraState() !== 'live') {
         const s = await ui.startCamera();
@@ -209,20 +207,9 @@ export function takePicture() {
       return;
     }
     if (ui.cameraState() !== 'live') {
-      const s = await ui.startCamera();
-      alive(t);
-      if (s === 'live') {
-        patch({ still: null, looking: false });
-        return;
-      }
       patch({ viewfinder: false });
       archive();
       return cameraOff(t);
-    }
-    if (inline && (v.still || v.chosen)) {
-      if (v.chosen) detach();
-      else patch({ still: null, looking: false });
-      return;
     }
     const still = await ui.snap();
     alive(t);

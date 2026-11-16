@@ -9,12 +9,12 @@ extension Color {
     Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })
   }
 
-  static let bg = token(0xF5F6F4, 0x0B0E0D)
+  static let bg = token(0xFFFFFF, 0x0F1110)
   static let card = token(0xFFFFFF, 0x141917)
-  static let card2 = token(0xEEF1EE, 0x1C2320)
+  static let card2 = token(0xF1F3F2, 0x1F2321)
   static let ink = token(0x0F1A15, 0xF1F5F3)
   static let ink2 = token(0x46534D, 0xAEB9B3)
-  static let hair = token(0xE2E6E3, 0x252C29)
+  static let hair = token(0xE6E9E7, 0x2A2F2D)
   static let line = token(0x77847D, 0x6E7B75)
   static let go = token(0x075C3D, 0x3ECF92)
   static let goDeep = token(0x043C28, 0x1F8F62)

@@ -94,7 +94,7 @@ export function applyLook(p: Prefs = getPrefs()) {
   html.dataset.theme = theme;
   html.style.fontSize = `${SIZES[p.size]}%`;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0B0E0D' : '#F5F6F4');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0D0F0E' : '#FFFFFF');
 }
 
 export function watchLook() {

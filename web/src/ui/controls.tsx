@@ -9,7 +9,7 @@ import { t } from '../strings';
 
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 font-bold tracking-[-0.025em] ${className}`}>
+    <span className={`inline-flex items-center gap-[0.45em] font-semibold tracking-[-0.02em] ${className}`}>
       <span className="mark-dot" aria-hidden="true" />
       WeKnow
     </span>

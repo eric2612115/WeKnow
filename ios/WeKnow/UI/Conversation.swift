@@ -6,23 +6,32 @@ import SwiftUI
 
 struct ConversationView: View {
   @Bindable var model: AskModel
-  let camera: LiveCamera
   let reduceMotion: Bool
   let showWhere: (AskModel.Exchange) -> Void
+  @State private var viewing: ViewedPicture?
 
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        LazyVStack(alignment: .leading, spacing: 14) {
+        LazyVStack(alignment: .leading, spacing: 18) {
           ForEach(model.thread) { ex in
-            PersonBubble(text: ex.question, picture: ex.picture)
+            PersonBubble(text: ex.question, picture: ex.picture) { viewing = ViewedPicture(image: $0) }
             AnswerBubble(head: ex.head, tone: ex.tone, sentences: ex.sentences, speaking: nil, tag: ex.tag) { showWhere(ex) }
           }
           // The question in progress.
           if model.picture != nil {
             VStack(alignment: .trailing, spacing: 8) {
-              PictureWindow(model: model, camera: camera, reduceMotion: reduceMotion, openPhotos: {})
-                .frame(height: 300)
+              PictureWindow(model: model, reduceMotion: reduceMotion)
+                .frame(height: 280)
+                .overlay(alignment: .bottomTrailing) { EnlargeBadge() }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                  if let p = model.picture {
+                    viewing = ViewedPicture(image: annotated(p, bars: Array(model.bars.prefix(model.barsShown)), marks: model.marks))
+                  }
+                }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Opens the picture full screen")
               if let q = model.question { PersonBubble(text: q, picture: nil) }
             }
             .padding(.leading, 30)
@@ -35,6 +44,7 @@ struct ConversationView: View {
         .padding(.vertical, 8)
       }
       .scrollDismissesKeyboard(.interactively)
+      .fullScreenCover(item: $viewing) { PhotoViewer(picture: $0) }
       .onChange(of: model.sentences.count) { _, _ in scroll(proxy) }
       .onChange(of: model.choices.count) { _, _ in scroll(proxy) }
       .onChange(of: model.thread.count) { _, _ in scroll(proxy) }
@@ -48,31 +58,35 @@ struct ConversationView: View {
   }
 }
 
-/// The person's message.
+/// The person's message: a soft grey bubble on the right.
 struct PersonBubble: View {
   let text: String?
   let picture: UIImage?
+  var open: ((UIImage) -> Void)? = nil
 
   var body: some View {
     VStack(alignment: .trailing, spacing: 6) {
       if let picture {
-        Image(uiImage: picture).resizable().scaledToFit().frame(maxWidth: 220, maxHeight: 220)
+        Image(uiImage: picture).resizable().scaledToFit().frame(maxWidth: 260, maxHeight: 260)
           .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+          .overlay(alignment: .bottomTrailing) { if open != nil { EnlargeBadge() } }
+          .onTapGesture { open?(picture) }
           .accessibilityLabel("Your picture, with personal details covered")
+          .accessibilityAddTraits(open != nil ? .isButton : [])
       }
       if let text, !text.isEmpty {
-        Text(text).font(.system(size: 19, weight: .semibold)).foregroundStyle(Color.ink)
-          .padding(.horizontal, 14).padding(.vertical, 10)
-          .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.okBg))
+        Text(text).font(.system(size: 17)).foregroundStyle(Color.ink)
+          .padding(.horizontal, 16).padding(.vertical, 11)
+          .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.card2))
           .fixedSize(horizontal: false, vertical: true)
       }
     }
     .frame(maxWidth: .infinity, alignment: .trailing)
-    .padding(.leading, 40)
+    .padding(.leading, 48)
   }
 }
 
-/// One answer: the point in bold, a tag only for Careful or Stop, the sentences, where it ran.
+/// One answer, as plain text on the page: a small tag only for Careful or Stop, the point, the sentences, where it ran.
 struct AnswerBubble: View {
   let head: String?
   let tone: Tone
@@ -82,20 +96,20 @@ struct AnswerBubble: View {
   let openWhere: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 7) {
       if tone == .warn || tone == .stop {
         Label(tone == .stop ? "Stop" : "Careful", systemImage: tone == .stop ? "hand.raised.fill" : "exclamationmark.triangle.fill")
-          .font(.system(size: 15, weight: .heavy))
+          .font(.system(size: 13, weight: .semibold))
           .foregroundStyle(tone == .stop ? Color.stop : Color.warnInk)
-          .padding(.horizontal, 10).padding(.vertical, 4)
+          .padding(.horizontal, 9).padding(.vertical, 3)
           .background(Capsule().fill(tone == .stop ? Color.stopBg : Color.warnBg))
       }
       if let head {
-        Text(head).font(.system(size: 23, weight: .bold)).tracking(-0.3).foregroundStyle(Color.ink)
+        Text(head).font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink)
           .fixedSize(horizontal: false, vertical: true)
       }
       ForEach(Array(sentences.enumerated()), id: \.offset) { i, s in
-        Text(s).font(.system(size: 20, weight: .medium)).lineSpacing(3)
+        Text(s).font(.system(size: 17)).lineSpacing(4)
           .foregroundStyle(speaking == nil || speaking == i ? Color.ink : Color.ink2)
           .fixedSize(horizontal: false, vertical: true)
       }
@@ -105,7 +119,7 @@ struct AnswerBubble: View {
           .accessibilityHint("Shows where this answer came from")
       }
     }
-    .padding(.trailing, 24)
+    .padding(.trailing, 12)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
@@ -120,33 +134,22 @@ struct LiveAnswer: View {
         HStack(spacing: 10) {
           ProgressView()
           Text(model.picture == nil ? "Looking in the knowledge packs on this \(S.device)…" : "Reading it on this \(S.device)…")
-            .font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink2)
+            .font(.system(size: 16)).foregroundStyle(Color.ink2)
         }
       }
       if model.phase == .asking {
-        Text("May I check this on the internet?").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.ink)
+        Text("May I check this on the internet?").font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink)
       }
       if model.verdict != nil || !model.sentences.isEmpty {
         AnswerBubble(head: model.verdict?.text, tone: model.verdict?.tone ?? .plain, sentences: model.sentences.map(\.text),
                      speaking: model.speaking, tag: model.phase == .done ? model.tag : nil) { model.showWhere = true }
       }
       if !model.choices.isEmpty {
-        VStack(spacing: 10) {
-          ForEach(model.choices) { c in
-            Button { model.choose(c) } label: {
-              HStack {
-                Text(c.label).font(.system(size: 19, weight: .bold)).foregroundStyle(Color.ink).multilineTextAlignment(.leading)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.go)
-              }
-              .padding(.horizontal, 16).frame(minHeight: 54)
-              .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.card))
-              .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.go.opacity(0.55), lineWidth: 1.5))
-            }
-            .buttonStyle(.plain)
-          }
+        FlowLayout(spacing: 8) {
+          ForEach(model.choices) { c in Pill(text: c.label) { model.choose(c) } }
         }
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        .padding(.top, 2)
+        .transition(.opacity)
       }
     }
     .animation(.weknow(0.25), value: model.choices.count)

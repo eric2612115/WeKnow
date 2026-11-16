@@ -5,6 +5,7 @@ import type { SVGProps } from 'react';
 import {
   ArrowRight,
   ArrowUp,
+  BookOpen,
   CalendarPlus,
   Camera,
   CameraOff,
@@ -26,9 +27,11 @@ import {
   Phone,
   Play,
   Plus,
+  Minus,
   RotateCcw,
   SlidersHorizontal,
   Square,
+  SquarePen,
   Sun,
   TriangleAlert,
   User,
@@ -140,4 +143,7 @@ export const I = {
   send: () => <ArrowUp {...base} strokeWidth={2.5} />,
   sound: () => <Volume2 {...base} />,
   soundOff: () => <VolumeX {...base} />,
+  compose: () => <SquarePen {...base} />,
+  book: () => <BookOpen {...base} />,
+  minus: () => <Minus {...base} />,
 };

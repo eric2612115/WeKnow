@@ -84,7 +84,7 @@ describe('a confident match', () => {
   });
 
   it('takes an item whose name or an alias shares at least half of its job words with the question', () => {
-    expect(matchStrength('How much does a brake pad replacement cost?', phrases(pads))).toBe(1);
+    expect(matchStrength('How much does a brake pad replacement cost?', phrases(pads))).toBeGreaterThanOrEqual(1);
     expect(matchStrength('How do I unclog a kitchen sink?', phrases(sink))).toBe(1);
     expect(matchStrength('front brakes squeaking', phrases(pads))).toBe(1);
   });
@@ -150,5 +150,12 @@ describe('follow-up words', () => {
     expect(followUp('Should I pay this?')).toBe('pay');
     expect(followUp('Is that fair?')).toBe('fair');
     expect(followUp('My kitchen sink is clogged')).toBeNull();
+  });
+});
+
+describe('a new thing is a replacement', () => {
+  it('prefers replacing over repairing when the question says new', () => {
+    const q = 'What does a new water heater cost?';
+    expect(matchStrength(q, ['Replace a water heater'])).toBeGreaterThan(matchStrength(q, ['Repair a water heater']));
   });
 });

@@ -5,12 +5,13 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --bg: #f5f6f4;
+  --bg: #ffffff;
   --card: #ffffff;
-  --card-2: #eef1ee;
-  --ink: #0f1a15;
-  --ink-2: #46534d;
-  --hair: #e2e6e3;
+  --card-2: #f2f4f2;
+  --fill-2: #e8ebe8;
+  --ink: #111614;
+  --ink-2: #505b55;
+  --hair: #e5e8e5;
   --line: #77847d;
   --go: #075c3d;
   --go-h: #064e34;
@@ -25,7 +26,7 @@
   --stop-bg: #fde7e3;
   --net: #1849a9;
   --net-bg: #e7eefd;
-  --key: #0f1a15;
+  --key: #171c1a;
   --key-deep: #000000;
   --on-key: #ffffff;
   --scrim: rgb(15 26 21 / 0.42);
@@ -36,12 +37,13 @@
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --bg: #0b0e0d;
-  --card: #141917;
-  --card-2: #1c2320;
+  --bg: #0d0f0e;
+  --card: #151817;
+  --card-2: #1d2120;
+  --fill-2: #282d2b;
   --ink: #f1f5f3;
   --ink-2: #aeb9b3;
-  --hair: #252c29;
+  --hair: #262b29;
   --line: #6e7b75;
   --go: #3ecf92;
   --go-h: #57d9a2;
@@ -71,6 +73,7 @@
   --color-bg: var(--bg);
   --color-card: var(--card);
   --color-card-2: var(--card-2);
+  --color-fill-2: var(--fill-2);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-hair: var(--hair);
@@ -290,13 +293,13 @@
 
   /* ---------- buttons ---------- */
   .btn {
-    min-height: 3.5rem;
-    border-radius: var(--radius-btn);
-    border: 1.5px solid var(--line);
-    background: var(--card);
+    min-height: 3rem;
+    border-radius: 0.9rem;
+    border: 0;
+    background: var(--card-2);
     color: var(--ink);
-    font: 700 1.1875rem/1.15 var(--font-sans);
-    letter-spacing: -0.01em;
+    font: 600 1.0625rem/1.2 var(--font-sans);
+    letter-spacing: -0.005em;
     padding: 0.5rem 1.1rem;
     display: inline-flex;
     align-items: center;
@@ -306,78 +309,75 @@
     text-decoration: none;
     transition:
       background 0.14s,
-      transform 0.14s var(--ease-wk),
-      box-shadow 0.14s,
-      border-color 0.14s;
+      transform 0.14s var(--ease-wk);
   }
   .btn svg {
-    width: 1.35rem;
-    height: 1.35rem;
+    width: 1.25rem;
+    height: 1.25rem;
     flex: none;
   }
   .btn-yes {
     background: var(--go);
-    border-color: transparent;
     color: var(--on-go);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.2),
-      0 0.16rem 0 var(--go-deep),
-      0 0.5rem 1rem -0.5rem rgb(4 60 40 / 0.5);
   }
   .btn-danger {
     color: var(--stop);
-    border-color: var(--stop);
+    background: var(--stop-bg);
   }
   .btn-sm {
     min-height: 2.75rem;
-    font-size: 1.0625rem;
-    font-weight: 600;
     padding: 0.25rem 0.95rem;
     border-radius: 0.8rem;
   }
   @media (hover: hover) {
     .btn:hover {
-      background: var(--card-2);
+      background: var(--fill-2);
     }
     .btn-yes:hover {
       background: var(--go-h);
     }
+    .btn-danger:hover {
+      background: var(--stop-bg);
+      filter: brightness(0.97);
+    }
   }
   .btn:active {
-    transform: scale(0.975);
+    transform: scale(0.98);
   }
   .btn[aria-disabled="true"],
   .btn:disabled {
-    opacity: 0.75;
+    opacity: 0.6;
   }
 
-  .pill-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    height: 2.9rem;
-    padding: 0 1rem 0 0.8rem;
+  /* the app bar: quiet round icon buttons, no borders */
+  .bar-btn {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 9999px;
-    border: 1px solid var(--hair);
-    background: var(--card);
-    box-shadow: var(--sh-1);
-    font: 600 1.0625rem/1 var(--font-sans);
+    border: 0;
+    background: transparent;
     color: var(--ink);
     transition:
       background 0.14s,
       transform 0.14s var(--ease-wk);
   }
-  .pill-btn svg {
+  .bar-btn svg {
     width: 1.4rem;
     height: 1.4rem;
   }
+  .bar-btn[data-off] {
+    color: var(--ink-2);
+  }
   @media (hover: hover) {
-    .pill-btn:hover {
+    .bar-btn:hover {
       background: var(--card-2);
     }
   }
-  .pill-btn:active {
-    transform: scale(0.97);
+  .bar-btn:active {
+    transform: scale(0.94);
   }
 
   /* Again and Stop, either side of the big button in step by step */
@@ -418,44 +418,203 @@
   }
 
   /* ---------- the conversation (Ask) ---------- */
-  /* WeKnow on the left: plain text on the page, no bubble fill, so long answers stay easy to read */
+  /* WeKnow: plain text on the page, no bubble, so long answers stay easy to read */
   .msg-wk {
     align-self: stretch;
     max-width: 100%;
-    padding: 0.2rem 0.15rem;
+    color: var(--ink);
+    font: 400 1.0625rem/1.55 var(--font-sans);
     animation: var(--animate-rise);
+  }
+  /* the point of an answer: the same text, a little larger and stronger; never a heading band */
+  .wk-head {
+    font: 650 1.1875rem/1.4 var(--font-sans);
+    letter-spacing: -0.012em;
+    text-wrap: pretty;
+  }
+  .wk-line {
+    margin: 0.4rem 0;
+    transition: box-shadow 0.2s;
+  }
+  .wk-line[data-kind="strong"] {
+    font-weight: 650;
+  }
+  /* the sentence being said aloud carries a green mark at its edge */
+  .wk-line[data-now] {
+    box-shadow: inset 2px 0 0 var(--go);
+    padding-left: 0.75rem;
+    margin-left: -0.75rem;
+  }
+  .wk-warn {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    margin: 0.5rem 0;
+    font-weight: 500;
+  }
+  /* a caution is a sentence with a small amber sign in front of it, not a box */
+  .wk-warn svg {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.25rem;
+    color: var(--warn-line);
   }
   /* the person on the right: their words in a soft bubble, their picture above them */
   .msg-me {
     align-self: flex-end;
-    max-width: min(85%, 30rem);
+    max-width: min(82%, 32rem);
     display: grid;
     justify-items: end;
     gap: 0.4rem;
     animation: var(--animate-rise);
   }
   .msg-me p {
-    padding: 0.6rem 0.95rem;
-    border-radius: 1.3rem 1.3rem 0.4rem 1.3rem;
+    padding: 0.6rem 1rem;
+    border-radius: 1.4rem;
     background: var(--card-2);
     color: var(--ink);
-    font: 500 1.25rem/1.3 var(--font-sans);
-    letter-spacing: -0.01em;
+    font: 400 1.0625rem/1.45 var(--font-sans);
+    text-wrap: wrap;
   }
   .msg-pic {
-    width: min(15rem, 62vw);
+    display: block;
+    width: min(14rem, 60vw);
     aspect-ratio: 4 / 3;
-    border-radius: 1.1rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 1rem;
+    cursor: zoom-in;
+  }
+  /* a sample picture on the start screen: a small card, the picture over its question */
+  .sample-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: var(--card-2);
+    color: var(--ink);
+    text-align: left;
+    font: 500 0.9375rem/1.3 var(--font-sans);
+    transition:
+      background 0.14s,
+      transform 0.14s var(--ease-wk);
+  }
+  .sample-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: var(--fill-2);
+  }
+  .sample-card span {
+    padding: 0.55rem 0.7rem 0.65rem;
+    overflow-wrap: normal;
+  }
+  .sample-card[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px var(--go);
+  }
+  @media (hover: hover) {
+    .sample-card:hover {
+      background: var(--fill-2);
+    }
+  }
+  .sample-card:active {
+    transform: scale(0.98);
+  }
+  /* the picture, large: the whole screen on black */
+  .pview {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    outline: none;
+    color: #fff;
+    animation: fade-in 0.18s ease-out;
+  }
+  .pview-stage {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 4.25rem 0.5rem 5rem;
+  }
+  .pview-stage[data-zoomed] {
+    padding: 0;
+  }
+  .pview-stage img {
+    margin: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    user-select: none;
+    cursor: zoom-in;
+  }
+  .pview-stage[data-zoomed] img {
+    cursor: zoom-out;
+  }
+  .pview-btn {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: 9999px;
+    background: rgb(40 44 42 / 0.92);
+    color: #fff;
+  }
+  .pview-btn svg {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+  .pview-btn:disabled {
+    opacity: 0.45;
+  }
+  .pview-btn:focus-visible {
+    outline-color: #fff;
+  }
+  .pview-close {
+    position: absolute;
+    top: calc(0.75rem + env(safe-area-inset-top));
+    right: 0.75rem;
+  }
+  .pview-zoom {
+    position: absolute;
+    left: 50%;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    background: rgb(40 44 42 / 0.92);
+    font: 600 0.9375rem/1 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+  .pview-zoom span {
+    min-width: 3.25rem;
+    text-align: center;
+  }
+  .pview-zoom .pview-btn {
+    background: transparent;
   }
   /* the small tag on a warning or a stop: never a band */
   .ctag {
-    display: inline-flex;
+    display: flex;
+    width: fit-content;
     align-items: center;
     gap: 0.3rem;
-    margin-bottom: 0.35rem;
-    padding: 0.15rem 0.6rem 0.15rem 0.45rem;
+    margin-bottom: 0.4rem;
+    padding: 0.1rem 0.55rem 0.1rem 0.4rem;
     border-radius: 9999px;
-    font: 700 0.95rem/1.3 var(--font-sans);
+    font: 650 0.875rem/1.4 var(--font-sans);
     background: var(--warn-bg);
     color: var(--warn-ink);
   }
@@ -464,36 +623,76 @@
     color: var(--stop);
   }
   .ctag svg {
-    width: 1rem;
-    height: 1rem;
+    width: 0.9rem;
+    height: 0.9rem;
   }
   .ctag[data-tone="stop"] svg {
     fill: currentColor;
   }
-  /* a next question: a big, plain button that reads like something to say */
-  .btn-next {
-    justify-content: flex-start;
+  /* something to say next: a light pill; a row of them wraps */
+  .sugg-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .sugg {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    max-width: 100%;
+    padding: 0.5rem 1rem;
+    border: 0;
+    border-radius: 1.375rem;
+    background: var(--card-2);
+    color: var(--ink);
+    font: 500 1.0625rem/1.3 var(--font-sans);
     text-align: left;
-    border-color: var(--line);
-    border-radius: 1.2rem;
+    text-decoration: none;
+    transition:
+      background 0.14s,
+      transform 0.14s var(--ease-wk);
+  }
+  .sugg svg {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+  .sugg[data-primary] {
+    background: var(--key);
+    color: var(--on-key);
     font-weight: 600;
+  }
+  @media (hover: hover) {
+    .sugg:hover {
+      background: var(--fill-2);
+    }
+    .sugg[data-primary]:hover {
+      background: var(--key);
+      opacity: 0.88;
+    }
+  }
+  .sugg:active {
+    transform: scale(0.97);
   }
 
   /* ---------- the question box (Ask) ---------- */
+  /* one soft pill: no border, no shadow; a thin ring while it has the cursor */
   .composer {
     display: flex;
     align-items: flex-end;
-    gap: 0.3rem;
-    padding: 0.35rem;
-    border-radius: 1.6rem;
-    border: 1.5px solid var(--line);
-    background: var(--card);
-    box-shadow: var(--sh-2);
-    transition: border-color 0.14s;
+    gap: 0.1rem;
+    padding: 0.375rem;
+    border-radius: 1.75rem;
+    background: var(--card-2);
+    box-shadow: inset 0 0 0 1.5px transparent;
+    transition: box-shadow 0.14s;
   }
-  .composer:focus-within,
+  .composer:has(.cfield:focus-visible) {
+    box-shadow: inset 0 0 0 1.5px var(--line);
+  }
   .composer[data-listening] {
-    border-color: var(--go);
+    box-shadow: inset 0 0 0 1.5px var(--go);
   }
   /* more than one line: the words take the whole width, the buttons sit in a row under them */
   .composer[data-tall],
@@ -503,54 +702,65 @@
   .composer[data-tall] .cfield {
     order: -1;
     flex-basis: 100%;
-    padding-inline: 0.6rem;
+    padding-inline: 0.75rem;
   }
   .composer[data-tall] .cbtn-go {
     margin-left: auto;
   }
-  /* the attached picture: a small chip above the words, with an x to take it off */
+  /* the attached picture: a small picture above the words, with an x on its corner to take it off */
   .cchip {
     order: -2;
     flex-basis: 100%;
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.2rem 0.2rem 0.3rem 0.25rem;
-    font: 600 1.0625rem/1.2 var(--font-sans);
-    color: var(--ink);
+    padding: 0.4rem 0.4rem 0.15rem 0.5rem;
   }
-  .cchip img {
-    flex: none;
-    width: 3.4rem;
-    height: 3.4rem;
+  .cthumb {
+    position: relative;
+    display: block;
+    width: 4rem;
+    height: 4rem;
+  }
+  .cthumb .cview {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0.8rem;
+    background: none;
+  }
+  .cthumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
     border-radius: 0.8rem;
     object-fit: cover;
-    background: #232a27;
+    background: var(--fill-2);
     box-shadow: 0 0 0 1px var(--hair);
   }
-  .cchip span {
-    min-width: 0;
-  }
-  .cchip button {
-    flex: none;
-    margin-left: auto;
-    width: 2.75rem;
-    height: 2.75rem;
+  .cthumb .cx {
+    position: absolute;
+    top: -0.45rem;
+    right: -0.45rem;
+    width: 1.6rem;
+    height: 1.6rem;
     border-radius: 9999px;
-    border: 0;
-    background: var(--card-2);
-    color: var(--ink);
+    border: 2px solid var(--card-2);
+    background: var(--key);
+    color: var(--on-key);
     display: grid;
     place-items: center;
+    padding: 0;
   }
-  .cchip button svg {
-    width: 1.3rem;
-    height: 1.3rem;
+  /* the x is small to look at and 44 px to press */
+  .cthumb .cx::after {
+    content: "";
+    position: absolute;
+    inset: -0.65rem;
   }
-  @media (hover: hover) {
-    .cchip button:hover {
-      filter: brightness(0.95);
-    }
+  .cthumb .cx svg {
+    width: 0.85rem;
+    height: 0.85rem;
   }
   .cfield {
     flex: 1 1 0;
@@ -560,11 +770,10 @@
     border: 0;
     background: transparent;
     color: var(--ink);
-    font: 500 1.25rem/1.3 var(--font-sans);
-    letter-spacing: -0.01em;
-    padding: 0.55rem 0.35rem;
+    font: 400 1.0625rem/1.45 var(--font-sans);
+    padding: 0.6rem 0.4rem;
     /* about four lines, then it scrolls */
-    max-height: calc(4 * 1.3em + 1.1rem);
+    max-height: calc(4 * 1.45em + 1.2rem);
     overflow-y: auto;
   }
   .cfield::placeholder {
@@ -575,14 +784,10 @@
   .cfield:focus-visible {
     outline: none;
   }
-  .composer:has(.cfield:focus-visible) {
-    outline: 3px solid var(--net);
-    outline-offset: 3px;
-  }
   .cbtn {
     flex: none;
-    width: 2.9rem;
-    height: 2.9rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 9999px;
     border: 0;
     background: transparent;
@@ -591,56 +796,54 @@
     place-items: center;
     transition:
       background 0.14s,
+      color 0.14s,
       transform 0.14s var(--ease-wk);
   }
   .cbtn svg {
-    width: 1.55rem;
-    height: 1.55rem;
+    width: 1.35rem;
+    height: 1.35rem;
   }
-  .cbtn-cam {
-    background: var(--go-ring);
-    color: var(--go);
-  }
+  /* the right-hand button. The microphone is quiet; send and stop are the one dark round button. */
   .cbtn-go {
-    background: var(--go);
-    color: var(--on-go);
-    box-shadow: 0 0.12rem 0 var(--go-deep);
+    color: var(--ink);
   }
+  .cbtn-go[data-face="send"],
   .cbtn-go[data-face="stop"] {
     background: var(--key);
     color: var(--on-key);
-    box-shadow: 0 0.12rem 0 var(--key-deep);
   }
   .cbtn-go[data-face="stop"] svg {
     fill: currentColor;
-    width: 1.2rem;
-    height: 1.2rem;
+    width: 0.95rem;
+    height: 0.95rem;
   }
   .cbtn-go[data-face="listen"] {
     position: relative;
+    background: var(--go);
+    color: var(--on-go);
   }
   .cbtn-go[data-face="listen"]::after {
     content: "";
     position: absolute;
-    inset: -0.3rem;
+    inset: -0.25rem;
     border-radius: 9999px;
-    border: 0.18rem solid var(--go);
+    border: 0.15rem solid var(--go);
     animation: var(--animate-ring);
   }
   @media (hover: hover) {
     .cbtn:hover {
-      background: var(--card-2);
+      background: var(--fill-2);
+      color: var(--ink);
     }
-    .cbtn-cam:hover {
-      background: var(--go-ring);
-      filter: brightness(0.96);
-    }
-    .cbtn-go:hover {
-      background: var(--go-h);
-    }
+    .cbtn-go[data-face="send"]:hover,
     .cbtn-go[data-face="stop"]:hover {
       background: var(--key);
-      filter: brightness(1.1);
+      color: var(--on-key);
+      opacity: 0.88;
+    }
+    .cbtn-go[data-face="listen"]:hover {
+      background: var(--go-h);
+      color: var(--on-go);
     }
   }
   .cbtn:active {
@@ -653,7 +856,7 @@
     height: 1.8rem;
   }
   .cbars i {
-    width: 0.24rem;
+    width: 0.22rem;
     border-radius: 0.2rem;
     background: currentColor;
     height: var(--h, 0.5rem);
@@ -685,62 +888,66 @@
   }
 
   /* ---------- the camera window ---------- */
+  /* ---------- the camera window ---------- */
+  /* A clean rounded picture: it takes the shape of the camera (or of the picture), so there are no bars round it. */
   .win {
     position: relative;
+    flex: none;
     min-height: 0;
-    border-radius: var(--radius-win);
+    margin-inline: auto;
+    border-radius: 1.5rem;
     overflow: hidden;
-    background: #232a27;
-    box-shadow: var(--sh-2);
+    background: var(--card-2);
   }
+  /* the corner marks: only on the person's picture in the conversation, while WeKnow looks at it */
   .brk {
     position: absolute;
-    width: 1.5rem;
-    height: 1.5rem;
-    border: 3px solid #fff;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid #fff;
     filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.6));
     transition: transform 0.22s var(--ease-wk);
     pointer-events: none;
   }
   .brk.tl {
-    left: 1rem;
-    top: 1rem;
+    left: 0.7rem;
+    top: 0.7rem;
     border-right: 0;
     border-bottom: 0;
-    border-radius: 0.5rem 0 0 0;
+    border-radius: 0.4rem 0 0 0;
   }
   .brk.tr {
-    right: 1rem;
-    top: 1rem;
+    right: 0.7rem;
+    top: 0.7rem;
     border-left: 0;
     border-bottom: 0;
-    border-radius: 0 0.5rem 0 0;
+    border-radius: 0 0.4rem 0 0;
   }
   .brk.bl {
-    left: 1rem;
-    bottom: 1rem;
+    left: 0.7rem;
+    bottom: 0.7rem;
     border-right: 0;
     border-top: 0;
-    border-radius: 0 0 0 0.5rem;
+    border-radius: 0 0 0 0.4rem;
   }
   .brk.br {
-    right: 1rem;
-    bottom: 1rem;
+    right: 0.7rem;
+    bottom: 0.7rem;
     border-left: 0;
     border-top: 0;
-    border-radius: 0 0 0.5rem 0;
+    border-radius: 0 0 0.4rem 0;
   }
   .win.looking .brk.tl {
-    transform: translate(0.5rem, 0.5rem);
+    transform: translate(0.35rem, 0.35rem);
   }
   .win.looking .brk.tr {
-    transform: translate(-0.5rem, 0.5rem);
+    transform: translate(-0.35rem, 0.35rem);
   }
   .win.looking .brk.bl {
-    transform: translate(0.5rem, -0.5rem);
+    transform: translate(0.35rem, -0.35rem);
   }
   .win.looking .brk.br {
-    transform: translate(-0.5rem, -0.5rem);
+    transform: translate(-0.35rem, -0.35rem);
   }
   .win.reading::after {
     content: "";
@@ -748,7 +955,7 @@
     left: 0;
     right: 0;
     top: 0;
-    height: 3px;
+    height: 2px;
     background: #fff;
     box-shadow: 0 0 0 1px rgb(0 0 0 / 0.3);
     animation: sweep 1.25s ease-in-out infinite alternate;
@@ -761,7 +968,7 @@
       top: 94%;
     }
   }
-  /* Labels on the picture: white pills with a shadow, the same in both themes, never see-through. */
+  /* Labels on the picture: small white pills, the same in both themes, never see-through. */
   .onpic {
     position: absolute;
     left: 50%;
@@ -770,25 +977,27 @@
     max-width: calc(100% - 1.2rem);
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.4rem;
     background: #fff;
-    color: #0f1a15;
-    font: 600 1.0625rem/1 var(--font-sans);
-    padding: 0.5rem 0.8rem;
+    color: #111614;
+    font: 600 0.875rem/1 var(--font-sans);
+    padding: 0.4rem 0.7rem;
     border-radius: 9999px;
     border: 0;
-    box-shadow:
-      0 1px 2px rgb(0 0 0 / 0.25),
-      0 6px 16px -6px rgb(0 0 0 / 0.4);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  }
+  .onpic.corner {
+    left: 0.6rem;
+    transform: none;
   }
   .onpic svg {
-    width: 1.3rem;
-    height: 1.3rem;
+    width: 1.1rem;
+    height: 1.1rem;
     flex: none;
   }
   .onpic .dot {
-    width: 0.65rem;
-    height: 0.65rem;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 9999px;
     background: #0a7a4f;
   }
@@ -889,13 +1098,12 @@
     gap: 0.45rem;
     min-height: 2.75rem;
     padding: 0.3rem 0.7rem 0.3rem 0.75rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--hair);
     border-radius: 9999px;
     background: var(--card);
     color: var(--ink);
     font: 600 1.0625rem/1.2 var(--font-sans);
     text-align: left;
-    box-shadow: var(--sh-1);
     transition:
       background 0.14s,
       transform 0.14s var(--ease-wk);
@@ -927,6 +1135,37 @@
   }
   .tag:active {
     transform: scale(0.98);
+  }
+  /* in the conversation: a quiet, link-like chip (where it ran, where it was kept) */
+  .tag.tag-quiet {
+    gap: 0.35rem;
+    padding: 0 0.6rem;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
+    color: var(--ink-2);
+    font: 500 0.9375rem/1.2 var(--font-sans);
+  }
+  .tag.tag-quiet svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .tag.tag-quiet .chev {
+    display: none;
+  }
+  .tag.tag-quiet[data-where="mixed"],
+  .tag.tag-quiet[data-where="cloud"] {
+    color: var(--w);
+  }
+  .tag.tag-quiet[data-where="pending"] {
+    color: var(--warn-ink);
+  }
+  @media (hover: hover) {
+    .tag.tag-quiet:hover {
+      background: var(--card-2);
+      color: var(--ink);
+      filter: none;
+    }
   }
   .wtag {
     display: inline-flex;
@@ -1221,14 +1460,14 @@
     left: 0;
     top: 0;
     bottom: 0;
-    width: min(21.5rem, 88vw);
+    width: min(20rem, 86vw);
     background: var(--card);
     box-shadow: var(--sh-3);
-    padding: 1rem;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    border-radius: 0 var(--radius-win) var(--radius-win) 0;
+    border-radius: 0 1.25rem 1.25rem 0;
     overflow: auto;
     outline: none;
   }
@@ -1240,29 +1479,30 @@
   }
   @media (min-width: 56.25rem) {
     .drawer {
-      width: 22.5rem;
+      width: 20rem;
     }
   }
   .nav-row {
     display: flex;
     align-items: center;
-    gap: 0.9rem;
+    gap: 0.8rem;
     width: 100%;
-    min-height: 3.6rem;
-    padding: 0 0.9rem;
+    min-height: 3rem;
+    padding: 0 0.75rem;
     border: 0;
-    border-radius: var(--radius-btn);
+    border-radius: 0.75rem;
     background: none;
     color: var(--ink);
-    font: 600 1.1875rem/1.2 var(--font-sans);
+    font: 500 1.0625rem/1.2 var(--font-sans);
     letter-spacing: -0.01em;
     text-align: left;
     text-decoration: none;
     transition: background 0.14s;
   }
   .nav-row svg {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    color: var(--ink-2);
     flex: none;
   }
   .nav-row {
@@ -1273,6 +1513,18 @@
     flex: 1 1 7rem;
     overflow-wrap: normal;
   }
+  /* a recent check: one quiet line, cut short with an ellipsis */
+  .nav-recent {
+    min-height: 2.75rem;
+    flex-wrap: nowrap;
+    color: var(--ink);
+  }
+  .nav-recent > span {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .nav-row small {
     flex: none;
     margin-left: auto;
@@ -1282,7 +1534,7 @@
   .nav-row[aria-current="page"],
   .nav-row[aria-current="true"] {
     background: var(--card-2);
-    font-weight: 700;
+    font-weight: 600;
   }
   @media (hover: hover) {
     .nav-row:hover {
@@ -1326,7 +1578,6 @@
     height: 0.82em;
     border-radius: 9999px;
     background: var(--go);
-    box-shadow: inset 0 -0.13em 0 var(--go-deep);
   }
 
   kbd {
