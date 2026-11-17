@@ -128,6 +128,15 @@
   --text-welcome: 2rem;
   --text-welcome--line-height: 1.12;
   --animate-rise: rise 0.28s var(--ease-wk) both;
+  --animate-scan: scan 1.4s ease-in-out both;
+  @keyframes scan {
+    from {
+      top: -2.5rem;
+    }
+    to {
+      top: 100%;
+    }
+  }
   --animate-ring: ring 1.6s ease-in-out infinite;
   /* the front page: dots moving along a dotted line */
   --animate-dash: dash 1.1s linear infinite;

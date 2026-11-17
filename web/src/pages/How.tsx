@@ -1,6 +1,6 @@
 // The front page: how WeKnow works, for a first visit and for people who want to see how it is built. Its spine: the
-// device and the cloud stay in sync while personal details stay on the device. Pictures first: a phone with an answer
-// on it; the main picture (the cloud above, the device below, the gated arrows between); the eight steps that happen
+// device and the cloud stay in sync while personal details stay on the device. It opens with seven scrolling slides
+// (Story.tsx), then the details: the main picture (the cloud above, the device below, the gated arrows between); the eight steps that happen
 // before anything leaves the device; exactly what can cross to the cloud; the sync loop; why hybrid is hard; what the
 // device does by itself; the Firebase services; the five test papers to try; the proof; the stack. One short line per idea, the detail opens on a
 // press. Its words name the parts by their real names, so they live here and not in strings.ts (the app's own words
@@ -16,7 +16,6 @@ import {
   Camera,
   Check,
   Cloud,
-  Code,
   Cpu,
   Database,
   Download,
@@ -54,6 +53,7 @@ import {
 import { Mark } from '../ui/controls';
 import { setPrefs, usePrefs } from '../store/prefs';
 import { t } from '../strings';
+import { Story } from './Story';
 
 const REPO = 'https://github.com/eric2612115/WeKnow';
 const CLAIMS = `${REPO}/blob/main/docs/claims.md`;
@@ -162,62 +162,6 @@ function Section({ id, title, lead, children }: { id?: string; title: string; le
 // ---------- the phone in the hero ----------
 
 /** A phone with one answer on it: the paper with its details covered, the question, the answer, the box. */
-function PhoneMock({ className = '' }: { className?: string }) {
-  return (
-    <div
-      className={`w-[19.5rem] max-w-full flex-none rounded-[2.6rem] border border-hair bg-card-2 p-[0.6rem] shadow-d3 ${className}`}
-      role="img"
-      aria-label="WeKnow on a phone: a quote with its personal details covered, the question “Is this a fair price?”, and the answer."
-    >
-      <div className="overflow-hidden rounded-[2.05rem] border border-hair bg-bg px-[0.9rem] pt-4 pb-[0.9rem] text-[0.875rem] leading-[1.35]" aria-hidden="true">
-        <div className="flex items-center justify-between px-1 text-ink">
-          <Lockup className="text-[0.95rem]" />
-          <Volume2 className="size-[1.1rem] text-ink-2" />
-        </div>
-        <div className="mt-4 ml-auto flex w-fit max-w-[85%] flex-col items-end gap-2">
-          <svg viewBox="0 0 120 84" className="w-[8.5rem] rounded-[0.9rem] border border-hair bg-card">
-            <rect x="12" y="11" width="44" height="6" rx="3" fill="var(--ink)" />
-            <rect x="12" y="24" width="52" height="8" rx="2" fill="var(--go)" />
-            <rect x="12" y="35" width="38" height="8" rx="2" fill="var(--go)" />
-            <g fill="var(--fill-2)">
-              <rect x="12" y="52" width="60" height="5" rx="2.5" />
-              <rect x="90" y="52" width="18" height="5" rx="2.5" />
-              <rect x="12" y="62" width="48" height="5" rx="2.5" />
-              <rect x="90" y="62" width="18" height="5" rx="2.5" />
-              <rect x="12" y="72" width="54" height="5" rx="2.5" />
-              <rect x="90" y="72" width="18" height="5" rx="2.5" />
-            </g>
-          </svg>
-          <span className="rounded-[1.1rem] bg-card-2 px-3 py-[0.45rem] font-medium text-ink">{t('welcome.q2')}</span>
-        </div>
-        <p className="mt-4 px-1 text-[1.0625rem] leading-[1.3] font-semibold text-ink">One line is above the usual range.</p>
-        <ul className="mt-3 grid gap-2 px-1 font-medium text-ink">
-          <li className="flex items-center justify-between gap-2">
-            Replace the faucet
-            <span className="rounded-full bg-ok-bg px-[0.6rem] py-[0.15rem] text-go">Fair</span>
-          </li>
-          <li className="flex items-center justify-between gap-2">
-            Clear the drain
-            <span className="rounded-full bg-warn-bg px-[0.6rem] py-[0.15rem] text-warn-ink">Above</span>
-          </li>
-        </ul>
-        <span className="mt-3 inline-flex items-center gap-[0.35rem] px-1 font-medium text-ink-2">
-          <Smartphone className="size-4" />
-          {t('tag.local', { device: 'phone' })}
-        </span>
-        <div className="mt-4 flex items-center gap-2 rounded-full border border-hair bg-card py-[0.35rem] pr-[0.35rem] pl-3 text-ink-2">
-          <Camera className="size-[1.1rem] flex-none" />
-          <span className="min-w-0 flex-1 truncate">{t('box.placeholder.short')}</span>
-          <Mic className="size-[1.1rem] flex-none" />
-          <span className="grid size-8 flex-none place-items-center rounded-full bg-go text-on-go">
-            <ArrowUp className="size-[1.1rem]" strokeWidth={2.6} />
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ---------- the main picture: the cloud above, the device below, the gated arrows between ----------
 
 const IN_CLOUD: Array<{ icon: LucideIcon; name: ReactNode; line: string }> = [
@@ -703,42 +647,10 @@ export default function How() {
         </div>
       </header>
 
-      <main className={`${wrapper} pb-20`}>
-        {/* the hero: its own first screen */}
-        <div className="flex animate-rise flex-col motion-reduce:animate-none lg:min-h-[calc(100dvh-4rem)]">
-          <div className="my-auto grid items-center gap-10 pt-8 pb-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16 lg:py-8">
-            <div className="min-w-0">
-              <h1 className="max-w-[40rem] text-[2.4rem] leading-[1.05] font-bold tracking-[-0.04em] md:text-[3.25rem] lg:text-[4rem]">
-                A second look before you pay <span className="text-go">— on your own device.</span>
-              </h1>
-              <p className="mt-5 max-w-[34rem] text-body text-ink-2 lg:text-[1.4rem] lg:leading-[1.35]">Show a quote, a bill or a message. Hear what to check.</p>
-              <p className="mt-4 flex max-w-[34rem] items-start gap-3 text-small font-semibold text-ink">
-                <Dot icon={RefreshCw} small />
-                <span className="pt-[0.35rem]">The device and the cloud stay in sync. Your personal details stay with you.</span>
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link to="/app" className="btn btn-yes min-w-[9rem]">
-                  {open}
-                  <ArrowRight />
-                </Link>
-                <Out href={REPO} className="btn">
-                  <Code />
-                  See the code
-                </Out>
-              </div>
-            </div>
-            <PhoneMock className="mx-auto lg:mx-0" />
-          </div>
-          <button
-            type="button"
-            className="mx-auto mb-5 hidden min-h-11 items-center gap-2 rounded-full border-0 bg-transparent px-4 text-[0.9375rem] font-semibold text-ink-2 hover:text-ink lg:inline-flex"
-            onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: stillMotion() ? 'auto' : 'smooth' })}
-          >
-            How it works
-            <ArrowDown className="size-[1.1rem] motion-safe:animate-bounce" aria-hidden="true" />
-          </button>
-        </div>
+      <Story open={open} />
 
+      <main className={`${wrapper} pb-20`}>
+        <p className="mt-16 -mb-16 text-small font-semibold text-ink-2 lg:mt-20 lg:-mb-20">The details</p>
         <Section id="how" title="How it works" lead="The device does the work. The cloud helps only after a yes.">
           <Architecture />
         </Section>
