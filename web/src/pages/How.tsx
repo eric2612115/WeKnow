@@ -2,7 +2,7 @@
 // device and the cloud stay in sync while personal details stay on the device. Pictures first: a phone with an answer
 // on it; the main picture (the cloud above, the device below, the gated arrows between); the eight steps that happen
 // before anything leaves the device; exactly what can cross to the cloud; the sync loop; why hybrid is hard; what the
-// device does by itself; the Firebase services; the proof; the stack. One short line per idea, the detail opens on a
+// device does by itself; the Firebase services; the five test papers to try; the proof; the stack. One short line per idea, the detail opens on a
 // press. Its words name the parts by their real names, so they live here and not in strings.ts (the app's own words
 // never name a model or a service).
 
@@ -671,6 +671,15 @@ const PROOF: Array<{ big: string; small: string; href: string }> = [
   { big: 'Apache-2.0', small: 'open source', href: LICENSE },
 ];
 
+/** The five made-up papers in docs/test-sheets, served at /test-sheets: what each one is and what WeKnow should say. */
+const SHEETS: Array<{ file: string; name: string; expect: string; warn?: boolean }> = [
+  { file: 'bill-2-electric-normal', name: 'An electricity bill', expect: 'Check first: a company you never paid. Remember it, and next time it is “the usual one”.' },
+  { file: 'bill-3-electric-new-account-buried', name: 'The same bill, one sentence changed', expect: 'Don’t pay yet: a new account in the small print, and a 24-hour rush.', warn: true },
+  { file: 'bill-4-water-ai-note', name: 'A water bill that talks to AI', expect: 'Don’t pay yet: hidden words that tell a reader it is safe.', warn: true },
+  { file: 'bill-7-scam-numbers-dont-add-up', name: 'A “processing fee” invoice', expect: 'Don’t pay yet: the numbers don’t add up, and an online check finds a known scam.', warn: true },
+  { file: 'quote-1-auto-one-high', name: 'A car repair estimate', expect: 'Line 4, a $385 belt, is above the usual range.' },
+];
+
 const quiet = 'inline-flex min-h-11 items-center font-semibold text-ink underline decoration-hair decoration-2 underline-offset-4 hover:decoration-go';
 
 export default function How() {
@@ -905,6 +914,34 @@ export default function How() {
               source.
             </Opens>
           </div>
+        </Section>
+
+        <Section id="try" title="Try it with our test papers" lead="Five made-up papers. Drag a PDF into WeKnow, paste the picture, or print one and take a photo.">
+          <ul className="grid gap-3 lg:grid-cols-2">
+            {SHEETS.map((x) => (
+              <li key={x.file} className="card flex items-start gap-4 p-4 lg:p-5">
+                <Dot icon={x.warn ? TriangleAlert : FileText} small />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[1.05rem] font-bold tracking-[-0.01em] text-ink">{x.name}</p>
+                  <p className="mt-1 text-small text-ink-2">{x.expect}</p>
+                  <p className="mt-2 flex flex-wrap gap-x-5">
+                    <a href={`/test-sheets/${x.file}.pdf`} download className={`${quiet} gap-1`}>
+                      <Download className="size-[1.1rem]" aria-hidden="true" />
+                      PDF
+                    </a>
+                    <a href={`/test-sheets/${x.file}.png`} download className={`${quiet} gap-1`}>
+                      <Download className="size-[1.1rem]" aria-hidden="true" />
+                      Picture
+                    </a>
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Link to="/app" className="btn btn-yes mt-6 min-w-[9rem]">
+            {open}
+            <ArrowRight />
+          </Link>
         </Section>
 
         {/* the proof */}

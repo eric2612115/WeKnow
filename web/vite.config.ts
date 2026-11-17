@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -92,9 +92,39 @@ function pdfjsData(): Plugin {
   };
 }
 
+// The five made-up test papers (docs/test-sheets) are offered for download on the front page, so anyone can try the
+// app without the repository. Served at /test-sheets from the docs folder in the dev server, and copied there by a
+// build; only the PDFs and pictures go.
+function testSheets(): Plugin {
+  const root = resolve(import.meta.dirname, '../docs/test-sheets');
+  const shipped = (f: string) => /^[a-z0-9-]+\.(pdf|png)$/.test(f);
+  let outDir = 'dist';
+  let isBuild = false;
+  return {
+    name: 'weknow-test-sheets',
+    configResolved(c) {
+      outDir = resolve(c.root, c.build.outDir);
+      isBuild = c.command === 'build';
+    },
+    configureServer(server) {
+      server.middlewares.use('/test-sheets/', (req, res, next) => {
+        const file = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\//, ''));
+        if (!shipped(file) || !existsSync(resolve(root, file))) return next();
+        res.setHeader('Content-Type', file.endsWith('.pdf') ? 'application/pdf' : 'image/png');
+        res.end(readFileSync(resolve(root, file)));
+      });
+    },
+    closeBundle() {
+      if (!isBuild || !existsSync(root)) return;
+      mkdirSync(resolve(outDir, 'test-sheets'), { recursive: true });
+      for (const f of readdirSync(root).filter(shipped)) copyFileSync(resolve(root, f), resolve(outDir, 'test-sheets', f));
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), evalFixtures(), tessdata(), pdfjsData()],
+  plugins: [react(), tailwindcss(), evalFixtures(), tessdata(), pdfjsData(), testSheets()],
   // Pre-bundle the text reader's loader up front, so its first use in the dev server does not reload the page.
   optimizeDeps: { include: ['tesseract.js'] },
   build: {

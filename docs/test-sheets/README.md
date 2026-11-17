@@ -3,7 +3,8 @@
 Five papers to try WeKnow with: print them and take a photo, or give the PDF or the picture to the web app (drag it
 in, paste a screenshot, or pick the file). Everything on them is made up: the companies, people, addresses, phone
 numbers (555-01xx), emails (example.com) and account numbers. The barcodes and QR codes lead nowhere, and each page
-says SPECIMEN at the bottom. They are printed to look like real paper, with the noise real bills carry.
+says SPECIMEN at the bottom. They are printed to look like real paper, with the noise real bills carry. The same
+files can be downloaded from the front page, under "Try it with our test papers" (https://weknow-6092f.web.app/#try).
 
 | File | What is on it | What WeKnow should say |
 |---|---|---|

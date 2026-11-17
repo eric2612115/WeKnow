@@ -1012,7 +1012,7 @@ final class AskModel {
 
   private func coveredList(_ kinds: Set<PIIKind>) -> String {
     let order: [(PIIKind, String)] = [(.name, "name"), (.phone, "phone"), (.street, "address"), (.plate, "plate"), (.account, "account number"),
-                                      (.email, "email"), (.card, "card number"), (.ssn, "social security number"), (.vin, "VIN")]
+                                      (.email, "email"), (.card, "long number"), (.ssn, "social security number"), (.vin, "VIN")]
     let words = order.filter { kinds.contains($0.0) }.map(\.1)
     guard let last = words.last else { return "your details" }
     return "your " + (words.count == 1 ? last : words.dropLast().joined(separator: ", ") + " and " + last)
