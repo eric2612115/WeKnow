@@ -3,6 +3,7 @@
 // The answer is used only with https web sources (core/webAnswer.ts).
 
 import { getGenerativeModel, InferenceMode, type GenerativeModel } from 'firebase/ai';
+import { online } from './ask/wire';
 import { ai, CLOUD_MODEL } from './firebase';
 import { buildCloudQuestion } from './core/cloudPayload';
 import { parseWebAnswer, webSources, type WebAnswer } from './core/webAnswer';
@@ -51,7 +52,7 @@ export async function checkBillOnline(question: string): Promise<BillCheckResult
   let check: OnlineCheck | null = null;
   while (!check && tries < 3) {
     tries += 1;
-    const res = await model().generateContent(onlineCheckPrompt(text));
+    const res = await online({ what: 'question', words: text }, () => model().generateContent(onlineCheckPrompt(text)));
     const sources = webSources(res.response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []);
     check = parseOnlineCheck(res.response.text(), sources);
   }
@@ -69,10 +70,10 @@ Use reliable how-to, manufacturer or safety pages you find with Google Search, t
 Do not put prices or costs in it. If the sources do not say how to deal with it, reply {"none": true}.`;
   // The model sometimes answers from memory without searching (no grounding sources): such an answer is never shown,
   // and the same request is tried once more.
-  let parsed = await ask(prompt);
+  let parsed = await online({ what: 'question', words: text }, () => ask(prompt));
   let tries = 1;
   if (!parsed.answer && parsed.reason === 'no web sources') {
-    parsed = await ask(prompt);
+    parsed = await online({ what: 'question', words: text }, () => ask(prompt));
     tries = 2;
   }
   const ms = Math.round(performance.now() - started);

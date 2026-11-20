@@ -20,6 +20,7 @@ import { attachSample, chooseFile, SAMPLES, type Sample } from '../samples';
 import { googleCalendarLink, icsFile } from '../core/reminders';
 import type { Memory } from '../core/memory';
 import { ExplainSheet } from './ExplainSheet';
+import { Lamps } from '../ui/Lamps';
 import { explainCheck } from './explainOpen';
 
 export function Sheets() {
@@ -36,6 +37,7 @@ export function Sheets() {
       <SetupSheet open={sheet?.type === 'setup'} />
       <EditSheet s={sheet?.type === 'edit' ? sheet : null} />
       <TrustedSheet open={sheet?.type === 'trusted'} />
+      <LightsSheet open={sheet?.type === 'lights'} />
       <ExplainSheet />
     </>
   );
@@ -553,6 +555,30 @@ function TrustedFields({ onSaved }: { onSaved?: () => void }) {
         {t('save')}
       </button>
     </form>
+  );
+}
+
+/** What the two lamps in the conversation mean. Opened by pressing them. */
+function LightsSheet({ open }: { open: boolean }) {
+  const device = deviceWord();
+  const row = (lit: 'device' | 'net' | null, title: string, text: string) => (
+    <div className="mt-5 flex items-start gap-4">
+      <Lamps lit={lit} />
+      <div>
+        <h3 className="text-[1.0625rem] font-semibold text-ink">{title}</h3>
+        <p className="mt-1 text-ink-2">{text}</p>
+      </div>
+    </div>
+  );
+  return (
+    <Sheet open={open} onClose={closeSheet} title={t('lights.title')}>
+      {row('device', t('lights.device.t', { device }), t('lights.device.d', { device }))}
+      {row('net', t('lights.net.t'), t('lights.net.d', { device }))}
+      {row(null, t('lights.off.t'), t('lights.off.d'))}
+      <h3 className="mt-6 text-[1.0625rem] font-semibold text-ink">{t('lights.after.t')}</h3>
+      <p className="mt-1 text-ink-2">{t('lights.after.d', { device })}</p>
+      <p className="mt-2 text-ink-2">{t('lights.settings')}</p>
+    </Sheet>
   );
 }
 

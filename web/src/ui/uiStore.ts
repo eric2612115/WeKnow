@@ -14,6 +14,7 @@ export type SheetState =
   | { type: 'setup' }
   | { type: 'edit'; memId: string }
   | { type: 'trusted' }
+  | { type: 'lights' }
   | {
       type: 'explain';
       key: string;

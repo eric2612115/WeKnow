@@ -220,7 +220,7 @@ function DeviceStrip() {
     ['Windows', 'w-[4.4rem]', <Laptop key="w" windows>{screen}</Laptop>],
   ];
   return (
-    <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-2" role="img" aria-label="Works on iPhone, Android, iPad, Mac and Windows.">
+    <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-2 short:mt-3 short:gap-x-3" role="img" aria-label="Works on iPhone, Android, iPad, Mac and Windows.">
       {items.map(([name, w, pic], i) => (
         <In key={name} d={500 + i * 90} className="flex flex-col items-center gap-1">
           <span className={`block ${w} [&_*]:!shadow-none`}>{pic}</span>
@@ -402,7 +402,7 @@ function ScanPicture() {
           </Step>
         </div>
       </div>
-      <p className="mt-3 flex items-center gap-2 text-[0.85rem] font-semibold text-ink lg:text-[0.95rem]" aria-live="off">
+      <p className="mt-3 flex items-center gap-2 text-[0.85rem] font-semibold text-ink short:mt-2 lg:text-[0.95rem]" aria-live="off">
         <span className="grid size-6 flex-none place-items-center rounded-full bg-go text-[0.75rem] text-on-go">{Math.max(1, Math.min(beat, STEPS.length))}</span>
         <span key={caption} className="animate-rise motion-reduce:animate-none">
           {caption}
@@ -663,7 +663,7 @@ function PapersPicture() {
 
 // ---------- the slides ----------
 
-function Words({ kicker, title, line, h1 = false, children }: { kicker?: string; title: ReactNode; line: ReactNode; h1?: boolean; children?: ReactNode }) {
+function Words({ kicker, title, line, h1 = false, tight = false, children }: { kicker?: string; title: ReactNode; line: ReactNode; h1?: boolean; tight?: boolean; children?: ReactNode }) {
   const H = h1 ? 'h1' : 'h2';
   return (
     <div className="min-w-0">
@@ -673,10 +673,10 @@ function Words({ kicker, title, line, h1 = false, children }: { kicker?: string;
         </In>
       )}
       <In d={80}>
-        <H className="mt-2 max-w-[36rem] text-[2.1rem] leading-[1.04] font-bold tracking-[-0.04em] md:text-[2.8rem] lg:text-[3.2rem]">{title}</H>
+        <H className="mt-2 max-w-[36rem] text-[2.1rem] leading-[1.04] font-bold tracking-[-0.04em] short:mt-1 short:text-[1.7rem] md:text-[2.8rem] lg:text-[3.2rem]">{title}</H>
       </In>
-      <In d={220}>
-        <p className="mt-4 max-w-[32rem] text-body text-ink-2 lg:text-[1.35rem] lg:leading-[1.38]">{line}</p>
+      <In d={220} className={tight ? 'short:hidden' : ''}>
+        <p className="mt-4 max-w-[32rem] text-body text-ink-2 short:mt-2 short:text-[0.98rem] lg:text-[1.35rem] lg:leading-[1.38]">{line}</p>
       </In>
       {children && <In d={360}>{children}</In>}
     </div>
@@ -693,7 +693,7 @@ function Slide({ i, at, wide = false, children }: { i: number; at: number; wide?
         className={`absolute inset-0 transition-opacity duration-500 motion-reduce:transition-none ${on ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
       >
         <div
-          className={`${wrapper} grid h-full content-center gap-6 pb-10 ${wide ? 'lg:grid-cols-1 lg:gap-12' : 'lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:items-center lg:gap-12 lg:[&>*:nth-child(2)]:[zoom:1.15]'}`}
+          className={`${wrapper} grid h-full content-center gap-6 pb-6 short:gap-3 short:pb-2 md:max-lg:[&>*:nth-child(2)]:[zoom:1.25] lg:pb-10 ${wide ? 'lg:grid-cols-1 lg:gap-12' : 'lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:items-center lg:gap-12 lg:[&>*:nth-child(2)]:[zoom:1.15]'}`}
         >
           {children}
         </div>
@@ -769,6 +769,7 @@ export function Story({ open }: { open: string }) {
         <Slide i={0} at={at}>
           <Words
             h1
+            tight
             title={
               <>
                 A second look before you pay. <span className="text-go">Checked on your own device.</span>
@@ -776,7 +777,7 @@ export function Story({ open }: { open: string }) {
             }
             line="It reads the bill part by part, covers your personal details, and compares it with who you paid last time. Only a covered question ever goes online."
           >
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3 short:mt-3">
               <Link to="/app" className="btn btn-yes min-w-[9rem]">
                 {open}
                 <ArrowRight />
@@ -829,6 +830,7 @@ export function Story({ open }: { open: string }) {
 
         <Slide i={4} at={at}>
           <Words
+            tight
             kicker="Only when the device can’t know"
             title="The cloud gets the question, never the paper."
             line="Is this company a known scam? Only the company and the charge names go. The answer comes back with sources, and can only make a warning stronger."
@@ -838,6 +840,7 @@ export function Story({ open }: { open: string }) {
 
         <Slide i={5} at={at}>
           <Words
+            tight
             kicker="Built on Firebase"
             title="One set of checks, on the device or in the cloud."
             line="Gemini Nano in Chrome, Apple’s model on iPhone, Gemini in the cloud. Firebase AI Logic connects them; App Check makes sure only the real app can ask."

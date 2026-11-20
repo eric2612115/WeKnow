@@ -3,6 +3,7 @@
 // The answer must cite web sources found by Google Search grounding, or it is not kept.
 
 import { getGenerativeModel, InferenceMode, type GenerativeModel } from 'firebase/ai';
+import { online } from './ask/wire';
 import { ai, CLOUD_MODEL } from './firebase';
 import { buildCloudLookup, type CloudLookup } from './core/cloudPayload';
 import type { PriceItem, Source } from './core/packs';
@@ -37,7 +38,7 @@ export async function lookupPrice(itemName: string, region: string): Promise<Loo
 Use recent cost guides you find with Google Search, then end your answer with one line of JSON:
 {"name": short plain name, "unit": "job" or similar, "low": number, "typical": number, "high": number}
 Use US dollars. If the sources do not give a price range for this item, reply {"none": true}.`;
-  const res = await model().generateContent(prompt);
+  const res = await online({ what: 'question', words: `${payload.item} (${payload.region})` }, () => model().generateContent(prompt));
   const ms = Math.round(performance.now() - started);
   const text = res.response.text();
   // The last {...} in the answer: the summary line after the prose.

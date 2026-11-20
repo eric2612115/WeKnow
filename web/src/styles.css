@@ -3,6 +3,8 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* A phone-width screen that is not tall (Safari on an iPhone with its bars showing): the front page's slides pack tighter. */
+@custom-variant short (@media (max-width: 56.24rem) and (max-height: 760px));
 
 :root {
   --bg: #ffffff;
@@ -1875,3 +1877,11 @@
     display: none;
   }
 }
+
+/* The lit lamp of the live light breathes while WeKnow works. */
+@keyframes lamp {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--net) 18%, transparent); }
+}
+.lamp-on { animation: lamp 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .lamp-on { animation: none; } }

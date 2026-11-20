@@ -6,6 +6,7 @@
 // Routing is explicit: on this device when a local model is ready, in the cloud only after consent.
 
 import { getGenerativeModel, getTemplateGenerativeModel, InferenceMode, type GenerativeModel, type TemplateGenerativeModel } from 'firebase/ai';
+import { online } from './ask/wire';
 import { ai, CLOUD_MODEL } from './firebase';
 import type { Pack } from './core/packs';
 import { isKnowledge, knowledgeFromPack, type Candidate, type Knowledge } from './core/knowledge';
@@ -198,6 +199,11 @@ export interface Reading {
  * `knowledge` is the layered pack (core/knowledge.ts); a whole in-memory Pack still works and is ranked the same way.
  */
 export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, question: string, where: Where): Promise<Reading> {
+  // On a device with no model of its own the covered picture is read online: the internet lamp is lit for all of it.
+  return where === 'cloud' ? online({ what: 'picture' }, () => readPhotoAt(knowledge, image, question, where)) : readPhotoAt(knowledge, image, question, where);
+}
+
+async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: string, where: Where): Promise<Reading> {
   const kb = isKnowledge(knowledge) ? knowledge : knowledgeFromPack(knowledge);
   const filesBefore = kb.stats().files.length;
   const t0 = performance.now();
@@ -382,7 +388,9 @@ export async function chooseFromIndex(
   index: ReadonlyArray<{ ref: string; name: string; kind: 'price' | 'guide' }>,
 ): Promise<{ raw: unknown; ms: number; model: string }> {
   const t0 = performance.now();
-  const r = await withRetry(() => model('cloud', INDEX_SCHEMA, 'index', false).generateContent(indexPrompt(text, index)));
+  const r = await online({ what: 'question', words: text }, () =>
+    withRetry(() => model('cloud', INDEX_SCHEMA, 'index', false).generateContent(indexPrompt(text, index))),
+  );
   let raw: unknown = null;
   try {
     raw = JSON.parse(r.response.text());

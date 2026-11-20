@@ -4,6 +4,7 @@
 // if a caller forgot. The model's warning fields can only add warnings (core/understanding.ts).
 
 import { getGenerativeModel, InferenceMode } from 'firebase/ai';
+import { online } from './ask/wire';
 import { ai } from './firebase';
 import { checkUnderstanding, type Understanding } from './core/understanding';
 import { flatPayload } from './core/paperText';
@@ -71,11 +72,14 @@ export async function readMailText(
       : cloud(cloudModel);
   const name = source === 'email' ? 'email' : 'paper (the text of a PDF)';
   const prompt = `${TEXT_PROMPT.replaceAll('{source}', name)}\n\n${source === 'email' ? 'EMAIL' : 'PAPER'}:\n"""\n${masked}\n"""`;
-  const res = await model.generateContent(prompt).catch((e) => {
-    // The free tier counts requests per day per model; when this one's day is used, ask the second model once.
-    if (where === 'cloud' && isDailyQuota(e)) return cloud(FALLBACK_MODEL).generateContent(prompt);
-    throw e;
-  });
+  const run = () =>
+    model.generateContent(prompt).catch((e) => {
+      // The free tier counts requests per day per model; when this one's day is used, ask the second model once.
+      if (where === 'cloud' && isDailyQuota(e)) return cloud(FALLBACK_MODEL).generateContent(prompt);
+      throw e;
+    });
+  // On a device with no model of its own the covered words are read online: the internet lamp is lit meanwhile.
+  const res = await (where === 'cloud' ? online({ what: 'paper', chars: masked.length }, run) : run());
   const raw = JSON.parse(res.response.text()) as Record<string, unknown>;
   // No lines and no refs: nothing in an email can point at a pack item or set a price.
   const understanding = checkUnderstanding({ ...raw, lines: [], problemRef: null }, new Set());

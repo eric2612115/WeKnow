@@ -13,6 +13,8 @@ import { attachSample, SAMPLES } from '../samples';
 import { deviceWord } from '../engine/device';
 import { I } from '../ui/icons';
 import { WhereTag } from '../ui/Receipt';
+import { Lamps } from '../ui/Lamps';
+import { useWire } from '../ask/wire';
 import { openSheet } from '../ui/uiStore';
 import { openPicture } from '../ui/PictureViewer';
 import { t, money } from '../strings';
@@ -359,6 +361,42 @@ function LiveAnswer() {
   );
 }
 
+/**
+ * The live light while WeKnow works: two lamps, one lit. The device lamp while this device works alone; the internet
+ * lamp only while a request is out, with what is on its way under it. A press says what the lamps mean.
+ */
+function WorkingLight() {
+  const v = useAsk();
+  const { going } = useWire();
+  if (!going && v.phase !== 'looking') return null;
+  const device = deviceWord();
+  const line = !going ? t('light.device', { device }) : going.what === 'question' ? t('light.net') : going.what === 'paper' ? t('light.net.paper') : t('light.net.picture');
+  const carried = !going ? null : going.what === 'question' ? going.words : going.what === 'paper' ? t('light.paper', { n: going.chars, device }) : t('light.picture', { device });
+  return (
+    <button
+      type="button"
+      className="msg-wk flex w-full flex-col items-start gap-2.5 text-left"
+      onClick={() => openSheet({ type: 'lights' })}
+      title={t('light.hint')}
+      aria-label={going ? t('light.aria.net', { words: carried ?? '' }) : t('light.aria.device', { device })}
+      data-light={going ? 'net' : 'device'}
+    >
+      <span className="flex items-center gap-2.5">
+        <Lamps lit={going ? 'net' : 'device'} pulse />
+        <span className={`font-medium ${going ? 'text-net' : 'text-ink-2'}`}>{line}</span>
+      </span>
+      {carried && (
+        <>
+          <span className="block w-full rounded-xl border-[1.5px] border-dashed border-net bg-net-bg px-3 py-2.5 font-mono text-[0.9375rem] break-words whitespace-pre-wrap text-ink">
+            {carried}
+          </span>
+          {going?.what === 'question' && <span className="text-small text-ink-2">{t('light.only', { device })}</span>}
+        </>
+      )}
+    </button>
+  );
+}
+
 /** The conversation, newest at the bottom; it keeps the newest words in view as they come. */
 export function Chat() {
   const v = useAsk();
@@ -378,6 +416,7 @@ export function Chat() {
         ),
       )}
       <LiveAnswer />
+      <WorkingLight />
     </div>
   );
 }
