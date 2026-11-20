@@ -194,7 +194,7 @@ lexicon file and a stemmer import from `@orama/stemmers/<language>`. Prices are 
 across regions of one language by listing the same `packs-src` file in several specs. Scripts without spaces
 between words (Chinese, Japanese) need a character-bigram tokenizer (the approach of Lucene's CJK analyzer) before
 those packs can ship; Fair Quote already holds `zh-TW` names and a Taiwan price book. Chrome's Nano does not accept
-Chinese prompts today, so such packs would be read in the cloud or by Apple's model.
+Chinese prompts today, so such packs would be read by Apple's on-device model on iPhone and iPad.
 
 ## 9. Learned items
 

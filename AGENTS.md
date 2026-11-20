@@ -14,8 +14,9 @@ outside this repo in `../BuildHybridAI-2026/STRATEGY-weknow.md`; design in `desi
 ## Rules
 - The model reads; the program decides. The model may only cite refs it was offered and copy amounts printed
   on the photo. Every number shown to a user comes from a knowledge pack with a source.
-- Nothing personal leaves the device: anything sent to the cloud goes through `buildCloudLookup` or an
-  explicit, consented cloud-reading path that the UI labels.
+- Nothing personal leaves the device, and the paper is never sent to be read: anything sent to the cloud is a
+  covered question built on the device (`buildCloudLookup`, `buildCloudQuestion`, `billQuestion`; iOS
+  `CloudPick.cleared`) and lights the internet lamp while it is out. The cloud reader serves only the evaluation harness.
 - Never ask a cloud model to invent scams or attacks; test attacks are hand-written fixtures.
 - Firebase config lives in `web/.env.local` (git-ignored). No production secrets in the repo.
 - Ask Eric before every commit and push; this repository is public.

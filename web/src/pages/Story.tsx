@@ -12,8 +12,6 @@ import { Link } from 'react-router';
 import {
   ArrowDown,
   ArrowRight,
-  ChevronLeft,
-  Circle,
   Cloud,
   Code,
   Cpu,
@@ -26,7 +24,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
-  Square,
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
@@ -118,25 +115,13 @@ const tones = {
 const paper = 'rounded-[0.8rem] border border-hair bg-card shadow-d3';
 const bezel = 'bg-[#1b1f1d]';
 
-function Phone({ android = false, children }: { android?: boolean; children: ReactNode }) {
+function Phone({ children }: { children: ReactNode }) {
   return (
-    <div className={`${bezel} ${android ? 'aspect-[9/20] rounded-[14%/6.3%]' : 'aspect-[9/19.5] rounded-[20%/9.2%]'} p-[5%] shadow-d3`}>
-      <div className={`@container relative h-full overflow-hidden bg-bg ${android ? 'rounded-[10%/4.6%]' : 'rounded-[16%/7.4%]'}`}>
-        {android ? (
-          <span className={`absolute top-[2.4%] left-1/2 aspect-square w-[7%] -translate-x-1/2 rounded-full ${bezel}`} />
-        ) : (
-          <span className={`absolute top-[2.2%] left-1/2 h-[4%] w-[34%] -translate-x-1/2 rounded-full ${bezel}`} />
-        )}
+    <div className={`${bezel} aspect-[9/19.5] rounded-[20%/9.2%] p-[5%] shadow-d3`}>
+      <div className="@container relative h-full overflow-hidden rounded-[16%/7.4%] bg-bg">
+        <span className={`absolute top-[2.2%] left-1/2 h-[4%] w-[34%] -translate-x-1/2 rounded-full ${bezel}`} />
         <div className="h-full pt-[18%] pb-[8%]">{children}</div>
-        {android ? (
-          <span className="absolute inset-x-0 bottom-[1.5%] flex justify-center gap-[16%] text-ink-2">
-            <ChevronLeft className="size-[9cqw]" strokeWidth={3} />
-            <Circle className="size-[8cqw]" strokeWidth={3} />
-            <Square className="size-[7.5cqw]" strokeWidth={3} />
-          </span>
-        ) : (
-          <span className="absolute bottom-[1.6%] left-1/2 h-[0.9%] w-[36%] -translate-x-1/2 rounded-full bg-ink/60" />
-        )}
+        <span className="absolute bottom-[1.6%] left-1/2 h-[0.9%] w-[36%] -translate-x-1/2 rounded-full bg-ink/60" />
       </div>
     </div>
   );
@@ -214,13 +199,12 @@ function DeviceStrip() {
   );
   const items: Array<[string, string, ReactNode]> = [
     ['iPhone', 'w-[1.5rem]', <Phone key="p">{screen}</Phone>],
-    ['Android', 'w-[1.5rem]', <Phone key="a" android>{screen}</Phone>],
     ['iPad', 'w-[2.5rem]', <Tablet key="t">{screen}</Tablet>],
     ['Mac', 'w-[4.4rem]', <Laptop key="m">{screen}</Laptop>],
     ['Windows', 'w-[4.4rem]', <Laptop key="w" windows>{screen}</Laptop>],
   ];
   return (
-    <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-2 short:mt-3 short:gap-x-3" role="img" aria-label="Works on iPhone, Android, iPad, Mac and Windows.">
+    <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-2 short:mt-3 short:gap-x-3" role="img" aria-label="Works on iPhone, iPad, Mac and Windows.">
       {items.map(([name, w, pic], i) => (
         <In key={name} d={500 + i * 90} className="flex flex-col items-center gap-1">
           <span className={`block ${w} [&_*]:!shadow-none`}>{pic}</span>
@@ -592,7 +576,7 @@ function QuestionPicture() {
 const MODELS: Array<{ name: string; where: string; icon: LucideIcon }> = [
   { name: 'Gemini Nano', where: 'in Chrome', icon: Globe },
   { name: 'Apple’s model', where: 'on iPhone', icon: Smartphone },
-  { name: 'Gemini', where: 'in the cloud', icon: Cloud },
+  { name: 'Gemini', where: 'the question only', icon: Cloud },
 ];
 const SERVICES: Array<{ name: string; icon: LucideIcon }> = [
   { name: 'App Check', icon: ShieldCheck },
@@ -623,7 +607,7 @@ function FirebasePicture() {
         <span className="flex items-center justify-center gap-2 text-[1.2rem] font-bold tracking-[-0.02em] lg:text-[1.4rem]">
           <Cpu className="size-6" /> Firebase AI Logic
         </span>
-        <span className="mt-1 block text-[0.85rem] opacity-90">The same code. On the device or in the cloud.</span>
+        <span className="mt-1 block text-[0.85rem] opacity-90">The paper on the device. Only the question in the cloud.</span>
       </In>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {SERVICES.map((s, i) => (
@@ -822,8 +806,8 @@ export function Story({ open }: { open: string }) {
         <Slide i={3} at={at}>
           <Words
             kicker="WeKnow"
-            title="Checked on your device first."
-            line="Personal details are covered before any model reads a word. The model only fills a form. Plain code makes the call."
+            title="Checked on your device."
+            line="Read and covered right here. The model only fills a form. Plain code makes the call, even with no model on the device."
           />
           <OnDevicePicture />
         </Slide>
@@ -842,8 +826,8 @@ export function Story({ open }: { open: string }) {
           <Words
             tight
             kicker="Built on Firebase"
-            title="One set of checks, on the device or in the cloud."
-            line="Gemini Nano in Chrome, Apple’s model on iPhone, Gemini in the cloud. Firebase AI Logic connects them; App Check makes sure only the real app can ask."
+            title="One set of checks, on every device."
+            line="Gemini Nano in Chrome and Apple’s model on iPhone read the paper. Gemini in the cloud gets only the question. Firebase AI Logic connects them; App Check lets only the real app ask."
           />
           <FirebasePicture />
         </Slide>

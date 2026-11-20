@@ -172,7 +172,7 @@ const IN_CLOUD: Array<{ icon: LucideIcon; name: ReactNode; line: string }> = [
         AI Logic <ArrowRight className="inline size-[1.1rem] align-[-0.15em]" aria-label="to" /> Gemini
       </>
     ),
-    line: 'Prompt templates · Search grounding',
+    line: 'Search grounding · the question only',
   },
   { icon: ShieldCheck, name: 'App Check', line: 'Only the real app can call.' },
   { icon: SlidersHorizontal, name: 'Remote Config', line: 'Change without a new release.' },
@@ -218,7 +218,7 @@ function Note({ icon, line, q, children, cloud = false }: { icon: LucideIcon; li
   );
 }
 
-/** The cloud above, the person's device below, and between them what goes up after a yes and what comes back. */
+/** The cloud above, the person's device below, and between them what goes up (only the question) and what comes back. */
 function Architecture() {
   const [step, setStep] = useState(-1);
   useEffect(() => {
@@ -246,8 +246,8 @@ function Architecture() {
           ))}
         </ul>
       </div>
-      <Note cloud icon={Cloud} line="The cloud helps only when asked." q="What runs there?">
-        Gemini, through Firebase AI Logic, with server prompt templates and Google Search grounding. App Check, Remote Config, Cloud Firestore and Hosting
+      <Note cloud icon={Cloud} line="The cloud only gets the question." q="What runs there?">
+        Gemini, through Firebase AI Logic, with Google Search grounding. It never gets the paper. App Check, Remote Config, Cloud Firestore and Hosting
         stand behind it.
       </Note>
 
@@ -258,10 +258,10 @@ function Architecture() {
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-small font-bold text-net">
               <Lock className="size-[1.15rem] flex-none" strokeWidth={2.2} aria-hidden="true" />
-              Only after a yes
+              Only the question
             </p>
             <ul className="mt-1 text-small text-ink">
-              <li>The picture</li>
+              <li>A covered question</li>
               <li>A masked line name + region</li>
             </ul>
           </div>
@@ -271,15 +271,15 @@ function Architecture() {
           <div className="min-w-0">
             <p className="text-small font-bold text-go">Comes back</p>
             <ul className="mt-1 text-small text-ink">
-              <li>A reading in the fixed form</li>
+              <li>A sourced answer</li>
               <li>A sourced price</li>
               <li>Pack files</li>
             </ul>
           </div>
         </div>
       </div>
-      <Note icon={Lock} line="Nothing goes up without a yes." q="When does it go up?">
-        <p>The picture: only on a device with no local model, for reading.</p>
+      <Note icon={Lock} line="The paper never goes up." q="What goes up, and when?">
+        <p>A covered question: only when this device cannot answer it. Words with nothing personal in them go by themselves; anything else waits for your yes.</p>
         <p className="mt-2">A masked line name and a region: only for a quote line the price book does not know.</p>
       </Note>
 
@@ -303,11 +303,11 @@ function Architecture() {
             </li>
           ))}
         </ol>
-        <p className="mt-4 text-center text-[0.9375rem] font-medium text-ink-2">Gemini Nano in Chrome · Apple’s on-device model on iPhone</p>
+        <p className="mt-4 text-center text-[0.9375rem] font-medium text-ink-2">Gemini Nano in Chrome · Apple’s on-device model on iPhone · the basic check anywhere</p>
       </div>
       <Note icon={Smartphone} line="Reading, deciding and speaking happen here." q="In one breath?">
         The picture is read on the device, personal details are covered, an on-device model fills a fixed form, plain code compares it with a sourced price
-        book, and the answer is spoken.
+        book, and the answer is spoken. With no model on the device, plain code still gives a bill the basic check.
       </Note>
     </div>
   );
@@ -335,10 +335,11 @@ const PIPE: PipeStep[] = [
     title: 'Read the words',
     line: 'Read on the device.',
     data: 'The text on the paper, with its position.',
-    how: 'Read on the device. On the web, Chrome’s Gemini Nano reads the photo itself.',
+    how: 'Read on the device. On the web, Chrome’s Gemini Nano reads the photo itself; in a browser without it, the text recognizer reads the words for the basic check.',
     tech: [
       ['iPhone', 'Apple Vision text recognition'],
       ['Web', 'Gemini Nano, multimodal Prompt API'],
+      ['Web', 'tesseract.js for the basic check'],
     ],
   },
   {
@@ -349,7 +350,7 @@ const PIPE: PipeStep[] = [
     how: 'Pattern rules plus Apple’s on-device name tagger replace them with tokens like [phone] and draw black bars on the picture. The copy kept in My checks is the covered one.',
     tech: [
       ['iPhone', 'On-device regex rules + NaturalLanguage name tagger'],
-      ['Web', 'core/pii.ts rules over words found on the device (tesseract.js), black bars before a cloud reading; masking for lookups, mail, requests'],
+      ['Web', 'core/pii.ts rules over the words found on the device; masking for questions, lookups, mail and requests'],
     ],
     shown: true,
   },
@@ -358,7 +359,7 @@ const PIPE: PipeStep[] = [
     title: 'Fill a fixed form',
     line: 'The model may only fill this form.',
     data: 'Kind (quote, bill or problem), each line’s label and amount, the payee, the last 4 digits of the account, and three warning flags: urgent, account changed, words aimed at an AI.',
-    how: 'The on-device model may only fill this form. It never writes prices or free text answers.',
+    how: 'The on-device model may only fill this form. It never writes prices or free text answers. With no model on the device, plain code fills it for a bill: its kind and who asks to be paid.',
     tech: [
       ['Both', 'Firebase AI Logic hybrid inference with structured output'],
       ['iPhone', 'Apple Foundation Models guided generation'],
@@ -497,7 +498,7 @@ function Cross({ icon, title, line, code, down = false, children }: { icon: Luci
         <Dot icon={icon} cloud />
         <span className={pill}>
           {down ? <ArrowDown className="size-4 text-go" strokeWidth={2.4} aria-hidden="true" /> : <Lock className="size-4 text-net" strokeWidth={2.4} aria-hidden="true" />}
-          {down ? 'Downloads only' : 'Only after a yes'}
+          {down ? 'Downloads only' : 'Only the question'}
         </span>
       </div>
       <h3 className="mt-4 text-title font-bold tracking-[-0.02em]">{title}</h3>
@@ -565,11 +566,11 @@ function SyncCard({ icon, title, items, q, tone, children }: { icon: LucideIcon;
 // ---------- why hybrid is hard ----------
 
 const HARD: Array<{ icon: LucideIcon; hard: string; does: string }> = [
-  { icon: Cloud, hard: 'Cloud AI sees your bill', does: 'Personal details are covered on the device before any model sees them.' },
+  { icon: Cloud, hard: 'Cloud AI sees your bill', does: 'The bill is read on the device and never sent. The cloud only gets a covered question.' },
   { icon: Scale, hard: 'The model makes up a price', does: 'The model can only point at sourced items. Plain code sets every number.' },
   { icon: TriangleAlert, hard: 'Text on a paper can trick the AI', does: 'Words aimed at an AI raise a warning. Nothing on the paper can clear one.' },
   { icon: WifiOff, hard: 'Offline means broken', does: 'Packs are cached and hash-checked. It answers in airplane mode.' },
-  { icon: Globe, hard: 'You can’t tell where it ran', does: 'Every answer says “On this device” or “Used the internet”, and shows exactly what was sent.' },
+  { icon: Globe, hard: 'You can’t tell where it ran', does: 'Two lights show this device or the internet while it works. Every answer shows exactly what was sent.' },
   { icon: RefreshCw, hard: 'Stale knowledge', does: 'Packs update by changed files. New prices come back sourced.' },
 ];
 
@@ -651,7 +652,7 @@ export default function How() {
 
       <main className={`${wrapper} pb-20`}>
         <p className="mt-16 -mb-16 text-small font-semibold text-ink-2 lg:mt-20 lg:-mb-20">The details</p>
-        <Section id="how" title="How it works" lead="The device does the work. The cloud helps only after a yes.">
+        <Section id="how" title="How it works" lead="The device does the work. The cloud only gets the question.">
           <Architecture />
         </Section>
 
@@ -663,17 +664,18 @@ export default function How() {
           </ol>
         </Section>
 
-        <Section title="What can cross to the cloud — exactly">
+        <Section title="What can cross to the cloud — exactly" lead="The paper never crosses. Only these questions do.">
           <SplitPicture className="mx-auto mb-8 block w-full max-w-[36rem] lg:mb-10" />
           <div className="grid gap-4 lg:grid-cols-2">
             <Cross
-              icon={ScanText}
-              title="Reading, on a device with no local model"
-              line="iPhone never sends the picture. The consent screen says what is sent, before sending."
-              code={'iPhone  covered text rows only\nWeb     the covered picture + your question\n\nweknow-read-photo-v1\nweknow-choose-v1\n+ an App Check token'}
+              icon={MessageSquare}
+              title="A question the device can’t answer"
+              line="Typed, or a problem the guides don’t cover. Personal details covered; on iPhone, a sentence that holds one stays behind."
+              code={'"The garage door opener hums but the door won’t move."\n+ the names of the pack’s guides and prices\n+ an App Check token'}
             >
-              <Fold q="Why server prompt templates?">
-                It goes through Firebase AI Logic server prompt templates. The prompts are kept on Firebase, so nobody can read or change them from the app.
+              <Fold q="What happens to it?">
+                Gemini may only name one item from the pack’s index. If none fits, it searches Google and brings back a how-to with its sources. While the words
+                are on their way, the internet light shows them.
               </Fold>
             </Cross>
             <Cross icon={Search} title="A price lookup" line="For a line the book does not know." code={'{\n  "item": "Install outdoor hose bib",\n  "region": "US"\n}'}>
@@ -712,8 +714,8 @@ export default function How() {
               <p className="mt-2">Reviewed learned prices come from one Firestore document per pack, read-only for clients.</p>
               <p className="mt-2">Settings come from Remote Config: the cloud model, the pack version, the warning phrases, the lookup switch.</p>
             </SyncCard>
-            <SyncCard tone="up" icon={Lock} title="Up, only after a yes" items={['A masked line name + region', 'A covered question: no names, no numbers']} q="For what?">
-              A price lookup, a “please add this item” request, or a check the device cannot do by itself (is this company real?). Firestore rules make requests write-only and accept only the line-and-region shape.
+            <SyncCard tone="up" icon={Lock} title="Up, only the question" items={['A masked line name + region', 'A covered question: no names, no numbers']} q="For what?">
+              A price lookup, a “please add this item” request, a question the packs don’t answer, or a check the device cannot do by itself (is this company real?). Firestore rules make requests write-only and accept only the line-and-region shape.
             </SyncCard>
             <SyncCard tone="stay" icon={Smartphone} title="Never synced" items={['Pictures', 'Names and numbers', 'Your checks', 'The payees you remembered']} q="Where do they stay?">
               On the device: iPhone files with data protection, browser storage on the web.
@@ -793,7 +795,7 @@ export default function How() {
               Under each answer, as buttons.
             </Opens>
             <Opens icon={Languages} name="Explain in my language">
-              On the device when it can. In the cloud otherwise.
+              On the device when it can. Otherwise only WeKnow’s answer goes, never the picture.
             </Opens>
             <Opens icon={ZoomIn} name="Picture viewer with zoom">
               Open the picture large and look closely.
@@ -807,7 +809,7 @@ export default function How() {
         <Section title="Built on Firebase" lead="Six services. Press one.">
           <div className="grid grid-cols-2 items-start gap-3 lg:grid-cols-3 lg:gap-4">
             <Opens icon={Cpu} name="AI Logic">
-              Hybrid on-device and cloud inference, structured output, server prompt templates, Google Search grounding.
+              Hybrid on-device and cloud inference, structured output, Google Search grounding, and server prompt templates for the evaluation.
             </Opens>
             <Opens icon={ShieldCheck} name="App Check">
               Only the real app can call the model: reCAPTCHA Enterprise on the web, App Attest on iPhone.

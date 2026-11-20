@@ -1,0 +1,133 @@
+{
+ "what": "What reached the cloud model, as Firebase AI monitoring logged it (resource type firebasevertexai.googleapis.com/Model), while five cases ran in the iPhone app on 2026-11-20 (iOS Simulator, iPhone 17 Pro, iOS 27, Apple on-device model). Every person, address, phone, email and account in the inputs is fictional (docs/test-sheets).",
+ "method": "Each case was given to the app; afterwards every request logged for the project in that window was pulled from Cloud Logging and searched for each planted detail. Besides the words below, a request carries only WeKnow's fixed instructions and, for a pack pick, the names of the guides and prices in the pack index.",
+ "cases": [
+  {
+   "input": "Photo of docs/test-sheets/bill-7-scam-numbers-dont-add-up.png, asked \"Should I pay this?\"",
+   "planted": "2 people's names, a street address, 2 phone numbers, 2 email addresses, a bank account and file numbers, 6 amounts"
+  },
+  {
+   "input": "Typed: \"My name is Wendell Farthingale, I live at 61 Larkspur Ln, my phone is (360) 555-0186. How do I get a protein shake stain out of a white shirt?\"",
+   "planted": "a name, a street address, a phone number"
+  },
+  {
+   "input": "Typed in Chinese: a sentence with a name, a street address and a phone number, then a question about a stain on a white shirt",
+   "planted": "a name, a street address, a phone number"
+  },
+  {
+   "input": "Typed in Chinese: a sentence with a name and a street address only, then the same question",
+   "planted": "a name, a street address"
+  },
+  {
+   "input": "Photo of a stain on fabric with a question in Chinese",
+   "planted": "nothing (the picture is not sent)"
+  }
+ ],
+ "requests_logged": 15,
+ "planted_details_searched_for": [
+  "Theodora",
+  "Quillfeather",
+  "Wendell",
+  "Farthingale",
+  "Alaric",
+  "Venn-Hollis",
+  "Bramble",
+  "98499",
+  "Larkspur",
+  "555-0134",
+  "555-0198",
+  "555-0186",
+  "@example.com",
+  "4410",
+  "2278",
+  "6092",
+  "UF-88",
+  "20931",
+  "482,700",
+  "1,091",
+  "4,827",
+  "1,050",
+  "王小明",
+  "信義路",
+  "台北市",
+  "0912"
+ ],
+ "planted_details_found": 0,
+ "requests": [
+  {
+   "at": "2026-11-20T15:40:04.794824Z",
+   "request": "company check",
+   "words_from_the_person_or_paper": "Who asks to be paid: Palisade Sovereign Reserve Trust / Charges: Non-refundable processing fee; Government processing fee (Federal Release Stamp); Anti-money-laundering clearance certificate; Identification card fee / It says: In payment of processing fee for release of unclaimed inheritance fund of USD held on PSRT Clearing"
+  },
+  {
+   "at": "2026-11-20T15:40:15.285646Z",
+   "request": "company check",
+   "words_from_the_person_or_paper": "Who asks to be paid: Palisade Sovereign Reserve Trust / Charges: Non-refundable processing fee; Government processing fee (Federal Release Stamp); Anti-money-laundering clearance certificate; Identification card fee / It says: In payment of processing fee for release of unclaimed inheritance fund of USD held on PSRT Clearing"
+  },
+  {
+   "at": "2026-11-20T15:41:18.165307Z",
+   "request": "pack pick",
+   "words_from_the_person_or_paper": "沾到高蛋白了染色了怎麼清？"
+  },
+  {
+   "at": "2026-11-20T15:41:23.807318Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "沾到高蛋白了染色了怎麼清？"
+  },
+  {
+   "at": "2026-11-20T15:46:02.399767Z",
+   "request": "pack pick",
+   "words_from_the_person_or_paper": "How do I get a protein shake stain out of a white shirt?"
+  },
+  {
+   "at": "2026-11-20T15:46:13.962364Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "How do I get a protein shake stain out of a white shirt?"
+  },
+  {
+   "at": "2026-11-20T15:47:26.846297Z",
+   "request": "pack pick",
+   "words_from_the_person_or_paper": "沾到高蛋白了染色了怎麼清？"
+  },
+  {
+   "at": "2026-11-20T15:47:35.729500Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "沾到高蛋白了染色了怎麼清？"
+  },
+  {
+   "at": "2026-11-20T15:49:59.856347Z",
+   "request": "pack pick",
+   "words_from_the_person_or_paper": "白色上衣沾到高蛋白染色了要怎麼洗？"
+  },
+  {
+   "at": "2026-11-20T15:50:08.703783Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "白色上衣沾到高蛋白染色了要怎麼洗？"
+  },
+  {
+   "at": "2026-11-20T15:53:34.955878Z",
+   "request": "pack pick",
+   "words_from_the_person_or_paper": "沾到高蛋白了染色了怎麼清？"
+  },
+  {
+   "at": "2026-11-20T15:53:44.044639Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "沾到高蛋白了染色了怎麼清？"
+  },
+  {
+   "at": "2026-11-20T15:54:35.877723Z",
+   "request": "pack pick",
+   "words_from_the_person_or_paper": "白色上衣沾到高蛋白染色了要怎麼洗？"
+  },
+  {
+   "at": "2026-11-20T15:54:39.048253Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "白色上衣沾到高蛋白染色了要怎麼洗？"
+  },
+  {
+   "at": "2026-11-20T15:54:43.724699Z",
+   "request": "web how-to",
+   "words_from_the_person_or_paper": "白色上衣沾到高蛋白染色了要怎麼洗？"
+  }
+ ]
+}

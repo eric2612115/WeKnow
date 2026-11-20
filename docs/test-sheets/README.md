@@ -16,3 +16,7 @@ files can be downloaded from the front page, under "Try it with our test papers"
 
 To see the "usual bill" answer, remember the company first: give WeKnow `bill-2`, choose "Remember this company",
 then give it `bill-2` again, then `bill-3`.
+
+In a browser with no built-in model (Safari, Firefox, a phone's browser, or Chrome before Get ready), the four bills
+dropped in as PDFs get the same answers from the basic check, by plain code on the device. `quote-1` says a quote
+needs the full check, and how to get it. Nothing is sent to be read.
