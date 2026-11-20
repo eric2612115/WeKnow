@@ -8,6 +8,10 @@ import { ai, CLOUD_MODEL } from './firebase';
 import { buildCloudQuestion } from './core/cloudPayload';
 import { parseWebAnswer, webSources, type WebAnswer } from './core/webAnswer';
 import { onlineCheckPrompt, parseOnlineCheck, type OnlineCheck } from './core/billCheck';
+import { withRetry } from './core/templateParse';
+
+/** A busy or briefly failing server is tried again twice (3 s, 12 s) before the person is told. */
+const RETRY = [3000, 12000];
 
 let searchModel: GenerativeModel | undefined;
 
@@ -31,7 +35,7 @@ export interface WebSearchResult {
 }
 
 async function ask(prompt: string) {
-  const res = await model().generateContent(prompt);
+  const res = await withRetry(() => model().generateContent(prompt), RETRY);
   const sources = webSources(res.response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []);
   return parseWebAnswer(res.response.text(), sources);
 }
@@ -52,7 +56,7 @@ export async function checkBillOnline(question: string): Promise<BillCheckResult
   let check: OnlineCheck | null = null;
   while (!check && tries < 3) {
     tries += 1;
-    const res = await online({ what: 'question', words: text }, () => model().generateContent(onlineCheckPrompt(text)));
+    const res = await online({ what: 'question', words: text }, () => withRetry(() => model().generateContent(onlineCheckPrompt(text)), RETRY));
     const sources = webSources(res.response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []);
     check = parseOnlineCheck(res.response.text(), sources);
   }

@@ -12,7 +12,7 @@ import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts, withBillMath } from '../core/verdict';
-import { billMath, payToOf, type BillMath } from '../core/billMath';
+import { amountsIn, billMath, keepPrinted, payToOf, type BillMath } from '../core/billMath';
 import { guideByRef, priceByRef, proPrice } from '../core/packs';
 import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, terms, type ItemKind, type Scored } from './words';
 import { afterConsent, gate, route, type Reason } from './router';
@@ -24,6 +24,7 @@ import type { BillCheckResult } from '../webSearch';
 import { maskText } from '../core/pii';
 import { coverPaperText, flatPayload } from '../core/paperText';
 import { openSheet } from '../ui/uiStore';
+import { withRetry } from '../core/templateParse';
 import { basicBill, basicKind } from '../core/basicRead';
 import { buildCloudLookup } from '../core/cloudPayload';
 import {
@@ -1495,17 +1496,19 @@ async function lookUpLines(
   kb: LayeredKnowledge,
 ): Promise<Array<{ i: LineItem; item: PriceItem; ms: number }>> {
   const { lookupPrice } = await import('../lookup');
-  const found = await Promise.all(
-    unknown.map(async (x) => {
-      try {
-        const r = await lookupPrice(x.payload.item, x.payload.region);
-        return r.item ? { i: x.i, item: r.item, ms: r.ms } : null;
-      } catch (e) {
-        console.warn('[WeKnow] price lookup failed', e);
-        return null;
-      }
-    }),
-  );
+  const one = async (x: (typeof unknown)[number]) => {
+    try {
+      // A busy minute at the cloud is waited out once or twice, not answered with "not found".
+      const r = await withRetry(() => lookupPrice(x.payload.item, x.payload.region), [3000, 12000]);
+      return r.item ? { i: x.i, item: r.item, ms: r.ms } : null;
+    } catch (e) {
+      console.warn('[WeKnow] price lookup failed', e);
+      return null;
+    }
+  };
+  // Three at a time: a long quote does not fire thirty searches at once.
+  const found: Array<Awaited<ReturnType<typeof one>>> = [];
+  for (let i = 0; i < unknown.length; i += 3) found.push(...(await Promise.all(unknown.slice(i, i + 3).map(one))));
   const ok = found.filter((x): x is NonNullable<typeof x> => !!x);
   for (const f of ok) await kb.learn(f.item).catch(() => undefined);
   return ok;
@@ -1535,6 +1538,16 @@ function applyFound(items: LineItem[], found: Array<{ i: LineItem; item: PriceIt
 
 async function quoteFlow(c: Ctx) {
   const { t, reading, kb, where } = c;
+  // What a model on this device copied is held against the paper's own words, by plain code on this device: an
+  // amount that is not printed there is dropped, so that line is never judged.
+  if (where === 'device' && !c.basic && !c.words && (c.picture || c.paper)) {
+    const printed = (await paperWords(c)) ?? [];
+    const lines = reading.understanding.lines;
+    // A PDF's text is exact. Words recognized from a photo count only when the recognizer plainly read the page:
+    // it found at least as many prices as the quote has priced lines.
+    const readable = !!c.paper || printed.flatMap((w) => amountsIn(w)).length >= Math.max(1, lines.filter((l) => l.amount !== null).length);
+    if (readable) reading.understanding = { ...reading.understanding, lines: keepPrinted(lines, printed) };
+  }
   const u = reading.understanding;
   const shop = nameOf(u.payee);
   const items = lineItems(quoteVerdicts(u, reading.pack), u.lines.map((l) => l.label));

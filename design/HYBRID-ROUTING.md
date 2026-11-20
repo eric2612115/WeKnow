@@ -4,8 +4,9 @@ People should not decide, question by question, whether the internet is used. We
 the device, tries to answer on the device, and moves to the cloud by itself when the device cannot answer well —
 with consent given once, and with every cloud answer labelled and showing exactly what was sent.
 
-Firebase AI Logic's own hybrid inference decides only *where a model is available* (on-device when ready, cloud
-otherwise). WeKnow adds the second decision on top: *is the on-device answer good enough?*
+WeKnow names the place for every request itself, with Firebase AI Logic's explicit modes (`ONLY_ON_DEVICE`,
+`ONLY_IN_CLOUD`): nothing falls over to the cloud on its own. The paper is read on the device or not at all; the
+decision WeKnow makes is whether a covered question may go online when the device cannot answer well.
 
 ## Consent, once
 The first time WeKnow would use the internet it asks once:

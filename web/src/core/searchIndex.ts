@@ -44,7 +44,9 @@ export function searchOptions(added: ReadonlySet<string>): SearchOptions {
   return {
     boost: { name: 2 },
     boostTerm: (term) => (added.has(term) ? 0.6 : 1),
-    fuzzy: (term) => (term.length >= FUZZY_MIN ? 0.2 : false),
+    // Terms are stemmed before they are compared, and a stem is short: "altenrator" becomes "altenr", two edits
+    // from "altern". So the edits allowed are counted, not a share of the length: two from six letters, one at five.
+    fuzzy: (term) => (term.length >= FUZZY_MIN ? 2 : term.length >= FUZZY_MIN - 1 ? 1 : false),
     prefix: (term) => term.length >= PREFIX_MIN,
     combineWith: 'OR',
   };

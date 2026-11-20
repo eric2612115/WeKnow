@@ -51,6 +51,17 @@ enum BillMath {
     return out
   }
 
+  /// Every number printed in a text, whole, as amounts: "$1,200.00", "160", "16.50". The digits inside a date
+  /// ("11/16/2026") or a covered detail ("[account ending 5678]") are not amounts.
+  static func moneyTokens(_ text: String) -> [Double] {
+    let t = text.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
+    return amountToken.matches(in: t, range: NSRange(t.startIndex..., in: t)).compactMap { m in
+      Range(m.range(at: 1), in: t).flatMap { Double(t[$0].replacingOccurrences(of: ",", with: "")) }
+    }
+  }
+  private static let amountToken = try! NSRegularExpression(
+    pattern: #"(?<![\d.,/])(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?![\d/]|[.,]\d)"#)
+
   /// The last money amount printed on a row: on a quote that is the line's own total, after quantity and rate.
   static func lastMoney(_ row: String) -> Double? {
     let all = row.matches(of: /\$?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})/)

@@ -730,11 +730,13 @@ final class AskModel {
         if let row = paper.row(for: l.label), let v = BillMath.lastMoney(row.masked), v >= 1 { l.amount = v }
         return l
       }
-      let printed = paper.masked.replacingOccurrences(of: ",", with: "")
+      // Compared as whole amounts, never as text inside text: 16 is not printed where the row says 160.
+      // The line's own row when it can be found, else anywhere on the paper.
+      let onPage = BillMath.moneyTokens(paper.masked)
       u.lines = u.lines.filter { line in
         guard let a = line.amount else { return false }
-        let whole = a.rounded() == a ? String(Int(a)) : String(format: "%.2f", a)
-        return printed.contains(whole)
+        let printed = paper.row(for: line.label).map { BillMath.moneyTokens($0.masked) } ?? onPage
+        return printed.contains { abs($0 - a) < 0.005 }
       }
       if u.lines.isEmpty { u.kind = .unknown }
     }
@@ -775,14 +777,21 @@ final class AskModel {
       answer = (q.sentences + Compose.notKnown(items)).map { Sentence(text: $0) }
       // A quote or an invoice with priced lines can carry the same traps as a bill: the same plain rules read its
       // covered words. They can only add a warning to the price verdict, never take one away.
-      let signs = Verdicts.bill(u, maskedText: paper.masked, known: []).flags.filter { $0 == .urgency || $0 == .instructionToAI }
+      let signs = Verdicts.bill(u, maskedText: paper.masked, known: []).flags.filter { [.accountChangeNotice, .urgency, .instructionToAI].contains($0) }
       if !signs.isEmpty {
-        if signs.contains(.instructionToAI) {
+        if signs.contains(.instructionToAI) || signs.contains(.accountChangeNotice) {
           verdict = Verdict(tone: .stop, text: "Don’t pay this yet")
         } else if verdict?.tone != .stop {
           verdict = Verdict(tone: .warn, text: "Check this before you pay")
         }
-        answer.insert(contentsOf: signs.map { Sentence(text: $0 == .urgency ? "It rushes you to pay." : "It has hidden words that try to tell a reader it is safe.") }, at: 0)
+        answer.insert(contentsOf: signs.map { f -> Sentence in
+          let text: String = switch f {
+          case .accountChangeNotice: "It wants the money sent to a new account."
+          case .urgency: "It rushes you to pay."
+          default: "It has hidden words that try to tell a reader it is safe."
+          }
+          return Sentence(text: text)
+        }, at: 0)
         tech.append("Warning signs on this paper: \(signs.map(\.rawValue).joined(separator: ", ")).")
       }
       // Most lines not matched: often the item names came out blurred, or they are not in the price book.
@@ -827,10 +836,14 @@ final class AskModel {
       // member number the model copied by mistake never stands in for it.
       let printedRows = paper.rows.map(\.masked)
       if let to = BillMath.payTo(printedRows, lastTime: Verdicts.knownPayee(u.payee, in: known)?.payTo) { u.payTo = to }
+      // Account digits the model gave that are printed nowhere on the paper are not an account (seen on a real
+      // phone: a page too small to read came back with "1234"). They are dropped, so no warning is built on them.
+      if let to = u.payTo, !paper.masked.contains(to) { u.payTo = nil }
       var v = Verdicts.bill(u, maskedText: paper.masked, known: known)
       // Then part by part, on this phone only (Reading/Sections.swift): plain code cuts the page, Apple's model
       // answers three yes/no questions per part in two wordings, and an answer counts only when both agree.
       var foundIn: [String] = []
+      var unread: [String] = [] // parts the on-device model would not answer about: never read as "nothing found"
       var scamOnline = false
       if reading.where_ == .device {
         let parts = Sections.split(paper.rows)
@@ -849,6 +862,8 @@ final class AskModel {
         add(.instructionToAI, f.addressedToAI)
         // A part that says the account is new counts only with an account printed in it; when WeKnow has a note
         // of this payee, only an account other than the one in the note is a change.
+        // With no note, the paper itself says the account is new: the same flag as the words "new account"
+        // (said once, however many parts say it).
         let lastTime = Verdicts.knownPayee(u.payee, in: known)?.payTo
         for hit in f.newAccount {
           guard hit.endings.contains(where: { $0 != lastTime }) else { continue }
@@ -856,13 +871,18 @@ final class AskModel {
           // a meter or invoice number in the same part is not it.
           let partRows = parts.filter { $0.name == hit.part }.flatMap { $0.rows.map(\.masked) }
           if lastTime != nil, let to = BillMath.payToEndings(partRows).first(where: { $0 != lastTime }) { u.payTo = to }
-          add(.changedAccount, [hit.part])
+          add(lastTime == nil ? .accountChangeNotice : .changedAccount, [hit.part])
         }
+        unread = f.unread
         v.safe = v.flags.isEmpty
         tech.append("Read part by part on this \(S.device): \(f.parts) parts, \(f.asks) yes/no questions in \(f.ms) ms"
           + "; urgent in: \(f.urgent.joined(separator: ", ").ifEmpty("none"))"
           + "; words to an AI in: \(f.addressedToAI.joined(separator: ", ").ifEmpty("none"))"
           + "; new account in: \(f.newAccount.map { "\($0.part) (\($0.endings.joined(separator: ", ")))" }.joined(separator: ", ").ifEmpty("none"))")
+        if !f.unread.isEmpty {
+          tech.append("Not read closely: \(f.unread.joined(separator: ", ")). Apple's on-device model gave no answer to at least one wording there"
+            + " (\(f.errors.joined(separator: "; "))), so the verdict stays at least “Check this bill first”.")
+        }
       }
       let b = Compose.bill(v, payee: u.payee, known: known)
       verdict = b.verdict
@@ -879,6 +899,14 @@ final class AskModel {
         answer = math.map { Sentence(text: $0.text) } + answer.filter { !$0.text.hasPrefix("Call the company first") }
         if b.doLine == nil { answer.append(Sentence(text: "Call the company first. Use the number on an older bill.")) }
         tech.append("Bill math: \(math.map(\.text).joined(separator: " / "))")
+      }
+      // A part the model would not answer about is not a part that was found clean: the bill is never called the
+      // usual one on the strength of the part-by-part check, and the person hears which part to look at.
+      if !unread.isEmpty {
+        if verdict?.tone != .stop { verdict = Verdict(tone: .warn, text: "Check this bill first") }
+        let doAt = answer.firstIndex { $0.text.hasPrefix("Call the company first") }
+        answer.insert(Sentence(text: "I could not read \(S.list(unread)) closely."), at: doAt ?? answer.count)
+        if doAt == nil { answer.append(Sentence(text: "Call the company first. Use the number on an older bill.")) }
       }
       // A company WeKnow has no note of, and something already wrong: the phone cannot know whether this company
       // or these charges are real, so it asks the web (design/HYBRID-ROUTING.md). Only the company and the names
@@ -947,15 +975,17 @@ final class AskModel {
         u.payTo.map { to in "Pay to: account ending \(to)" + (Verdicts.knownPayee(u.payee, in: known).map { $0.payTo != to ? " (last time: \($0.payTo))" : " (same as last time)" } ?? "") },
       ].compactMap { $0 }
       topic = .bill(stop: verdict?.tone == .stop, warn: verdict?.tone == .warn)
-      if v.flags == [.newPayee] && math.isEmpty, let name = u.payee, let to = u.payTo {
+      if v.flags == [.newPayee] && math.isEmpty && unread.isEmpty, let name = u.payee, let to = u.payTo {
         next.append(NextQ(label: "Remember this company", action: .rememberPayee(name, to)))
       } else if v.flags.contains(.newPayee), !scamOnline, let name = u.payee, let to = u.payTo {
         // A new company whose first bill raised warnings can still be remembered, after two confirmations.
         var why: [String] = []
+        if Compose.said(.accountChangeNotice, in: v.flags) { why.append("it says the account has changed") }
         if v.flags.contains(.urgency) { why.append("it rushes you to pay") }
         if v.flags.contains(.instructionToAI) { why.append("it has words that try to tell a reader it is safe") }
         if v.flags.contains(.changedAccount) { why.append("it asks you to pay a new account") }
         if !math.isEmpty { why.append("its numbers don’t add up") }
+        if !unread.isEmpty { why.append("part of it could not be read closely") }
         next.append(NextQ(label: "I know this company, remember it", action: .rememberCareful(name, to, why)))
       }
       if reading.where_ == .basic { next.append(NextQ(label: "How to get the full check", action: .fullCheck)) }
@@ -1193,10 +1223,13 @@ final class AskModel {
   private func billMarks(_ v: Verdicts.Bill, u: Understanding, paper: PaperText) -> [Mark] {
     var out: [Mark] = []
     var n = 0
-    for f in Compose.order where v.flags.contains(f) {
+    for f in Compose.order where Compose.said(f, in: v.flags) {
       n += 1
       let rows: [PaperRow]
       switch f {
+      case .accountChangeNotice:
+        let said = paper.rows.filter { Verdicts.matches(Verdicts.accountChange, $0.masked) }
+        rows = said.isEmpty ? paper.rows.filter { $0.masked.contains(u.payTo ?? "----") } : said
       case .changedAccount:
         let digits = u.payTo ?? "----"
         rows = paper.rows.filter { $0.masked.contains(digits) || $0.masked.localizedCaseInsensitiveContains("new [account") }

@@ -21,32 +21,6 @@ export interface Understanding {
   accountChange: boolean; // the document says the bank or account to pay has changed (can only add a warning)
 }
 
-/** JSON schema handed to Firebase AI Logic for structured output. */
-export const understandingSchema = {
-  type: 'object',
-  properties: {
-    kind: { type: 'string', enum: ['quote', 'bill', 'problem', 'unknown'] },
-    lines: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          label: { type: 'string' },
-          amount: { type: 'number', nullable: true },
-          ref: { type: 'string', nullable: true },
-        },
-        required: ['label', 'amount', 'ref'],
-      },
-    },
-    problemRef: { type: 'string', nullable: true },
-    payee: { type: 'string', nullable: true },
-    payTo: { type: 'string', nullable: true },
-    urgent: { type: 'boolean' },
-    addressedToAI: { type: 'boolean' },
-    accountChange: { type: 'boolean' },
-  },
-  required: ['kind', 'lines', 'problemRef', 'payee', 'payTo', 'urgent', 'addressedToAI', 'accountChange'],
-} as const;
 
 export class UnderstandingError extends Error {}
 

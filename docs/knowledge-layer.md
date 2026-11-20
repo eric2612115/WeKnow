@@ -81,7 +81,7 @@ shell and the eval runner.
    - **route** with the root's filters: a shard scores Σ ln(1 + S / cf(t)) over the query terms its filter holds
      (cf = how many shards hold the term, so a word found everywhere counts little). Shards scoring at least half
      the best are loaded, at most 3. Here: `car-service.price` and `locksmith.price` ("front door");
-   - **search** each loaded shard with BM25+ (name ×2, aliases ×1, synonym terms ×0.6, one typo per five
+   - **search** each loaded shard with BM25+ (name ×2, aliases ×1, synonym terms ×0.6, up to two typos in a word of six letters or more
      letters for words of six letters or more, prefix match for words of four or more);
    - **fall back** to the whole-kind index when more than 3 shards score close to the best (a line of common words
      such as "Replace"), or when a printed word of four letters or more matched nothing in the routed shards: a
@@ -110,14 +110,17 @@ search; a laptop, expect 5–10× on an old phone). Bytes and tokens re-measured
 Eval quotes use the fallback index for lines the pack does not cover ("Shop supplies", "Diagnostic labor"); a
 household problem is a sentence, and words such as "slowly" are in no index.
 
-Typo and prefix tolerance, on every price whose name has a word of six letters or more (150 cases; test
+Typo and prefix tolerance, on every price whose name has a word of six letters or more (161 cases; test
 "the layered pack finds typo and prefix queries at least as well as one whole-pack index"):
 
-| Query | Layered, before the fallback | Layered now | One whole-pack index |
-|---|---|---|---|
-| The name with two letters swapped in its longest word | 145 | **150** | 150 |
-| That misspelled word alone | 0 | **22** | 22 |
-| The first six letters of that word | 29 | **75** | 75 |
+| Query | Layered pack | One whole-pack index |
+|---|---|---|
+| The name with two letters swapped in its longest word | **161** | 161 |
+| That misspelled word alone | **68** | 68 |
+| The first six letters of that word | **88** | 88 |
+
+A typo is matched on the word's stem, so the edits allowed are counted: two for a stem of six letters or more, one
+for five (`core/searchIndex.ts`).
 
 Token budgets for the choose prompt (`core/budget.ts`). No tokenizer for either model ships to the web, so the
 count is pessimistic: every digit and every symbol is a token (the Gemini family's tokenizers split numbers into
@@ -163,10 +166,13 @@ less code), SQLite/PGlite in WASM (runtime cost, section 1).
   Editing one price rewrites one block and the root; editing a name or alias also rewrites that shard and its
   kind's fallback index; editing the lexicon rewrites only the root. The device revalidates the catalog, fetches the new root, and fetches changed
   shards or blocks only when a question needs them (or all of them in `prefetch`). Unchanged files are cache hits
-  under the same names. `gc()` then deletes files the new root no longer names.
-- **Remote Config.** `pack_id` picks the pack per region or language (conditions); `pack_root` pins a root for a
-  staged rollout while its files are served, and the loader falls back to the catalog if they are not. The main
-  rollback is a Hosting rollback, which restores the previous catalog and files together.
+  under the same names. `gc()` first downloads the new copy of every file the device held an older copy of, then
+  deletes the old copies: what worked offline before an update still does right after it. The catalog is kept on
+  the device only once its root has loaded, so a dropped connection cannot leave a catalog that points at nothing.
+- **Remote Config.** `pack_id` picks the pack per region or language (conditions); `pack_root` pins a root while
+  its files are served (a staged rollout, with both versions' files deployed), and the loader follows the catalog
+  when they are not. A failed fetch keeps the values activated last time. A rollback is a Hosting rollback, which
+  restores the previous catalog and files together.
 - **After a deploy**, a device holding the old root may ask for a file that is gone and get a 404. The loader asks
   once more past the HTTP cache (`cache: 'reload'`, in case the browser kept an old answer), then re-reads the
   catalog once, adopts the new root and retries. A body that does not match its hash is handled the same way.
@@ -202,7 +208,10 @@ A learned price is one a cloud lookup found, with web sources, for a line the pa
 (`web/src/lookup.ts`). It joins an overlay index on the device; every path refuses it without a `learned-` ref,
 an ordered range and https sources (`assertLearnable`, the same rule as `learn` in `packs.ts`). Its tiny index
 cannot give BM25 scores comparable with a shard's, so it is offered when it covers at least half of the printed
-words, at most two per line, and the UI can say it was found online. Shared learned prices go through review:
+words, at most two per line, and the receipt names it as found on the web. It comes first only for the very line it
+was looked up for (its name or alias is the line's words); otherwise it goes after the pack's own results, so a
+price from the web never pushes a pack price aside. A device keeps at most 200, and one looked up more than a year
+ago is looked up again. Shared learned prices go through review:
 `scripts/seed-learned.mjs` validates (sources, ranges, refs not already in the pack, no personal data) and writes
 the list to Firestore; the next pack build moves them into `packs-src/` with their sources and they leave the list.
 

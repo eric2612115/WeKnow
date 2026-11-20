@@ -63,6 +63,19 @@ export function amountsIn(line: string): AmountHit[] {
   return out;
 }
 
+/**
+ * A quote line keeps the amount a model copied only when that same number is printed in the paper's own words
+ * (whole numbers compared, so 16 is not found in 160). An amount that is not there is set to null: the line is
+ * then never judged, so it can never come out as a fair price.
+ */
+export function keepPrinted<T extends { amount: number | null }>(lines: T[], words: string[]): T[] {
+  const printed = new Set<number>();
+  for (const w of words) for (const m of fixDigitsInNumbers(w).matchAll(/\d[\d,]*(?:\.\d+)?/g)) printed.add(Math.round(Number(m[0].replace(/,/g, '')) * 100));
+  return lines.map((l) => (l.amount === null || printed.has(Math.round(l.amount * 100)) ? l : { ...l, amount: null }));
+}
+/** "$1,2O0" read by a text recognizer: O and l between digits are digits. */
+const fixDigitsInNumbers = (s: string) => s.replace(/(?<=[\d$,.])[Oo](?=[\d,.]|\b)/g, '0').replace(/(?<=[\d$,.])[Il|](?=[\d,.]|\b)/g, '1');
+
 /** The first money amount in `s`, or undefined (used by tests and for OCR noise checks). */
 export function parseAmount(s: string): number | undefined {
   return amountsIn(s)[0]?.value;

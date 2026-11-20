@@ -1,6 +1,7 @@
-// The second hybrid decision, in plain code. Firebase AI Logic decides where a model runs (on this device when it is
-// ready, in the cloud otherwise); the router decides whether what the device produced is good enough, or whether
-// WeKnow should move to the cloud by itself, and why. No model, no network, no UI: flows.ts asks it and acts.
+// The hybrid decision, in plain code. Firebase AI Logic's hybrid SDK runs every step with an explicit mode (only on
+// this device, or only in the cloud); WeKnow picks the mode, so nothing reaches the cloud by an automatic fallback.
+// The router decides whether what the device produced is good enough, or whether a covered question should go to
+// the cloud, and why. No model, no network, no UI: flows.ts asks it and acts.
 //
 //   route        - from what the device produced: escalate or not, and the reason
 //   gate         - from the person's choice and the connection: go, ask first, or stay on the device

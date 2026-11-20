@@ -61,7 +61,17 @@ export async function deviceCanExplain(lang: Language, withPicture: boolean): Pr
  * personal detail in them covered again by plain code. These exact words are what the sheet shows before they go.
  */
 export function explainFacts(x: Pick<ExplainInput, 'verdict' | 'sentences'>): string {
-  return maskText([x.verdict, ...x.sentences].map((s) => s.replace(/"/g, "'")).join(' ')).slice(0, 1800);
+  // The last digits of an account ("one ending 4821") are not needed to explain the answer, so they are left out.
+  const said = [x.verdict, ...x.sentences].map((s) => s.replace(/"/g, "'").replace(/\b(ending|ends)(\s+(?:in|with))?\s+\d{2,6}\b/gi, '$1$2 [number]'));
+  return maskText(said.join(' ')).slice(0, 1800);
+}
+
+/** Every number in the explanation is one that WeKnow's answer has (same rule as the iPhone's Lang.keepsNumbers). */
+export function keepsNumbers(facts: string, said: string): boolean {
+  const numbers = (s: string) => (s.match(/\d[\d,.]*\d|\d/g) ?? []).map((n) => n.replace(/,/g, '').replace(/\.$/, ''));
+  const have = new Set(numbers(facts));
+  // A count the model may write itself ("three things", shown as 1, 2, 3) is not a number from the paper.
+  return numbers(said).every((n) => have.has(n) || (/^\d$/.test(n) && Number(n) <= 9));
 }
 
 export function explainPrompt(lang: Language, x: ExplainInput, withPicture: boolean): string {
@@ -106,6 +116,9 @@ export async function explain(lang: Language, x: ExplainInput, where: Where, clo
   if (where === 'cloud' && x.picture) throw new Error('a picture is never sent to be explained');
   const res = await (where === 'cloud' ? online({ what: 'question', words: explainFacts(x) }, ask) : ask());
   const text = res.response.text().trim().slice(0, 2400);
+  // The numbers are the answer. Written from WeKnow's answer alone, an explanation may not bring a number of its
+  // own: if it does, WeKnow's answer is shown as it is instead.
+  if (!x.picture && !keepsNumbers(explainFacts(x), text)) return { text: [x.verdict, ...x.sentences].join('\n'), ms: Math.round(performance.now() - t0) };
   return { text, ms: Math.round(performance.now() - t0) };
 }
 

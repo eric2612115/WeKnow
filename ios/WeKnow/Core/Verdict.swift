@@ -32,7 +32,10 @@ enum Verdicts {
     var payTo: String // the fingerprint the person confirmed before: last four digits
   }
 
-  enum BillFlag: String, Sendable, CaseIterable { case newPayee = "new-payee", changedAccount = "changed-account", urgency, instructionToAI = "instruction-to-ai" }
+  enum BillFlag: String, Sendable, CaseIterable {
+    case accountChangeNotice = "account-change-notice", newPayee = "new-payee", changedAccount = "changed-account", urgency
+    case instructionToAI = "instruction-to-ai"
+  }
 
   struct Bill: Sendable, Equatable {
     var safe: Bool
@@ -41,6 +44,12 @@ enum Verdicts {
 
   static let urgency = try! NSRegularExpression(
     pattern: #"\b(urgent|immediately|today only|within 24 hours|final notice|act now|avoid (?:suspension|disconnection|penalt))"#,
+    options: [.caseInsensitive])
+  /// A letter that says the bank or the account changed: the classic trick to send a payment somewhere else
+  /// (web/src/core/verdict.ts ACCOUNT_CHANGE). "New account 12345678" reaches these rules covered, as
+  /// "New [account ending 5678]", so that form counts too.
+  static let accountChange = try! NSRegularExpression(
+    pattern: #"\b(bank (?:has |have )?changed|new (?:bank|account)(?: details| number)?|new \[account|changed (?:our )?(?:bank|account)|updated (?:bank|payment) (?:details|information))\b"#,
     options: [.caseInsensitive])
   static let aiInstruction = try! NSRegularExpression(
     pattern: #"\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))"#,
@@ -63,6 +72,8 @@ enum Verdicts {
   /// Text inside the bill can raise flags; it can never clear one.
   static func bill(_ u: Understanding, maskedText: String, known: [KnownPayee]) -> Bill {
     var flags: [BillFlag] = []
+    // A letter announcing a new bank or account is always a warning, whoever sent it.
+    if matches(accountChange, maskedText) { flags.append(.accountChangeNotice) }
     let match = knownPayee(u.payee, in: known)
     if let match {
       if u.payTo == nil || u.payTo != match.payTo { flags.append(.changedAccount) }

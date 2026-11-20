@@ -7,6 +7,9 @@
 // Who decides what: plain code cuts the page (the same way every time, so a test can repeat it); the model only
 // answers yes or no about the part it is shown; plain code adds the answers up, and an answer counts only when both
 // wordings agree. A "new account" answer also needs an account number printed in that same part.
+// A part the model would not answer about (an error, or its safety filter declined either wording) is never taken as
+// a "no": it is listed as not read closely, and the caller keeps the bill at a warning. Words hidden in a paper cannot
+// clear a warning by making the model refuse.
 // It never runs in the cloud: it costs nothing and nothing leaves the phone.
 
 import CoreGraphics
@@ -123,6 +126,8 @@ enum Sections {
     var urgent: [String] = []          // names of the parts where both wordings said yes
     var addressedToAI: [String] = []
     var newAccount: [(part: String, endings: [String])] = []
+    var unread: [String] = []          // names of the parts that could not be asked (an error or a refusal on a wording)
+    var errors: [String] = []          // why, for Technical details
     var parts = 0
     var asks = 0
     var ms = 0
@@ -172,14 +177,19 @@ enum Sections {
         if Task.isCancelled { return found }
         let session = LanguageModelSession(model: Device.model, instructions: instructions)
         found.asks += 1
-        if let r = try? await session.respond(to: prompt, generating: PartCheck.self, options: GenerationOptions(samplingMode: .greedy)) {
-          answers.append(r.content)
+        do {
+          answers.append(try await session.respond(to: prompt, generating: PartCheck.self, options: GenerationOptions(samplingMode: .greedy)).content)
+        } catch {
+          found.errors.append("\(part.name): \(String(describing: error).prefix(120))")
         }
       }
       #if DEBUG
       print("[WeKnow] part \(i + 1)/\(parts.count) \(part.name) (\(part.rows.count) rows): " + answers.map { "u\($0.urgent ? 1 : 0) a\($0.addressedToAI ? 1 : 0) n\($0.newAccount ? 1 : 0)" }.joined(separator: " / "))
       #endif
-      guard answers.count == 2 else { continue }
+      guard answers.count == 2 else {
+        if !found.unread.contains(part.name) { found.unread.append(part.name) }
+        continue
+      }
       if answers.allSatisfy(\.urgent) { found.urgent.append(part.name) }
       if answers.allSatisfy(\.addressedToAI) { found.addressedToAI.append(part.name) }
       if answers.allSatisfy(\.newAccount) {

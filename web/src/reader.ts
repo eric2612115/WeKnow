@@ -296,8 +296,15 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
         );
       }
     } else {
-      const c = await model(where, CHOOSE_SCHEMA, 'choose', false).generateContent(choosePrompt(askable));
-      choices = (JSON.parse(c.response.text()) as { choices?: Array<{ i: number; ref: string | null }> }).choices ?? [];
+      // The reading is already done. If the small model fails at choosing, nothing is chosen: the lines stay
+      // unmatched (never "fair") instead of the whole reading being lost.
+      try {
+        const c = await model(where, CHOOSE_SCHEMA, 'choose', false).generateContent(choosePrompt(askable));
+        choices = (JSON.parse(c.response.text()) as { choices?: Array<{ i: number; ref: string | null }> }).choices ?? [];
+      } catch (e) {
+        console.warn('[WeKnow] the on-device model could not choose', e);
+        choices = [];
+      }
     }
     for (const ch of choices) {
       const allowed = askable.find((it) => it.i === ch.i)?.options.some((o) => o.ref === ch.ref);

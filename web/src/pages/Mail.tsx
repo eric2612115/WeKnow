@@ -14,7 +14,7 @@ import { billAnswer, type BillAnswer } from '../answer/compose';
 import type { Receipt } from '../answer/types';
 import { mailState, useMail } from '../engine/mailState';
 import { appSettings } from '../engine/knowledge';
-import { deviceStore, deviceWord } from '../engine/device';
+import { deviceStore, deviceWord, refreshModel } from '../engine/device';
 import { addCheck, dataStore } from '../store/data';
 import { Card, PageTitle, VerdictBand } from '../ui/controls';
 import { I } from '../ui/icons';
@@ -46,11 +46,18 @@ export default function Mail() {
       const s = await appSettings();
       // An email is read on this device or not at all: by its built-in model when it has one, otherwise by plain
       // code (the basic check, core/basicRead.ts). Its words are never sent to be read.
-      const basic = deviceStore.get().model !== 'available';
+      if (deviceStore.get().model !== 'available') await refreshModel();
+      let basic = deviceStore.get().model !== 'available';
       const mail = `${item.subject}\n${item.text}`;
+      const byCode = () => ({ understanding: basicBill(coverPaperText(mail).text.split('\n'), knownPayees(dataStore.get().memory).map((k) => k.name)), ms: 0, masked: mailPayload(mail) });
+      // If the built-in model fails on this email, plain code still checks it. It goes nowhere either way.
       const r = basic
-        ? { understanding: basicBill(coverPaperText(mail).text.split('\n'), knownPayees(dataStore.get().memory).map((k) => k.name)), ms: 0, masked: mailPayload(mail) }
-        : await readMailText(mail, 'device', s.cloudModel);
+        ? byCode()
+        : await readMailText(mail, 'device', s.cloudModel).catch((e) => {
+            console.warn('[WeKnow] the on-device model could not read the email', e);
+            basic = true;
+            return byCode();
+          });
       const u = r.understanding;
       const known = knownPayees(dataStore.get().memory);
       let v = billVerdict(u, r.masked, known);

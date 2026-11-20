@@ -18,6 +18,13 @@ function model(): GenerativeModel {
   return searchModel;
 }
 
+/** A short, stable tag of a text (FNV-1a, base 36). */
+function tag(s: string): string {
+  let h = 0x811c9dc5;
+  for (const ch of s.trim().toLowerCase()) h = Math.imul(h ^ ch.codePointAt(0)!, 0x01000193) >>> 0;
+  return h.toString(36);
+}
+
 export function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
 }
@@ -68,7 +75,9 @@ Use US dollars. If the sources do not give a price range for this item, reply {"
     payload,
     ms,
     item: {
-      ref: `learned-${slug(payload.item)}`,
+      // The whole line decides the ref: two long lines with the same start, or a line with no Latin letters at all,
+      // never share one (each lookup would overwrite the other).
+      ref: `learned-${slug(payload.item) || 'item'}-${tag(payload.item)}`,
       category: 'learned',
       name: typeof parsed.name === 'string' ? parsed.name.slice(0, 80) : payload.item,
       aliases: [payload.item],

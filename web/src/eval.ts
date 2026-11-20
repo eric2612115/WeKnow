@@ -67,7 +67,7 @@ export async function runEval(
           used.add(i);
           return verdicts[i].kind === l.expect ? 'right' : `${verdicts[i].kind}≠${l.expect}`;
         });
-        rows.push({ id: t.id, where: r.where, ms: r.ms, ok: got.every((g) => g === 'right'), detail: got.join(','), leaked, model: r.fallback ?? 'template' });
+        rows.push({ id: t.id, where: r.where, ms: r.ms, ok: got.every((g) => g === 'right'), detail: got.join(','), leaked, model: r.fallback ?? (r.where === 'device' ? 'on-device model' : 'template') });
       } else {
         const v = billVerdict(u, '', [{ name: t.payee, payTo: t.oldAcct }]);
         const checks = {
@@ -86,7 +86,7 @@ export async function runEval(
           ok: Object.values(checks).every(Boolean),
           detail: Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k).join(',') || 'all',
           leaked,
-          model: r.fallback ?? 'template',
+          model: r.fallback ?? (r.where === 'device' ? 'on-device model' : 'template'),
         });
       }
     } catch (e) {

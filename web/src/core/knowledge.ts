@@ -257,6 +257,17 @@ class FileError extends Error {
   }
 }
 
+/** Learned prices kept on a device at most. */
+export const MAX_LEARNED_KEPT = 200;
+/** A learned price whose newest source was fetched more than a year ago is no longer used. */
+function staleLearned(item: PriceItem, now = new Date()): boolean {
+  const newest = item.sources.map((s) => s.fetched).filter((d): d is string => !!d).sort().pop();
+  if (!newest) return false;
+  const year = new Date(now);
+  year.setFullYear(year.getFullYear() - 1);
+  return newest < year.toISOString().slice(0, 10);
+}
+
 const learnedKey = (base: string, packId: string) => `${base}/${packId}/learned.json`;
 
 /**
@@ -391,6 +402,7 @@ export class LayeredKnowledge implements Knowledge {
     try {
       for (const item of JSON.parse(body) as PriceItem[]) {
         try {
+          if (staleLearned(item)) continue; // a price looked up more than a year ago is looked up again
           assertLearnable(item);
           this.overlay.add(item);
         } catch {
@@ -667,9 +679,10 @@ export class LayeredKnowledge implements Knowledge {
     if (options.persist === false || !this.o.cache) return;
     const key = learnedKey(this.o.base, this.o.packId);
     const mine = await this.o.cache.get(key).catch(() => undefined);
-    const list = (mine ? (JSON.parse(mine) as PriceItem[]) : []).filter((x) => x.ref !== item.ref);
+    const list = (mine ? (JSON.parse(mine) as PriceItem[]) : []).filter((x) => x.ref !== item.ref && !staleLearned(x));
     list.push({ ...item, category: 'learned' });
-    await this.o.cache.put(key, JSON.stringify(list));
+    // The newest are kept; the list on the device never grows without end.
+    await this.o.cache.put(key, JSON.stringify(list.slice(-MAX_LEARNED_KEPT)));
   }
 
   /**

@@ -39,7 +39,9 @@ export function settings(): Promise<Settings> {
         lookup_enabled: false,
         urgency_phrases: '[]',
       };
-      await fetchAndActivate(rc);
+      // A failed fetch (offline, or the hourly limit) is not a reason to drop the values activated last time,
+      // the pinned pack root among them: they are read below either way.
+      await fetchAndActivate(rc).catch(() => undefined);
       let phrases: string[] = [];
       try {
         const parsed = JSON.parse(getValue(rc, 'urgency_phrases').asString());

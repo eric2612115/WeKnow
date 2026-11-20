@@ -149,14 +149,22 @@ enum Compose {
 
   // ---------- bills ----------
 
-  static let order: [Verdicts.BillFlag] = [.changedAccount, .instructionToAI, .newPayee, .urgency]
+  // A letter announcing a new bank or account is said first; then anything else that is wrong.
+  static let order: [Verdicts.BillFlag] = [.accountChangeNotice, .changedAccount, .instructionToAI, .newPayee, .urgency]
+
+  /// A flag that has its own sentence. "The account has changed" is said once: a changed-account line already
+  /// says it, so the letter's own announcement adds no second line (and no second mark).
+  static func said(_ f: Verdicts.BillFlag, in flags: [Verdicts.BillFlag]) -> Bool {
+    flags.contains(f) && !(f == .accountChangeNotice && flags.contains(.changedAccount))
+  }
 
   static func bill(_ v: Verdicts.Bill, payee: String?, known: [Verdicts.KnownPayee]) -> (verdict: Verdict, reasons: [Sentence], doLine: String?) {
     if v.safe { return (Verdict(tone: .ok, text: "This bill looks like the usual one"), [Sentence(text: "Same company and same account as last time.", fromNote: true)], nil) }
     let match = Verdicts.knownPayee(payee, in: known)
     var raw: [Sentence] = []
-    for f in order where v.flags.contains(f) {
+    for f in order where said(f, in: v.flags) {
       switch f {
+      case .accountChangeNotice: raw.append(Sentence(text: "It wants the money sent to a new account."))
       case .changedAccount:
         raw.append(match.map { Sentence(text: "The account is new. You paid them at one ending \($0.payTo) before.", fromNote: true) }
           ?? Sentence(text: "It wants the money sent to a different account than last time."))
@@ -165,7 +173,7 @@ enum Compose {
       case .urgency: raw.append(Sentence(text: "It rushes you to pay."))
       }
     }
-    let stop = v.flags.contains(.changedAccount) || v.flags.contains(.instructionToAI)
+    let stop = v.flags.contains(.accountChangeNotice) || v.flags.contains(.changedAccount) || v.flags.contains(.instructionToAI)
     let reasons = raw.enumerated().map { i, r in Sentence(text: "\(S.words(i + 1, capital: true)). \(r.text)", fromNote: r.fromNote) }
     return (Verdict(tone: stop ? .stop : .warn, text: stop ? "Don’t pay this yet" : "Check this bill first"), reasons,
             "Call the company first. Use the number on an older bill.")

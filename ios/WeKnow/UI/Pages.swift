@@ -349,7 +349,7 @@ struct PriceBookPage: View {
 
   private var packIDs: [String] {
     let fromCatalog = know.catalog.map(\.id)
-    let local = Set(know.installed.values.map(\.pack))
+    let local = Set(know.installed.values.map(\.pack) + [know.builtInPackID].compactMap { $0 })
     return fromCatalog + local.subtracting(fromCatalog).sorted()
   }
 
@@ -454,8 +454,10 @@ struct PriceBookPage: View {
           } else if know.isInstalled(id, c.id) {
             if know.needsUpdate(id, c.id) {
               Button("Update") { Task { await know.download(id, c.id) } }.buttonStyle(.bordered)
+                .accessibilityLabel("Update \(Knowledge.name(c.id))")
             }
             Button("Remove", role: .destructive) { removing = (id, c.id) }.buttonStyle(.bordered)
+              .accessibilityLabel("Remove \(Knowledge.name(c.id))")
           } else {
             Button {
               Task { await know.download(id, c.id) }
@@ -463,6 +465,7 @@ struct PriceBookPage: View {
               Text(root.map { "Get \(Knowledge.bytes($0.downloadBytes(c.id)))" } ?? "Get")
             }
             .buttonStyle(.borderedProminent).tint(Color.go)
+            .accessibilityLabel("Get \(Knowledge.name(c.id))")
           }
         }
         .padding(.vertical, 4)

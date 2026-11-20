@@ -5,8 +5,11 @@
 //
 // The app answers only from sections that are installed. On first launch every section is installed from the copy
 // built into the app, so it works in airplane mode from the start. Downloading fetches published files only;
-// nothing about the person is sent.
+// nothing about the person is sent. Every file below the catalog is named by its content hash (the first 16 hex
+// digits of the SHA-256 of its bytes, web/src/core/packFormat.ts), and a downloaded file that does not match its
+// name is thrown away, never installed.
 
+import CryptoKit
 import Foundation
 import Observation
 
@@ -96,17 +99,29 @@ final class Knowledge {
   func isInstalled(_ pack: String, _ category: String) -> Bool { installed[key(pack, category)] != nil }
   func size(_ pack: String, _ category: String) -> Int? { sizes[key(pack, category)] }
 
-  /// Categories to show for a pack: from its published root when online, otherwise from what is installed.
+  /// Categories to show for a pack: from its published root when online, otherwise what is installed plus what
+  /// the copy built into the app holds (so a removed section can be put back with no internet).
   func categories(of pack: String) -> [PackRoot.Category] {
     if let r = roots[pack] { return r.categories }
-    return installed.values.filter { $0.pack == pack }.sorted { $0.category < $1.category }
+    var cats = installed.values.filter { $0.pack == pack }
       .map { PackRoot.Category(id: $0.category, prices: $0.prices.count, guides: $0.guides.count) }
+    if let b = Self.builtIn, b.pack.id == pack {
+      for c in Self.categories(of: b.pack) where !cats.contains(where: { $0.id == c }) {
+        cats.append(PackRoot.Category(id: c, prices: b.pack.prices.filter { $0.category == c }.count,
+                                      guides: b.pack.guides.filter { $0.category == c }.count))
+      }
+    }
+    return cats.sorted { $0.id < $1.id }
   }
 
+  /// The pack built into the app, listed even when every one of its sections was removed.
+  var builtInPackID: String? { Self.builtIn?.pack.id }
+
+  /// The published root's version is its date and a hash of its content ("2026-11-16.20e72c4a"); a section keeps
+  /// the version it was installed from. Any difference is an update, even a new publish on the same date.
   func needsUpdate(_ pack: String, _ category: String) -> Bool {
     guard let have = installed[key(pack, category)], let root = roots[pack] else { return false }
-    // The copy built into the app carries the date only ("2026-11-16"); the published root adds a content hash.
-    return have.version != root.version && !root.version.hasPrefix(have.version + ".")
+    return have.version != root.version
   }
 
   // MARK: Catalog
@@ -117,9 +132,11 @@ final class Knowledge {
       struct Catalog: Codable { var packs: [CatalogPack] }
       let c = try JSONDecoder().decode(Catalog.self, from: try await fetch("catalog.json"))
       var rs: [String: PackRoot] = [:]
-      for p in c.packs { rs[p.id] = try JSONDecoder().decode(PackRoot.self, from: try await fetch(p.root)) }
+      for p in c.packs { rs[p.id] = try JSONDecoder().decode(PackRoot.self, from: try await fetchChecked(p.root)) }
       catalog = c.packs
       roots = rs
+    } catch is PackFileError {
+      lastError = "A published file did not match what it should be, so it was not used. The packs on this \(S.device) still work."
     } catch {
       lastError = "Couldn’t reach the internet to see other packs. The packs on this \(S.device) still work."
     }
@@ -130,24 +147,38 @@ final class Knowledge {
 
   func download(_ pack: String, _ category: String) async {
     let k = key(pack, category)
-    guard let root = roots[pack] else { return }
     busy.insert(k)
     defer { busy.remove(k) }
+    // No list of what is published yet (never loaded, or loaded with no internet): one more try first.
+    if roots[pack] == nil { await refreshCatalog() }
+    guard let root = roots[pack] else {
+      // Still none: no internet. A section that is not on this phone comes back from the copy built into the app.
+      let back = !isInstalled(pack, category) && putBack(pack, category)
+      lastError = back
+        ? "No internet, so the copy built into the app was put back. Try again when you are online."
+        : "No internet. Try again when you are online."
+      return
+    }
     do {
       var prices: [PriceItem] = []
       var guides: [Guide] = []
       struct Block: Codable { var prices: [PriceItem]?; var guides: [Guide]? }
       for shard in root.shards where shard.category == category {
         for b in shard.blocks {
-          let block = try JSONDecoder().decode(Block.self, from: try await fetch("\(pack)/\(b.file)"))
+          let block = try JSONDecoder().decode(Block.self, from: try await fetchChecked("\(pack)/\(b.file)"))
           prices += block.prices ?? []
           guides += block.guides ?? []
         }
       }
       try save(InstalledSection(pack: pack, category: category, version: root.version, prices: prices, guides: guides))
       lastError = nil
+    } catch let e as PackFileError {
+      print("[WeKnow] knowledge download refused: \(e)")
+      lastError = "Couldn’t download \(Self.name(category)): a file did not match what was published. Nothing was changed."
     } catch {
-      lastError = "Couldn’t download \(Self.name(category)). Nothing was changed."
+      lastError = Self.isOffline(error)
+        ? "No internet. Try again when you are online."
+        : "Couldn’t download \(Self.name(category)). Nothing was changed."
     }
   }
 
@@ -160,14 +191,40 @@ final class Knowledge {
 
   /// Puts every section back from the copy built into the app (no internet needed).
   func installBuiltIn() {
+    guard let b = Self.builtIn else { return }
+    for c in Self.categories(of: b.pack) { _ = putBack(b.pack.id, c) }
+  }
+
+  /// Puts one section back from the copy built into the app. False when the app has no such section.
+  private func putBack(_ pack: String, _ category: String) -> Bool {
+    guard let b = Self.builtIn, b.pack.id == pack, Self.categories(of: b.pack).contains(category) else { return false }
+    do {
+      try save(InstalledSection(pack: pack, category: category, version: b.version,
+                                prices: b.pack.prices.filter { $0.category == category },
+                                guides: b.pack.guides.filter { $0.category == category }))
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /// The copy built into the app (web/public/packs/us-home.json) and the published version it was built with: the
+  /// catalog bundled beside it names the root of the same build ("2026-11-16.20e72c4a"), so a section put back from
+  /// it compares exactly with what is published. Without that catalog, the date alone (one extra Update at most).
+  private static let builtIn: (pack: Pack, version: String)? = {
     guard let url = Bundle.main.url(forResource: "us-home", withExtension: "json"),
           let data = try? Data(contentsOf: url),
-          let p = try? JSONDecoder().decode(Pack.self, from: data) else { return }
-    let cats = Set(p.prices.compactMap(\.category) + p.guides.compactMap(\.category))
-    for c in cats {
-      try? save(InstalledSection(pack: p.id, category: c, version: p.version,
-                                 prices: p.prices.filter { $0.category == c }, guides: p.guides.filter { $0.category == c }))
-    }
+          let p = try? JSONDecoder().decode(Pack.self, from: data) else { return nil }
+    struct Catalog: Codable { var packs: [CatalogPack] }
+    let published = Bundle.main.url(forResource: "catalog", withExtension: "json")
+      .flatMap { try? Data(contentsOf: $0) }
+      .flatMap { try? JSONDecoder().decode(Catalog.self, from: $0) }?
+      .packs.first { $0.id == p.id && $0.dataAsOf == p.version }?.version
+    return (p, published ?? p.version)
+  }()
+
+  private static func categories(of p: Pack) -> [String] {
+    Set(p.prices.compactMap(\.category) + p.guides.compactMap(\.category)).sorted()
   }
 
   // MARK: Files
@@ -200,6 +257,24 @@ final class Knowledge {
     let (data, resp) = try await URLSession.shared.data(for: req)
     guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
     return data
+  }
+
+  enum PackFileError: Error { case unhashed(String), mismatch(String) }
+
+  /// A file below the catalog, kept only when its bytes hash to the name it was published under
+  /// ("d/plumbing.price.0.5fdcd496456b9633.json": the first 16 hex digits of the SHA-256 of the file).
+  private func fetchChecked(_ path: String) async throws -> Data {
+    guard let m = path.firstMatch(of: /\.([0-9a-f]{16})\.json$/) else { throw PackFileError.unhashed(path) }
+    let data = try await fetch(path)
+    let hex = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    guard hex.prefix(16) == m.1 else { throw PackFileError.mismatch(path) }
+    return data
+  }
+
+  private static func isOffline(_ error: Error) -> Bool {
+    guard let e = error as? URLError else { return false }
+    return [.notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .timedOut,
+            .dataNotAllowed, .internationalRoamingOff].contains(e.code)
   }
 
   // MARK: Words

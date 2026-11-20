@@ -20,6 +20,9 @@ targets:
           - "GoogleService-Info*.plist"
       - path: ../web/public/packs/us-home.json
         buildPhase: resources
+      # The catalog built with it names the published version of that same copy, so the app can tell an update.
+      - path: ../web/public/packs/catalog.json
+        buildPhase: resources
       - path: ../web/fixtures/quote-brakes.png
         buildPhase: resources
       - path: ../web/fixtures/bill-changed-account.png
