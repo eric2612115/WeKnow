@@ -85,6 +85,10 @@ final class AskModel {
   var consent: Consent?
   var confirm: Confirm?
   var showWhere = false
+  /// The live light: the exact covered words on their way to the internet right now; nil while the phone works alone.
+  var online: String?
+  /// The sheet that says what the two lights mean.
+  var showLights = false
 
   /// The conversation so far: every finished question and answer, oldest first. The one in progress lives in the
   /// properties above (picture, question, verdict, sentences ...) until the next question archives it.
@@ -242,7 +246,9 @@ final class AskModel {
     else { online = await mayUseInternet([PII.mask(q)]) }
     if online {
       phase = .looking
-      switch await CloudPick.pick(q, pack: pack) {
+      let went61 = await CloudPick.pick(q, pack: pack)
+      self.online = nil
+      switch went61 {
       case let .found(ref, ms, sent):
         found.hit = pack.guide(ref).map(WordsAnswer.Hit.guide) ?? pack.price(ref).map(WordsAnswer.Hit.price)
         cloud = (ms, sent)
@@ -251,7 +257,9 @@ final class AskModel {
         cloud = (ms, sent)
         found.tech.append("Gemini through Firebase AI Logic found nothing in the pack either (\(ms) ms). Sent: “\(sent)”.")
         // Not in WeKnow's own guides: a sourced answer from the web (Google Search grounding).
-        switch await CloudPick.searchGuide(q, lang: answerLang) {
+        let went725 = await CloudPick.searchGuide(q, lang: answerLang)
+        self.online = nil
+        switch went725 {
         case let .found(g):
           web = g
           cloud = (ms + g.ms, g.sent)
@@ -539,6 +547,7 @@ final class AskModel {
     Voice.shared.stop()
     speaking = nil
     scanning = false
+    online = nil
     if phase == .looking || phase == .speaking || phase == .asking { phase = verdict == nil ? .ready : .done }
   }
 
@@ -862,7 +871,9 @@ final class AskModel {
         print("[WeKnow] bill check online, would send: \(q.replacingOccurrences(of: "\n", with: " / "))")
         if await mayUseInternet([q]) {
           phase = .looking
-          switch await CloudPick.checkOnline(q, pageNames: paper.coveredNames) {
+          let went462 = await CloudPick.checkOnline(q, pageNames: paper.coveredNames)
+          online = nil
+          switch went462 {
           case let .found(c):
             escalated = (c.ms, c.sent)
             if c.finding == .knownScamPattern { scamOnline = true }
@@ -938,7 +949,9 @@ final class AskModel {
       let norm = { (t: String) in t.lowercased().trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)) }
       let words = said.isEmpty || norm(said) == norm(question) ? question : "\(said) \(question)"
       if guides.isEmpty, reading.where_ == .device, await mayUseInternet([PII.mask(words)]) {
-        switch await CloudPick.pick(words, pack: pack) {
+        let went823 = await CloudPick.pick(words, pack: pack)
+        online = nil
+        switch went823 {
         case let .found(ref, ms, sent):
           escalated = (ms, sent)
           if let g = pack.guide(ref) {
@@ -957,7 +970,9 @@ final class AskModel {
           tech.append("Cloud step failed: \(e)")
         }
         if guides.isEmpty, cloudNote == nil {
-          switch await CloudPick.searchGuide(words, lang: answerLang) {
+          let went185 = await CloudPick.searchGuide(words, lang: answerLang)
+          online = nil
+          switch went185 {
           case let .found(g):
             web = g
             if escalated == nil { escalated = (g.ms, g.sent) } else if escalated?.sent != g.sent { alsoSent.append(g.sent) }

@@ -140,6 +140,71 @@ struct AnswerBubble: View {
   }
 }
 
+/// The live light while WeKnow works: two lamps, one lit. The phone lamp while the phone works alone; the internet
+/// lamp only while a request is on its way, with the exact covered words under it. A press says what they mean.
+struct WorkingLight: View {
+  let online: String?
+  let picture: Bool
+  let explain: () -> Void
+
+  var body: some View {
+    let net = online != nil
+    Button(action: explain) {
+      VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 10) {
+          Lamps(net: net)
+          Text(net ? "Asking the internet one question…" : picture ? "Reading it on this \(S.device)…" : "Looking in the knowledge packs on this \(S.device)…")
+            .font(.system(size: 16, weight: .medium)).foregroundStyle(net ? Color.net : Color.ink2)
+            .multilineTextAlignment(.leading)
+        }
+        if let online {
+          Text(online)
+            .font(.system(size: 15, weight: .medium, design: .monospaced)).foregroundStyle(Color.ink)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.netBg))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.net, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])))
+          Text("Only these words. Your picture and personal details stay on this \(S.device).")
+            .font(.system(size: 14)).foregroundStyle(Color.ink2).multilineTextAlignment(.leading)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(net ? "Asking the internet one question: \(online ?? "")" : "Working on this \(S.device). Nothing is leaving it.")
+    .accessibilityHint("Says what the two lights mean")
+    .accessibilityIdentifier("working-light")
+    .animation(.weknow(0.25), value: net)
+  }
+}
+
+/// The two lamps: this phone, the internet. Exactly one is lit while WeKnow works.
+struct Lamps: View {
+  let net: Bool
+  var lit: Bool = true
+  @State private var pulse = false
+
+  var body: some View {
+    HStack(spacing: 6) {
+      lamp("lock.iphone", on: lit && !net, color: Color.go)
+      lamp("globe", on: lit && net, color: Color.net)
+    }
+    .padding(.horizontal, 8).padding(.vertical, 6)
+    .background(Capsule().fill(Color.card2))
+    .onAppear { withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true } }
+  }
+
+  private func lamp(_ symbol: String, on: Bool, color: Color) -> some View {
+    Image(systemName: symbol)
+      .font(.system(size: 15, weight: .semibold))
+      .foregroundStyle(on ? Color.white : Color.ink2.opacity(0.45))
+      .frame(width: 30, height: 30)
+      .background(Circle().fill(on ? color : Color.clear))
+      .overlay(Circle().stroke(color.opacity(on ? (pulse ? 0.0 : 0.55) : 0), lineWidth: on ? (pulse ? 7 : 1) : 0))
+  }
+}
+
 /// The answer being worked out and said now, then the next questions.
 struct LiveAnswer: View {
   @Bindable var model: AskModel
@@ -147,11 +212,7 @@ struct LiveAnswer: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       if model.phase == .looking {
-        HStack(spacing: 10) {
-          ProgressView()
-          Text(model.picture == nil ? "Looking in the knowledge packs on this \(S.device)…" : "Reading it on this \(S.device)…")
-            .font(.system(size: 16)).foregroundStyle(Color.ink2)
-        }
+        WorkingLight(online: model.online, picture: model.picture != nil) { model.showLights = true }
       }
       if model.phase == .asking {
         Text("May I check this on the internet?").font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.ink)

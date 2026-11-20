@@ -20,6 +20,8 @@ struct WeKnowApp: App {
       HomeView(model: model, theme: Binding(get: { ThemeChoice(rawValue: themeRaw) ?? .light }, set: { themeRaw = $0.rawValue }))
         .preferredColorScheme(ThemeChoice(rawValue: themeRaw)?.scheme)
         .task {
+          // The live light: every request that leaves the phone says so here, with its exact covered words.
+          CloudPick.onSend = { [model] words in Task { @MainActor in if model.phase == .looking { model.online = words } } }
           Voice.shared.warmUp()
           _ = Knowledge.shared
           // For recordings and screenshots: `-WeKnowSample quote` or `-WeKnowSample bill` starts that sample.
@@ -37,6 +39,8 @@ struct WeKnowApp: App {
             model.draftText = UserDefaults.standard.string(forKey: "WeKnowQuestion") ?? ""
             if UserDefaults.standard.bool(forKey: "WeKnowSend") { model.send() }
           }
+          // `-WeKnowLights YES` opens the sheet that says what the two lights mean (screenshots).
+          if UserDefaults.standard.bool(forKey: "WeKnowLights") { model.showLights = true }
           // `-WeKnowAsk "How much is a brake pad replacement?"` asks in words, as if typed.
           if let q = UserDefaults.standard.string(forKey: "WeKnowAsk"), !q.isEmpty {
             try? await Task.sleep(for: .milliseconds(600))

@@ -21,6 +21,9 @@ struct PrivacyReview {
 }
 
 enum CloudPick {
+  /// Told the exact covered words at the moment a request leaves the phone (the live light in the conversation).
+  nonisolated(unsafe) static var onSend: (@Sendable (String) -> Void)?
+
   enum Outcome {
     case found(ref: String, ms: Int, sent: String)
     case nothing(ms: Int, sent: String)
@@ -130,6 +133,7 @@ enum CloudPick {
     """
     let t0 = Date()
     do {
+      onSend?(String(covered))
       let session = LanguageModelSession(model: FirebaseCloud.model, instructions: "You match a person's words to one item in a list. You never invent items.")
       let r = try await session.respond(to: prompt, generating: PackPick.self, options: GenerationOptions(temperature: 0))
       let ms = Int(Date().timeIntervalSince(t0) * 1000)
@@ -187,6 +191,7 @@ extension CloudPick {
     """
     let t0 = Date()
     do {
+      onSend?(covered)
       let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
         modelName: Cloud.modelName, generationConfig: GenerationConfig(temperature: 0), tools: [.googleSearch()])
       let r = try await model.generateContent(prompt)
@@ -298,6 +303,7 @@ extension CloudPick {
     """
     let t0 = Date()
     do {
+      onSend?(covered)
       let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
         modelName: Cloud.modelName, generationConfig: GenerationConfig(temperature: 0), tools: [.googleSearch()])
       let r = try await model.generateContent(prompt)

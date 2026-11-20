@@ -80,6 +80,7 @@ struct HomeView: View {
     .sheet(isPresented: $model.showWhere) {
       if let receipt = model.receipt { WhereSheet(tag: model.tag, receipt: receipt) }
     }
+    .sheet(isPresented: $model.showLights) { LightsSheet() }
     .alert(model.confirm?.title ?? "", isPresented: Binding(get: { model.confirm != nil }, set: { _ in }), presenting: model.confirm) { c in
       Button(c.yes) { model.confirm = nil; c.answer(true) }
       Button(c.no, role: .cancel) { model.confirm = nil; c.answer(false) }

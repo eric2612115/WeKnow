@@ -141,6 +141,48 @@ struct ConsentSheet: View {
   }
 }
 
+/// What the two lights in the conversation mean. Opened by pressing them.
+struct LightsSheet: View {
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 20) {
+        HStack {
+          Text("What the lights mean").font(.system(size: 26, weight: .bold)).foregroundStyle(Color.ink)
+          Spacer()
+          Button("Done") { dismiss() }.font(.system(size: 17, weight: .semibold)).tint(Color.ink)
+        }
+        row(net: false, lit: true, "The phone light is on",
+            "WeKnow is working on this \(S.device): reading, covering your personal details, checking. Nothing is leaving it.")
+        row(net: true, lit: true, "The internet light is on",
+            "This \(S.device) could not know the answer by itself, so WeKnow is asking the internet one question. The exact words are shown under the light. Your picture, name, address, phone and account numbers stay on this \(S.device).")
+        row(net: false, lit: false, "Both lights are off",
+            "WeKnow is not working on anything, and nothing is being sent.")
+        VStack(alignment: .leading, spacing: 8) {
+          Text("After the answer").font(.system(size: 19, weight: .bold)).foregroundStyle(Color.ink)
+          Text("The line under every answer says where it came from: on this \(S.device), or using the internet. Press it to see everything that was sent.")
+          Text("You choose when the internet may be used, in Menu, Settings.")
+        }
+        .font(.system(size: 17)).foregroundStyle(Color.ink2)
+      }
+      .padding(20)
+    }
+    .background(Color.bg.ignoresSafeArea())
+    .presentationDetents([.large])
+  }
+
+  private func row(net: Bool, lit: Bool, _ title: String, _ text: String) -> some View {
+    HStack(alignment: .top, spacing: 14) {
+      Lamps(net: net, lit: lit)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(title).font(.system(size: 19, weight: .bold)).foregroundStyle(Color.ink)
+        Text(text).font(.system(size: 17)).foregroundStyle(Color.ink2)
+      }
+    }
+  }
+}
+
 /// UI-SPEC 7.2: two lanes, always both, then the sources; Technical details closed by default.
 struct WhereSheet: View {
   let tag: WhereRan?
