@@ -31,7 +31,8 @@ const router = createBrowserRouter([
       { path: 'settings', lazy: page(() => import('../pages/Settings')) },
       { path: 'help', lazy: page(() => import('../pages/Help')) },
       { path: 'mail', lazy: page(() => import('../pages/Mail')) },
-      { path: 'eval', lazy: page(() => import('../pages/Eval')) },
+      // The evaluation harness makes a hundred cloud requests a run: it is for a developer's own project, not the hosted site.
+      ...(import.meta.env.DEV ? [{ path: 'eval', lazy: page(() => import('../pages/Eval')) }] : []),
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

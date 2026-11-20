@@ -44,8 +44,13 @@ export function billQuestion(payee: string | null | undefined, lines: string[], 
     }
     if (charges.length >= 3) break;
   }
-  const storyLine = lines.find((l) => STORY.test(l));
-  const story = storyLine ? clean(maskText(storyLine)).slice(0, 90) : '';
+  // The story stops at the first covered detail (what follows is about the person), and loses a dangling ending.
+  const storyLine = lines.map((l) => maskText(l)).find((l) => STORY.test(l));
+  const story = storyLine
+    ? clean(storyLine.split('[')[0])
+        .replace(/\s+(on behalf(\s+of)?(\s+name)?|in the name(\s+of)?|released to|payable to|for|to|of)$/i, '')
+        .slice(0, 90)
+    : '';
   if (!who && !charges.length) return null;
   const parts = [
     ...(who ? [`Who asks to be paid: ${who}`] : []),

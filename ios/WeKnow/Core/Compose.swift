@@ -32,7 +32,14 @@ struct Sentence: Sendable, Identifiable, Equatable {
 }
 
 enum S {
-  static let device = "phone"
+  /// "phone" or "tablet": the word WeKnow uses for the device in its hands.
+  static let device = ProcessInfo.processInfo.isiOSAppOnMac ? "computer" : (deviceIsPad ? "tablet" : "phone")
+  private static let deviceIsPad: Bool = {
+    var info = utsname()
+    uname(&info)
+    let model = withUnsafeBytes(of: &info.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
+    return model.hasPrefix("iPad") || (ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "").hasPrefix("iPad")
+  }()
   static func money(_ n: Double) -> String {
     let f = NumberFormatter()
     f.numberStyle = .currency

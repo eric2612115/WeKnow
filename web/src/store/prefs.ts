@@ -26,6 +26,8 @@ export interface Prefs {
   internet: Internet;
   /** "I worked that out right here" has been said once. */
   toldLocal: boolean;
+  /** What the full check needs was shown once (a device with no model of its own). */
+  toldBasic: boolean;
   /** The offer to get ready to work without the internet was made (it is made once). */
   offeredReady: boolean;
   /** Offer to remember new things. */
@@ -49,6 +51,7 @@ export const DEFAULT_PREFS: Prefs = {
   size: 0,
   internet: 'ask-once',
   toldLocal: false,
+  toldBasic: false,
   offeredReady: false,
   offerNotes: true,
   toldNotes: false,

@@ -70,12 +70,17 @@ enum CloudPick {
     // 1. Plain code. A sentence that carries a personal detail ("My name is ..., my phone is ...") stays on the phone
     //    whole when another sentence holds the question; a lone sentence has its details covered in place.
     let all = sentences(text)
-    var kept = all.filter { PII.spans($0).isEmpty && guardText($0) == nil }
+    var kept = all.filter { PII.spans($0).isEmpty && guardText($0) == nil && !saysWho($0) }
     if kept.isEmpty { kept = [PII.mask(text)] }
     var covered = String(kept.joined(separator: " ").prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines)
     if let why = guardText(covered) { return .blocked(why) }
     // 2. Apple's on-device model reads what is left. A sentence it finds a detail in stays on the phone too.
-    guard let found = await reviewOnDevice(covered, pageNames: pageNames), !found.isEmpty else { return .ok(covered) }
+    var first = await reviewOnDevice(covered, pageNames: pageNames)
+    if first == nil, Device.canRead { first = await reviewOnDevice(covered, pageNames: pageNames) } // once more
+    // Words a person typed are not sent unless this reading could be done. A question built by plain code from a
+    // paper's covered words (the company check) has already lost every name found on the page.
+    if first == nil, Device.canRead, pageNames == nil { return .blocked("the check on this phone could not finish") }
+    guard let found = first, !found.isEmpty else { return .ok(covered) }
     let clean = kept.filter { s in !found.contains { s.contains($0) } }
     if !clean.isEmpty, clean.count < kept.count {
       covered = String(clean.joined(separator: " ").prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -90,6 +95,12 @@ enum CloudPick {
       return .blocked("the check on this phone thought a personal detail was left")
     }
     return .ok(covered)
+  }
+
+  /// A sentence in which the person says who they are ("My name is ...", "I'm Wei Chen", 我叫…): it stays on the phone
+  /// when another sentence holds the question (same rule as web/src/ask/escalate.ts).
+  static func saysWho(_ s: String) -> Bool {
+    s.range(of: #"(?i)\b(?:my name is|my name's|i am called|call me|this is)\s+\p{Lu}|\bi['’]?m\s+\p{Lu}[\p{L}'’-]+\s+\p{Lu}|我叫|我是|我的名字|我姓"#, options: .regularExpression) != nil
   }
 
   /// Sentences and lines, each kept with its end mark. A full stop inside a number or an abbreviation does not end one.

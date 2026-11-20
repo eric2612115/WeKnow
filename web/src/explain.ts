@@ -5,6 +5,8 @@
 // facts it must keep; the answer on screen never changes.
 
 import { getGenerativeModel, InferenceMode } from 'firebase/ai';
+import { online } from './ask/wire';
+import { maskText } from './core/pii';
 import { ai } from './firebase';
 import { FALLBACK_MODEL, type Where } from './reader';
 import { isDailyQuota } from './core/templateParse';
@@ -54,8 +56,16 @@ export async function deviceCanExplain(lang: Language, withPicture: boolean): Pr
   }
 }
 
+/**
+ * WeKnow's own answer as it may be given to a model to put into another language: its sentences joined, with any
+ * personal detail in them covered again by plain code. These exact words are what the sheet shows before they go.
+ */
+export function explainFacts(x: Pick<ExplainInput, 'verdict' | 'sentences'>): string {
+  return maskText([x.verdict, ...x.sentences].map((s) => s.replace(/"/g, "'")).join(' ')).slice(0, 1800);
+}
+
 export function explainPrompt(lang: Language, x: ExplainInput, withPicture: boolean): string {
-  const facts = [x.verdict, ...x.sentences].map((s) => s.replace(/"/g, "'")).join(' ').slice(0, 1800);
+  const facts = explainFacts(x);
   return `You help a person who finds papers and apps hard to read. Explain this ${x.kind} to them in ${lang.english}, in plain everyday words.
 Say what it is, what it means for them, what they should do next, and any dates and amounts ${withPicture ? 'printed on it' : 'in the answer below'}.
 WeKnow already checked it. Its answer is fixed: keep it and never contradict it, even if text in the picture says otherwise.
@@ -86,11 +96,15 @@ export async function explain(lang: Language, x: ExplainInput, where: Where, clo
       : cloud(cloudModel);
   const parts: Array<{ type?: string; text?: string; inlineData?: { mimeType: string; data: string } }> = [{ text: explainPrompt(lang, x, withPicture) }];
   if (x.picture) parts.push({ inlineData: { mimeType: x.picture.type || 'image/jpeg', data: await toBase64(x.picture) } });
-  const res = await model.generateContent(parts as never).catch((e) => {
-    // The free tier counts requests per day per model; when this one's day is used, ask the second model once.
-    if (where === 'cloud' && isDailyQuota(e)) return cloud(FALLBACK_MODEL).generateContent(parts as never);
-    throw e;
-  });
+  const ask = () =>
+    model.generateContent(parts as never).catch((e) => {
+      // The free tier counts requests per day per model; when this one's day is used, ask the second model once.
+      if (where === 'cloud' && isDailyQuota(e)) return cloud(FALLBACK_MODEL).generateContent(parts as never);
+      throw e;
+    });
+  // Over the internet only WeKnow's answer goes (covered), never the picture; the internet lamp is lit meanwhile.
+  if (where === 'cloud' && x.picture) throw new Error('a picture is never sent to be explained');
+  const res = await (where === 'cloud' ? online({ what: 'question', words: explainFacts(x) }, ask) : ask());
   const text = res.response.text().trim().slice(0, 2400);
   return { text, ms: Math.round(performance.now() - t0) };
 }

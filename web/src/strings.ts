@@ -277,6 +277,8 @@ export const EN = {
   'letter.sign.newpayee': 'I have no note of paying {payee} before.', // added: new-payee flag
   'letter.sign.nopayee': 'I cannot tell who is asking for the money.', // added: new-payee flag, no name read
   'letter.sign.changed': 'It wants the money sent to a different account than last time.', // added: changed account, no digits read
+  'quote.stop.title': 'Don’t pay this yet.', // added: a quote or invoice that carries a bill's warning signs
+  'quote.check.title': 'Check this before you pay.', // added
   'letter.sign.rush': 'It rushes you to pay.', // added: the general form of "It rushes you: 48 hours."
   'letter.sign.ai': 'It has hidden words that try to tell a reader it is safe.', // added: instruction-to-ai flag
   'letter.fine': 'Same company and same account as last time.', // added
@@ -413,8 +415,6 @@ export const EN = {
   'ask.item.say': 'May I look that up on the internet? I would send only those words, and your region. Not the picture.',
   'ask.item.price': '“{item}” price',
   'ask.item.region': 'Region: {region}',
-  'ask.thing.title': 'Send this picture to check online?',
-  'ask.thing.body': 'This {device} can’t read it by itself. Only the covered picture below goes.',
   // added: what was covered, said first in one plain line, on the picture and the words sheets alike
   // added: the consent sheet for a check online (picture, PDF words, words): short points, two closed sections,
   // Yes and No always in view (home/AskSheet.tsx)
@@ -454,24 +454,10 @@ export const EN = {
   'ask.words.less': 'Show fewer lines',
   'ask.mark.title': 'Covered on this device',
   // The words on the picture are read on this device first, and every personal detail is covered in black.
-  'ask.thing.covered': 'Names, numbers, addresses and accounts are covered on this {device} before the picture is sent.', // added
-  'ask.thing.list': 'Covered: {list}.', // added
-  'ask.thing.none': 'I found no personal details to cover.', // added
   // Still used when a picture read on this device is explained in another language over the internet (after a yes).
-  'ask.thing.whole': 'The whole picture is sent as it is, with any names and numbers on it.',
   'ask.thing.not': 'I will tell you every time I use the internet.',
-  'ask.thing.yes': 'Yes, send it',
   'ask.thing.no': 'No',
-  'ask.thing.say': 'This {device} cannot read pictures by itself. I covered {list} on it. May I send the covered picture over the internet?',
-  'ask.thing.say.none': 'This {device} cannot read pictures by itself. I found no personal details on it. May I send it over the internet?', // added
-  'ask.thing.said': 'I covered your details and I am sending the picture over the internet.', // added: after the first yes
   // added: a PDF with real text is read from its words; only the covered words may go, never its picture
-  'ask.paper.title': 'Send these words to check online?',
-  'ask.paper.body': 'This {device} can’t read it by itself. Only the words below go — not the picture.',
-  'ask.paper.covered': 'Names, numbers, addresses and accounts are covered on this {device} before the words are sent.',
-  'ask.paper.say': 'This {device} cannot read this by itself. I covered {list} in its words. May I send the covered words over the internet?',
-  'ask.paper.say.none': 'This {device} cannot read this by itself. I found no personal details in its words. May I send them over the internet?',
-  'ask.paper.said': 'I covered your details and I am sending the words over the internet.',
   'where.paper': 'The PDF',
   'where.paper.original': 'The PDF as you gave it',
   'where.sent.paper': 'The words of the PDF, with your personal details covered ({n} characters)',
@@ -494,15 +480,6 @@ export const EN = {
   'cover.plate.many': '{n} plates',
   'cover.vin': '{n} VIN',
   'cover.vin.many': '{n} VINs',
-  'cover.fail.title': 'I could not cover your details',
-  'cover.fail.line': 'I could not read the words on this picture to cover your personal details, so I sent nothing.',
-  'cover.fail.try': 'Try again, or take a clearer photo: closer, flat and in good light.',
-  'cover.fail.again': 'Try again',
-  'cover.fail.photo': 'Take a clearer photo',
-  'ask.mail.title': 'May I check this email on the internet?', // added: the email path
-  'ask.mail.body': 'This {device} cannot read by itself. I covered your details first. This is all I would send:',
-  'ask.mail.not': 'Not sent: your name, email address, phone or account numbers.',
-  'ask.mail.yes': 'Yes, check it',
   'ask.none.title': 'Nothing was sent',
   'ask.none.line': 'All right. This {device} needs the internet to see, so I cannot answer this one.',
   'ask.none.again': 'Ask me again any time.',
@@ -534,6 +511,28 @@ export const EN = {
   'lights.after.t': 'After the answer',
   'lights.after.d': 'The line under every answer says where it came from: on this {device}, or using the internet. Press it to see everything that was sent.',
   'lights.settings': 'You choose when the internet may be used, in Menu, Settings.',
+  // added: a device with no model of its own. The paper is never sent to be read; plain code does the basic check.
+  'basic.note': 'This was the basic check: accounts, totals and warning words, by plain rules on this {device}.',
+  'need.quote.title': 'A quote needs the full check',
+  'need.quote.line': 'I can see this is a quote. Checking each price needs a {device} that can read papers by itself.',
+  'need.paper.title': 'This paper needs the full check',
+  'need.paper.line': 'I could not tell what this paper is from its words alone. Reading it needs a {device} that can read papers by itself.',
+  'need.thing.title': 'I can’t look at pictures on this {device}',
+  'need.thing.line': 'This {device} cannot look at pictures by itself. Tell me in a few words what is wrong, and I will look that up.',
+  'need.stays': 'Nothing was sent. Your paper stays on this {device}.',
+  'need.how': 'How to get the full check',
+  'needmodel.title': 'How to get the full check',
+  'needmodel.here.t': 'On this {device}, today',
+  'needmodel.here.d': 'The basic check of a bill: the account to pay, the totals, and words that rush you or try to tell a reader it is safe. Questions you type. And, after your yes, a check on the internet of a company you never paid. Your paper is never sent anywhere.',
+  'needmodel.full.t': 'The full check',
+  'needmodel.full.d': 'Your own device reads every part of the page and checks every price on a quote. Two ways to get it:',
+  'needmodel.chrome.t': 'Chrome on a computer',
+  'needmodel.chrome.1': 'Open WeKnow in Google Chrome on a Windows, Mac or Linux computer.',
+  'needmodel.chrome.2': 'Open Menu, Settings, and press Get ready. It downloads what it needs once; best on home Wi-Fi.',
+  'needmodel.chrome.3': 'When it says ready, give WeKnow the paper again. It is read on the computer, with or without the internet.',
+  'needmodel.app.t': 'iPhone or iPad',
+  'needmodel.app.d': 'The WeKnow app reads the paper on the iPhone or iPad itself, even in airplane mode.',
+  'needmodel.ready': 'Get ready now',
   'where.title': 'Where this answer came from',
   'where.stayed': 'Stayed on this {device}',
   'where.sent': 'Went over the internet',
@@ -570,7 +569,6 @@ export const EN = {
   'where.note': 'Your note about this shop, from {when}',
   'where.note.payee': 'Your note about this payee: account ending {digits}',
   'where.mail': 'The email, with your details covered',
-  'where.sent.picture': 'This picture',
   'where.sent.covered': 'This picture, with your personal details covered in black', // added
   'where.picture.original': 'The picture as you took it', // added
   'where.covered.list': 'The details I covered: {list}', // added
@@ -737,7 +735,7 @@ export const EN = {
   'help.how.title': 'How it works',
   'help.how': 'Take a picture with the camera button. Type or say what’s wrong. Press Send. WeKnow looks, and tells you what to do.',
   'help.hear': 'Hear how WeKnow works',
-  'help.hybrid': 'On a phone or computer that can read by itself, WeKnow reads the picture right there and your details never leave it. Where it cannot, it asks before using the internet, and says so on every answer.', // added
+  'help.hybrid': 'On a phone or computer that can read by itself, WeKnow reads the paper right there. Where it cannot, it does a basic check of a bill right there too: the paper is never sent. Only a question goes on the internet, with your details covered, and a light shows it while it goes.', // added
   'help.hear.say': 'Take a picture with the camera button. Type or say what’s wrong, and press Send. I will look, and tell you what to do.',
   'help.words.title': 'Words WeKnow always understands',
   'help.setup.title': 'Setting it up for someone else?',
@@ -768,9 +766,10 @@ export const EN = {
   'explain.hear': 'Hear it',
   'explain.again': 'Another language',
   'explain.fail': 'I could not explain that one. Try again in a moment.',
+  'explain.never': 'This {device} cannot write {language} by itself, and the internet is off or not allowed. Nothing was sent.', // added
   'ask.explain.title': 'May I explain this on the internet?',
   'ask.explain.body': 'This {device} cannot write {language} by itself. This is all I would send:',
-  'ask.explain.answer': 'WeKnow’s answer, in English',
+  'ask.explain.answer': 'WeKnow’s answer, in English, with personal details covered:',
   'ask.explain.lang': 'Language: {language}',
   'ask.explain.yes': 'Yes, explain it',
   'pro.find': 'Find a pro nearby',

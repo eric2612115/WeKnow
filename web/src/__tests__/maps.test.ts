@@ -21,7 +21,8 @@ describe('strings', () => {
   });
   it('never names a model, a cloud or a brand where a person reads it', () => {
     const banned = /\b(AI|model|cloud|on-device|sync|cache|token|offline|consent|Gemini|Firebase|Chrome)\b/;
-    const allowed = new Set(['set.signin']); // "Sign in with Google" is the spec's own string
+    // "Sign in with Google" is the spec's own string; the two steps that say which browser to open must name it.
+    const allowed = new Set(['set.signin', 'needmodel.chrome.t', 'needmodel.chrome.1']);
     for (const [id, s] of Object.entries(EN)) if (!allowed.has(id)) expect(s, id).not.toMatch(banned);
   });
 });

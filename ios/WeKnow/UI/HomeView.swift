@@ -23,18 +23,23 @@ struct HomeView: View {
   @State private var drawer = false
   @State private var openRecord: CheckRecord?
 
+  /// The widest the conversation and the input bar grow (an iPad, or a wide window): lines stay easy to read.
+  static let readableWidth: CGFloat = 720
+
   var body: some View {
     GeometryReader { geo in
       VStack(spacing: 8) {
         appBar
-        if model.inConversation {
-          ConversationView(model: model, reduceMotion: reduceMotion) { whereShown = $0 }
-            .frame(maxHeight: .infinity)
-        } else {
-          StartView(model: model, trySample: trySample, suggest: suggest)
-            .frame(maxHeight: .infinity)
+        Group {
+          if model.inConversation {
+            ConversationView(model: model, reduceMotion: reduceMotion) { whereShown = $0 }
+          } else {
+            StartView(model: model, trySample: trySample, suggest: suggest)
+          }
         }
+        .frame(maxWidth: Self.readableWidth, maxHeight: .infinity)
         Composer(model: model, takePhoto: takePhoto, choosePhoto: { choosingPhoto = true }, chooseFile: { choosingFile = true })
+          .frame(maxWidth: Self.readableWidth)
           .padding(.bottom, 4)
       }
       .padding(.horizontal, 16)
@@ -90,6 +95,8 @@ struct HomeView: View {
     .sheet(item: $model.consent) { c in
       ConsentSheet(consent: c).presentationDetents([.large]).interactiveDismissDisabled()
     }
+    // `-WeKnowPage priceBook` (or checks, remembers, settings) opens that page at launch, for screenshots.
+    .task { if let p = UserDefaults.standard.string(forKey: "WeKnowPage").flatMap(MenuPage.init(rawValue:)) { page = p } }
     .sheet(item: $page) { p in
       switch p {
       case .checks: ChecksPage()

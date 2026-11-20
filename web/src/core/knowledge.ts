@@ -36,6 +36,8 @@ export interface Candidate {
   kind: ItemKind;
   shard: string; // "learned" for items added on this device or from the shared learned list
   learned?: boolean;
+  /** A learned price whose name or alias is this very line (the same line seen again). */
+  sameLine?: boolean;
 }
 
 /** One line of the whole pack index: what an item is called and what kind it is, without its data. */
@@ -108,21 +110,24 @@ export const MIN_RELATIVE_SCORE = 0.2;
 /** At most this many level-2 shards per query. */
 export const MAX_SHARDS_PER_QUERY = 3;
 
-/** Learned prices offered per question at most; they only cover lines the pack did not know. */
+/** Learned prices offered per question at most; they cover lines the pack did not know. */
 export const MAX_LEARNED = 2;
 /** A learned price is offered when it matches at least this share of the printed words. */
 export const MIN_LEARNED_COVERAGE = 0.5;
 
 /**
- * Best first, without duplicates. Learned prices come first when they cover the line well: their tiny
- * index cannot produce BM25 scores comparable with a shard's, so they are judged by word coverage instead.
+ * Best first, without duplicates. A learned price comes first only when it is this very line seen again (its name
+ * or an alias is the line's words): it was looked up for exactly that. Any other learned price goes after the
+ * pack's own, sourced results, so a price from the web never pushes a pack price aside. (The learned index is tiny,
+ * so its BM25 scores cannot be compared with a shard's; word coverage and this rule place it instead.)
  */
 function rank(results: Candidate[], k: number, learned: Candidate[] = []): Candidate[] {
   const byScore = (a: Candidate, b: Candidate) => b.score - a.score || (a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0);
   results.sort(byScore);
+  const offered = [...learned].sort(byScore).slice(0, Math.min(MAX_LEARNED, k));
   const seen = new Set<string>();
   const out: Candidate[] = [];
-  for (const r of [...learned].sort(byScore).slice(0, Math.min(MAX_LEARNED, k))) {
+  for (const r of offered.filter((x) => x.sameLine)) {
     seen.add(r.ref);
     out.push(r);
   }
@@ -130,6 +135,12 @@ function rank(results: Candidate[], k: number, learned: Candidate[] = []): Candi
   for (const r of results) {
     if (out.length >= k) break;
     if (r.score < floor || seen.has(r.ref)) continue;
+    seen.add(r.ref);
+    out.push(r);
+  }
+  for (const r of offered) {
+    if (out.length >= k) break;
+    if (seen.has(r.ref)) continue;
     seen.add(r.ref);
     out.push(r);
   }
@@ -157,7 +168,9 @@ export function assertLearnable(item: PriceItem): void {
 class Overlay {
   readonly items = new Map<string, PriceItem>();
   index: MiniSearch<IndexDoc>;
+  private pipe: TextPipeline;
   constructor(pipe: TextPipeline) {
+    this.pipe = pipe;
     this.index = createIndex(pipe);
   }
   add(item: PriceItem) {
@@ -168,6 +181,7 @@ class Overlay {
   rebuild(pipe: TextPipeline) {
     const items = [...this.items.values()];
     this.items.clear();
+    this.pipe = pipe;
     this.index = createIndex(pipe);
     for (const it of items) this.add(it);
   }
@@ -175,10 +189,17 @@ class Overlay {
     if (kind !== 'price' || !this.items.size) return [];
     const printed = q.terms.filter((t) => !q.added.has(t));
     if (!printed.length) return [];
+    // The same words, whatever their order: "Brake fluid exchange" is the line a price was learned for.
+    const words = (terms: string[]) => [...new Set(terms)].sort().join(' ');
+    const line = words(printed);
+    const same = (ref: string) => {
+      const item = this.items.get(ref);
+      return !!item && [item.name, ...(item.aliases ?? [])].some((n) => words(this.pipe.terms(n)) === line);
+    };
     return this.index
       .search(q.text, searchOptions(q.added))
       .filter((r) => r.queryTerms.filter((t) => printed.includes(t)).length / printed.length >= MIN_LEARNED_COVERAGE)
-      .map((r) => ({ ref: r.id, name: r.name as string, score: r.score, kind, shard: 'learned', learned: true }));
+      .map((r) => ({ ref: r.id, name: r.name as string, score: r.score, kind, shard: 'learned', learned: true, sameLine: same(r.id as string) }));
   }
 }
 
@@ -238,7 +259,12 @@ class FileError extends Error {
 
 const learnedKey = (base: string, packId: string) => `${base}/${packId}/learned.json`;
 
-async function readCatalog(o: OpenOptions): Promise<{ catalog: Catalog; from: 'network' | 'cache'; bytes: number }> {
+/**
+ * The newest catalog from the network, else the copy on the device. A catalog from the network is not written to
+ * the device here: refresh() keeps it only once its root has loaded, so a catalog whose root never arrived cannot
+ * replace the one that works offline.
+ */
+async function readCatalog(o: OpenOptions): Promise<{ catalog: Catalog; from: 'network' | 'cache'; bytes: number; body?: string }> {
   const url = `${o.base}/catalog.json`;
   const parse = (body: string) => {
     const c = JSON.parse(body) as Catalog;
@@ -250,8 +276,7 @@ async function readCatalog(o: OpenOptions): Promise<{ catalog: Catalog; from: 'n
     if (res.ok) {
       const body = await res.text();
       const catalog = parse(body); // a hosting fallback page is not a catalog
-      await o.cache?.put(url, body).catch(() => undefined);
-      return { catalog, from: 'network', bytes: byteLength(body) };
+      return { catalog, from: 'network', bytes: byteLength(body), body };
     }
   } catch {
     /* offline: fall back to the copy on the device */
@@ -300,8 +325,30 @@ export class LayeredKnowledge implements Knowledge {
 
   /** Read the catalog and adopt the newest root. Returns true when the pack version changed. */
   async refresh(): Promise<boolean> {
-    const { catalog, from, bytes } = await readCatalog(this.o);
-    this.records.push({ path: 'catalog.json', level: 0, bytes, from });
+    const read = await readCatalog(this.o);
+    this.records.push({ path: 'catalog.json', level: 0, bytes: read.bytes, from: read.from });
+    const url = `${this.o.base}/catalog.json`;
+    try {
+      const changed = await this.adopt(read.catalog);
+      if (read.body !== undefined) await this.o.cache?.put(url, read.body).catch(() => undefined);
+      return changed;
+    } catch (e) {
+      // The new catalog's root could not be loaded (a dropped connection): keep working from the version on the device.
+      if (read.from !== 'network' || e instanceof IncompatiblePackError) throw e;
+      const kept = await this.o.cache?.get(url).catch(() => undefined);
+      if (kept === undefined) throw e;
+      let old: Catalog;
+      try {
+        old = JSON.parse(kept) as Catalog;
+      } catch {
+        throw e;
+      }
+      return this.adopt(old);
+    }
+  }
+
+  /** Adopt the root a catalog names (or the pinned one). Returns true when the pack version changed. */
+  private async adopt(catalog: Catalog): Promise<boolean> {
     const entry: CatalogEntry | undefined = catalog.packs.find((p) => p.id === this.o.packId);
     if (!entry) throw new KnowledgeUnavailableError(`no pack ${this.o.packId} in the catalog`);
     // A pinned root (Remote Config) wins while its files are served; if it is gone, follow the catalog.
@@ -670,22 +717,42 @@ export class LayeredKnowledge implements Knowledge {
     return this.bytesLoaded('network') - before;
   }
 
-  /** Delete cached files of this pack that the current root no longer uses. Returns how many were removed. */
+  /**
+   * Tidy up after a new version. First the new copy of every file this device held an older copy of is downloaded
+   * (only the files that changed), so whatever worked offline before still does. Then old copies are deleted: one
+   * that has a new copy on the device, or one the current version no longer has at all. An old copy whose new one
+   * could not be fetched yet stays until it can. Returns how many were removed.
+   */
   async gc(): Promise<number> {
     if (!this.o.cache) return 0;
     const dir = `${this.o.base}/${this.o.packId}/`;
     const keep = new Set([`${dir}${this.rootPath.replace(`${this.o.packId}/`, '')}`, learnedKey(this.o.base, this.o.packId)]);
+    // A file's name without its content hash ("plumbing.price.0"), and how to load the current copy of it.
+    const stem = (file: string) => file.replace(new RegExp(`\\.[0-9a-f]{${HASH_HEX}}\\.json$`), '');
+    const current = new Map<string, { key: string; load: () => Promise<unknown> }>();
     for (const s of this.rootData.shards) {
       keep.add(dir + s.file);
-      for (const b of s.blocks) keep.add(dir + b.file);
+      current.set(stem(s.file), { key: dir + s.file, load: () => this.shard(s) });
+      s.blocks.forEach((b, i) => {
+        keep.add(dir + b.file);
+        current.set(stem(b.file), { key: dir + b.file, load: () => this.block(s, i) });
+      });
     }
-    for (const k of this.rootData.kinds ?? []) keep.add(dir + k.file);
+    for (const k of this.rootData.kinds ?? []) {
+      keep.add(dir + k.file);
+      current.set(stem(k.file), { key: dir + k.file, load: () => this.kindIndex(k.kind) });
+    }
+    const old = (await this.o.cache.keys()).filter((key) => key.startsWith(dir) && !keep.has(key));
+    let have = new Set(await this.o.cache.keys());
+    const wanted = [...new Set(old.map((key) => current.get(stem(key.slice(dir.length)))).filter((c): c is NonNullable<typeof c> => !!c && !have.has(c.key)))];
+    await Promise.all(wanted.map((c) => c.load().catch(() => undefined)));
+    have = new Set(await this.o.cache.keys());
     let n = 0;
-    for (const key of await this.o.cache.keys()) {
-      if (key.startsWith(dir) && !keep.has(key)) {
-        await this.o.cache.delete(key);
-        n++;
-      }
+    for (const key of old) {
+      const now = current.get(stem(key.slice(dir.length)));
+      if (now && !have.has(now.key)) continue; // its new copy is not here yet
+      await this.o.cache.delete(key);
+      n++;
     }
     return n;
   }

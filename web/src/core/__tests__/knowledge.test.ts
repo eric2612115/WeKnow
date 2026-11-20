@@ -391,6 +391,42 @@ describe('integrity and versions', () => {
     expect(await kb.gc()).toBe(2); // the old root and the old block
   });
 
+  it('tidying up after an update carries over what the device had, so going offline right after loses nothing', async () => {
+    const v1 = await servedBuild(pack.prices, pack.guides);
+    const v2 = await servedBuild(pack.prices.map((p) => (p.ref === 'brake-pads' ? { ...p, aliases: [...(p.aliases ?? []), 'pad slap'] } : p)), pack.guides);
+    const s = server(v1.files);
+    const cache = memoryCache();
+    await (await open(s, cache)).prefetch(true); // the whole pack is on the device
+    s.files = v2.files;
+    const kb2 = await open(s, cache); // online: the new version is adopted, as when the app opens
+    s.log.length = 0;
+    await kb2.gc();
+    // Only the changed files were fetched, and their old copies are gone.
+    expect(s.log.length).toBeGreaterThan(0);
+    expect(s.log.every((u) => !v1.files.has(u))).toBe(true);
+    s.online = false;
+    const kb3 = await open(s, cache);
+    expect((await kb3.candidates('Front brake pads', { kind: 'price' }))[0].ref).toBe('brake-pads');
+    expect((await kb3.resolve(['brake-pads'])).prices).toHaveLength(1);
+    expect(kb3.stats().unavailable).toEqual([]);
+  });
+
+  it('a new catalog whose root never arrived does not replace the version that works offline', async () => {
+    const v1 = await servedBuild(pack.prices, pack.guides);
+    const v2 = await servedBuild(pack.prices.map((p) => (p.ref === 'brake-pads' ? { ...p, high: p.high + 1 } : p)), pack.guides);
+    const s = server(v1.files);
+    const cache = memoryCache();
+    await (await open(s, cache)).prefetch(true);
+    // The new catalog downloads, but the connection drops before its root does.
+    const catalogUrl = [...v2.files.keys()].find((u) => u.endsWith('catalog.json'))!;
+    s.files = new Map([...v1.files].filter(([u]) => !u.endsWith('catalog.json')).concat([[catalogUrl, v2.files.get(catalogUrl)!]]));
+    const kb2 = await open(s, cache);
+    expect((await kb2.resolve(['brake-pads'])).prices).toHaveLength(1); // still answering, from the version on the device
+    s.online = false;
+    const kb3 = await open(s, cache);
+    expect((await kb3.candidates('Front brake pads', { kind: 'price' }))[0].ref).toBe('brake-pads');
+  });
+
   it('when a deploy removed the files of the version in use, the next question switches to the new version', async () => {
     const v1 = await servedBuild(pack.prices, pack.guides);
     const changed = pack.prices.map((p) => (p.ref === 'drain-unclog' ? { ...p, aliases: [...p.aliases, 'sink snaked'] } : p));
@@ -469,5 +505,17 @@ describe('learned prices', () => {
     s.online = true;
     const kb2 = await open(s, cache);
     expect((await kb2.candidates('Brake fluid flush', { kind: 'price' }))[0].ref).toBe(learned.ref);
+  });
+
+  it('never push a sourced pack price aside: first only for the very line they were learned for', async () => {
+    const kb = await open(server(files));
+    await kb.learn({ ...learned, ref: 'learned-front-brake-pad-replacement', name: 'Front brake pad replacement', aliases: [] });
+    // Another wording of a job the pack prices: the pack's own item leads, the learned one follows.
+    const other = await kb.candidates('brake pads', { kind: 'price' });
+    expect(other[0]).toMatchObject({ ref: 'brake-pads' });
+    expect(other[0].learned).toBeFalsy();
+    // The same line seen again: the price looked up for it comes first.
+    const same = await kb.candidates('Front brake pad replacement', { kind: 'price' });
+    expect(same[0]).toMatchObject({ ref: 'learned-front-brake-pad-replacement', learned: true });
   });
 });

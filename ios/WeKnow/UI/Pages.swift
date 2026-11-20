@@ -268,7 +268,7 @@ struct SettingsPage: View {
         }
         .pickerStyle(.inline)
         .labelsHidden()
-        Fine(text: "Everything starts on this \(S.device), with your details covered. When it can’t answer, WeKnow can ask a larger model online. Only covered words go, and every answer shows what went.")
+        Fine(text: "Your papers are read on this \(S.device) and never sent anywhere. When it can’t answer a question, WeKnow can look it up online. Only covered words go, and every answer shows what went.")
       }
       PageCard {
         CardTitle(text: "Voice")
@@ -310,13 +310,15 @@ struct SettingsPage: View {
         CardTitle(text: "Privacy")
         Label("Stays on this \(S.device)", systemImage: "iphone").font(.system(size: 17, weight: .bold)).foregroundStyle(Color.go)
         Fine(text: "Your pictures. Names, phone numbers, addresses, plates and account numbers. Your notes and checks.")
-        Label("May leave, only after you say yes", systemImage: "globe").font(.system(size: 17, weight: .bold)).foregroundStyle(Color.net)
-        Fine(text: "When this \(S.device) cannot read a paper by itself: the printed words, with your details covered. WeKnow shows them to you first.")
+        Label("May leave, with your details covered", systemImage: "globe").font(.system(size: 17, weight: .bold)).foregroundStyle(Color.net)
+        Fine(text: "A question this \(S.device) can’t answer. For a bill from a company you never paid: its name and the names of its charges, after you say yes. Never your paper or your picture.")
       }
       PageCard {
         CardTitle(text: "How this \(S.device) reads")
-        Fine(text: "On-device model: \(Device.status)")
-        Fine(text: "Reads with: \(Device.canRead ? Device.engine : "the internet, after you say yes")")
+        Fine(text: Device.canRead
+          ? "Papers are read here with Apple Intelligence: the full check."
+          : "Papers are checked here by plain rules: the basic check of a bill. \(Device.fullCheckNeeds)")
+        Fine(text: "Status: \(Device.status)")
         Button { showBook = true } label: {
           HStack {
             VStack(alignment: .leading, spacing: 2) {

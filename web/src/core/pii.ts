@@ -34,9 +34,13 @@ const PATTERNS: Array<[PIIKind, RegExp]> = [
   ['account', /\b(?:meter|invoice|inv|statement|reference|ref|e-?receipt|receipt|order|policy|claim|premise|service id|confirmation|ticket|case|file)\b\.?\s*(?:no\.?|number|num|#|id)?[#:\s.-]*(?=[A-Z0-9-]*\d{3})[A-Z0-9][A-Z0-9-]{4,}/gi],
   ['account', /\b(?!\d{4}-\d{2}-\d{2}\b)(?!(?:1-)?\d{3}-\d{3}-\d{4}\b)(?!\d{3}-\d{4}\b)(?!\d{5}-\d{4}\b)(?=(?:[A-Z-]*\d){7})[A-Z0-9][A-Z0-9-]{6,}\b/gi],
   ['plate', /\b(?:plate|lic(?:ense)?\.?\s*(?:no|#)?)\b[#:\s.-]*[A-Z0-9-]{4,8}\b/gi],
+  // The other ways an address is written: a PO box, a flat or unit. (A town with its five-digit ZIP is a region, and
+  // stays, like the ZIP alone; a town's name is often part of the company's name too.)
+  ['street', /\bP\.?\s?O\.?\s*Box\s+\d+\b/gi],
+  ['street', /\b(?:Apt|Apartment|Unit|Suite|Ste)\.?\s*#?\s*(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{1,6}\b/gi],
   [
     'street',
-    /\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace)\b\.?/g,
+    /\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace|Cir|Circle|Hwy|Highway|Pkwy|Parkway|Trl|Trail|Hollow|Pike|Cove|Aly|Alley|Sq|Square|Loop|Run|Row|Close|Crescent)\b\.?/g,
   ],
   // The same street in capitals, as an envelope window prints it: "512 BRAMBLE CT".
   ['street', /\b\d{1,6}\s+(?:[A-Z]+\s){1,3}(?:ST|STREET|AVE|AVENUE|RD|ROAD|BLVD|DR|DRIVE|LN|LANE|CT|COURT|WAY|PL|PLACE|TER)\b\.?/g],

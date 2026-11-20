@@ -1,4 +1,4 @@
-# XcodeGen spec for the WeKnow iPhone app. `xcodegen generate` in this folder rebuilds WeKnow.xcodeproj.
+# XcodeGen spec for the WeKnow iPhone and iPad app. `xcodegen generate` in this folder rebuilds WeKnow.xcodeproj.
 # The knowledge pack and the sample pictures are read from the web app's folders, so both apps use the same files.
 name: WeKnow
 options:
@@ -30,7 +30,9 @@ targets:
         CFBundleDisplayName: WeKnow
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        NSCameraUsageDescription: WeKnow looks at the paper or the thing you point at. The picture stays on this phone unless you say yes.
+        # An iPad window can be any shape, so every orientation is allowed there.
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSCameraUsageDescription: WeKnow looks at the paper or the thing you point at. The picture stays on this device.
         NSPhotoLibraryUsageDescription: Choose a picture of a quote, a bill or a problem at home for WeKnow to check.
         NSMicrophoneUsageDescription: Say your question. The sound is turned into words on this phone and is never kept or sent.
         NSSpeechRecognitionUsageDescription: Your spoken question is turned into words on this phone, so WeKnow can answer it.
@@ -59,7 +61,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_USER_SCRIPT_SANDBOXING: NO

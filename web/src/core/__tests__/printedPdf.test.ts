@@ -28,6 +28,8 @@ test.each(SHEETS)('%s: covered words leave nothing personal', async (name) => {
 
 test('the account to pay into is read from the paper, a member number is not it', async () => {
   expect(payToOf(await linesOfPdf('bill-2-electric-normal'))).toBe('4821');
+  // The digits printed under the stub's barcode are not an account: with a note of 4821 this is still the usual bill.
+  expect(payToOf(await linesOfPdf('bill-2-electric-normal'), '4821')).toBe('4821');
   expect(payToOf(await linesOfPdf('bill-3-electric-new-account-buried'), '4821')).toBe('7730');
   expect(payToOf(await linesOfPdf('bill-4-water-ai-note'))).toBe('3168');
   // "Payment account 2048 6650 3168" is where money goes, not a second customer account.

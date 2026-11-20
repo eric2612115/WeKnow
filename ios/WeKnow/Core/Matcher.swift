@@ -86,7 +86,9 @@ struct Matcher: Sendable {
       let coverage = printedWeight > 0 ? coveredWeight / printedWeight : 0
       if s > 0, coverage >= minCoverage { scored.append(Candidate(ref: d.ref, name: d.name, detail: d.detail, score: s)) }
     }
-    scored.sort { $0.score != $1.score ? $0.score > $1.score : $0.ref < $1.ref }
+    // On a tie the plainer name wins ("iPhone 15" before "iPhone 15 Plus"), then the ref, so the order is stable.
+    let words = { (c: Candidate) in c.name.split(separator: " ").count }
+    scored.sort { $0.score != $1.score ? $0.score > $1.score : words($0) != words($1) ? words($0) < words($1) : $0.ref < $1.ref }
     guard let best = scored.first?.score else { return [] }
     return Array(scored.filter { $0.score >= best * 0.2 }.prefix(k))
   }
@@ -104,7 +106,7 @@ enum Lexicon {
     "could", "should", "would", "will", "please", "how", "what", "why", "when", "where", "which", "who", "there", "here",
     "very", "just", "also", "get", "got", "some", "any", "all", "labor", "labour", "parts", "qty", "ea", "item", "items",
     "line", "total", "subtotal", "tax", "estimate", "est", "incl", "included", "including", "new", "fair", "price", "cost",
-    "costs", "usual", "normal", "plus",
+    "costs", "usual", "normal",
   ]
   static let synonyms: [[String]] = [
     ["refrigerator", "fridge"], ["air conditioner", "air conditioning", "ac", "hvac"], ["faucet", "tap"], ["tire", "tyre"],

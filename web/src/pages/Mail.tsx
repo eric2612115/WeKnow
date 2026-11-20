@@ -8,13 +8,14 @@ import type { MailItem } from '../gmail';
 import { billVerdict, withBillMath } from '../core/verdict';
 import { billMath } from '../core/billMath';
 import { knownPayees } from '../core/memory';
+import { basicBill } from '../core/basicRead';
+import { coverPaperText } from '../core/paperText';
 import { billAnswer, type BillAnswer } from '../answer/compose';
 import type { Receipt } from '../answer/types';
 import { mailState, useMail } from '../engine/mailState';
 import { appSettings } from '../engine/knowledge';
 import { deviceStore, deviceWord } from '../engine/device';
 import { addCheck, dataStore } from '../store/data';
-import { getPrefs, setPrefs } from '../store/prefs';
 import { Card, PageTitle, VerdictBand } from '../ui/controls';
 import { I } from '../ui/icons';
 import { Sheet } from '../ui/Sheet';
@@ -32,7 +33,6 @@ export default function Mail() {
   const device = deviceWord();
   const [busy, setBusy] = useState<string | null>(null);
   const [judged, setJudged] = useState<Record<string, Judged>>({});
-  const [asking, setAsking] = useState<{ item: MailItem; words: string; resolve: (yes: boolean) => void } | null>(null);
   const [details, setDetails] = useState<Receipt | null>(null);
 
   useEffect(() => {
@@ -44,18 +44,13 @@ export default function Mail() {
     try {
       const { readMailText, mailPayload } = await import('../textReader');
       const s = await appSettings();
-      const where = deviceStore.get().model === 'available' ? 'device' : 'cloud';
-      const words = mailPayload(`${item.subject}\n${item.text}`);
-      if (where === 'cloud') {
-        const p = getPrefs();
-        if (p.internet !== 'auto') {
-          const yes = await new Promise<boolean>((resolve) => setAsking({ item, words, resolve }));
-          setAsking(null);
-          if (!yes) return;
-          if (p.internet === 'ask-once') setPrefs({ internet: 'auto' });
-        }
-      }
-      const r = await readMailText(`${item.subject}\n${item.text}`, where, s.cloudModel);
+      // An email is read on this device or not at all: by its built-in model when it has one, otherwise by plain
+      // code (the basic check, core/basicRead.ts). Its words are never sent to be read.
+      const basic = deviceStore.get().model !== 'available';
+      const mail = `${item.subject}\n${item.text}`;
+      const r = basic
+        ? { understanding: basicBill(coverPaperText(mail).text.split('\n'), knownPayees(dataStore.get().memory).map((k) => k.name)), ms: 0, masked: mailPayload(mail) }
+        : await readMailText(mail, 'device', s.cloudModel);
       const u = r.understanding;
       const known = knownPayees(dataStore.get().memory);
       let v = billVerdict(u, r.masked, known);
@@ -67,18 +62,20 @@ export default function Mail() {
       const payee = u.payee && !/\[/.test(u.payee) ? u.payee : null;
       const answer = billAnswer(v, payee, known, null, math);
       const receipt: Receipt = {
-        w: where === 'cloud' ? 'cloud' : 'local',
+        w: 'local',
         n: 0,
-        stayed: where === 'device' ? [t('where.mail'), t('where.covered.letter')] : [t('where.covered.letter')],
-        sent: where === 'cloud' ? [t('where.mail')] : [],
+        stayed: [t('where.mail'), t('where.covered.letter')],
+        sent: [],
         sources: [{ label: t('where.src.rules', { device }), date: '' }],
         tech: [
-          `${where === 'device' ? `Read by the built-in model on this ${device}` : `Read by the cloud model ${s.cloudModel}`} in ${(r.ms / 1000).toFixed(1)} s.`,
+          basic
+            ? `Basic check: this ${device} has no built-in model, so the email's words were checked by plain code alone. Nothing was sent to be read.`
+            : `Read by the built-in model on this ${device} in ${(r.ms / 1000).toFixed(1)} s.`,
           `Bill flags: ${v.flags.join(', ') || 'none'}. ${r.masked.length} characters of covered text.`,
         ],
       };
       setJudged((j) => ({ ...j, [item.id]: { answer, receipt } }));
-      const lines = [...answer.reasons.map((x) => x.text), ...(answer.doLine ? [answer.doLine] : [])];
+      const lines = [...answer.reasons.map((x) => x.text), ...(answer.doLine ? [answer.doLine] : []), ...(basic ? [t('basic.note', { device })] : [])];
       await addCheck({
         kind: 'Email',
         family: 'email',
@@ -149,7 +146,7 @@ export default function Mail() {
                           explainText({
                             kind: 'email',
                             verdict: j.answer.verdict.text,
-                            sentences: [item.subject, ...j.answer.reasons.map((r) => r.text), ...(j.answer.doLine ? [j.answer.doLine] : [])],
+                            sentences: [...j.answer.reasons.map((r) => r.text), ...(j.answer.doLine ? [j.answer.doLine] : [])],
                           })
                         }
                       >
@@ -164,21 +161,6 @@ export default function Mail() {
           })}
         </div>
       </div>
-      {asking && (
-        <Sheet open closable={false} onEscape={() => asking.resolve(false)} title={t('ask.mail.title')} titleIcon={<I.net />} tone="net">
-          <p className="text-body font-medium">{t('ask.mail.body', { device })}</p>
-          <div className="parcel my-3 max-h-48 overflow-auto text-small font-semibold">{asking.words}</div>
-          <p className="mt-[0.4rem] text-small text-ink-2">{t('ask.mail.not')}</p>
-          <div className="mt-[1.1rem] grid grid-cols-2 gap-[0.7rem]">
-            <button type="button" className="btn btn-yes" onClick={() => asking.resolve(true)}>
-              {t('ask.mail.yes')}
-            </button>
-            <button type="button" className="btn" onClick={() => asking.resolve(false)}>
-              {t('ask.thing.no')}
-            </button>
-          </div>
-        </Sheet>
-      )}
       {details && (
         <Sheet open onClose={() => setDetails(null)} title={t('where.title')}>
           <ReceiptFull r={details} device={device} />

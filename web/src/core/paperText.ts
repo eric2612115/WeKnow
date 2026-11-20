@@ -14,6 +14,8 @@ export interface CoveredPaper {
   text: string;
   /** What was covered, for the sheet and the receipt. */
   counts: Partial<Record<PIIKind, number>>;
+  /** The words of the people's names that were covered, lower case (a company's own words left out). */
+  names: Set<string>;
 }
 
 export function coverPaperText(text: string): CoveredPaper {
@@ -62,7 +64,7 @@ export function coverPaperText(text: string): CoveredPaper {
   for (const line of masked.split('\n')) {
     if (COMPANY.test(line) && !line.includes('[name]')) for (const w of line.toLowerCase().split(/[^a-z'’-]+/)) words.delete(w);
   }
-  if (!words.size) return { text: masked, counts };
+  if (!words.size) return { text: masked, counts, names: words };
   const again = new RegExp(`\\b(?:${[...words].map(escape).join('|')})\\b(?:[ \\t]+[A-Z][A-Za-z'’.-]+){0,2}`, 'gi');
   const fixCase = new RegExp(`\\b(?:${[...words].map(escape).join('|')})\\b`, 'i');
   const covered = masked.replace(again, (m) => {
@@ -71,7 +73,7 @@ export function coverPaperText(text: string): CoveredPaper {
     const rest = m.slice(first.length).match(/^(?:[ \t]+[A-Z][A-Za-z'’.-]+)*/)?.[0] ?? '';
     return `[name]${m.slice(first.length + rest.length)}`;
   });
-  return { text: covered, counts };
+  return { text: covered, counts, names: words };
 }
 
 const COMPANY = /\b(co-?op|inc|llc|ltd|corp|company|district|bank|trust|care|services?|electric|water|clinic)\b/i;

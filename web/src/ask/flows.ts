@@ -21,8 +21,10 @@ import type { PIIKind } from '../core/pii';
 import type { WebAnswer } from '../core/webAnswer';
 import { billQuestion } from '../core/billCheck';
 import type { BillCheckResult } from '../webSearch';
-import { findPII, maskText } from '../core/pii';
-import { coverPaperText } from '../core/paperText';
+import { maskText } from '../core/pii';
+import { coverPaperText, flatPayload } from '../core/paperText';
+import { openSheet } from '../ui/uiStore';
+import { basicBill, basicKind } from '../core/basicRead';
 import { buildCloudLookup } from '../core/cloudPayload';
 import {
   billAnswer,
@@ -42,7 +44,7 @@ import {
 import type { LineItem, Receipt, Tone } from '../answer/types';
 import { t as tr, money, monthYear, longDate, shortDate } from '../strings';
 import { appSettings, knowledge } from '../engine/knowledge';
-import { deviceStore, deviceWord, getReady } from '../engine/device';
+import { deviceStore, deviceWord, getReady, refreshModel } from '../engine/device';
 import { listening, soundEnd, soundStart, wait, sayAloud } from '../engine/speech';
 import { permission, torch, type CameraState } from '../engine/camera';
 import { addCheck, dataStore, newId, pictureUrl, putMemory, type Check, type CheckKind, type Family } from '../store/data';
@@ -339,55 +341,42 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
     if (done) return;
   }
 
+  // The model may have finished downloading since the page opened: ask again before deciding.
+  if (deviceStore.get().model !== 'available') await refreshModel();
+  alive(t);
   const d = deviceStore.get();
-  const where: Where = d.model === 'available' ? 'device' : 'cloud';
-  let saidCloud = false;
-  // The cloud path: the words on the picture are read on this device and every personal detail is covered in
-  // black first. Only that covered copy may be sent; if the words cannot be read, nothing is sent.
-  let covered: Covered | undefined;
-  if (where === 'cloud') {
-    if (!d.online) return noInternet(t);
-    if (getPrefs().internet === 'never') return neverPicture(t);
-    covered = await coverFirst(pic.blob, sideFor(pic));
-    alive(t);
-    if (!covered) return cannotCover(t, question, pic);
-    const list = coveredList(covered.counts);
-    const auto = getPrefs().internet === 'auto';
-    const go = await mayUseInternet(
-      t,
-      {
-        kind: 'net',
-        title: PAPER.test(question) ? tr('check.title.bill') : tr('check.title'),
-        picture: covered.url,
-        hidden: covered.counts,
-        goes: 'picture',
-        parcel: [`“${question}”`],
-        not: [],
-        yes: tr('check.yes'),
-        no: tr('check.no'),
-      },
-      [list ? tr('ask.thing.say', { device: dev(), list: coveredList(covered.counts, true) }) : tr('ask.thing.say.none', { device: dev() })],
-    );
-    if (go !== 'go') return nothingSent(t);
-    saidCloud = auto;
-  }
+  // A device with no model of its own: the paper is never sent anywhere to be read. Plain code does the basic check
+  // on this device, and says how to get the full one.
+  if (d.model !== 'available') return noModelPicture(t, question, pic);
+  const where: Where = 'device';
 
   // Start reading at once; what WeKnow is doing is said while it reads, never before.
   const job = (async () => {
     const [kb, settings] = await Promise.all([knowledge(), appSettings()]);
-    const reading = await readNow(kb, settings, still.blob, question, where, covered, sideFor(pic));
+    const reading = await readNow(kb, settings, still.blob, question, where, undefined, sideFor(pic));
     return { kb, settings, reading };
   })();
   job.catch(() => undefined);
   const paper = PAPER.test(question);
   setPhase('looking');
   patch({ reading: paper });
-  void narrate(t, [...(saidCloud ? [tr('ask.thing.said')] : []), paper ? tr('look.paper') : tr('look.thing')]);
-  const { kb, settings, reading } = await withWaits(t, withTimeout(job, READ_TIMEOUT));
+  void narrate(t, [paper ? tr('look.paper') : tr('look.thing')]);
+  let read: Awaited<typeof job>;
+  try {
+    read = await withWaits(t, withTimeout(job, READ_TIMEOUT));
+  } catch (e) {
+    if (e instanceof Cancel) throw e;
+    // The model on this device could not read it (an error, a refusal, too slow). The picture still goes nowhere:
+    // plain code does the basic check here.
+    console.warn('[WeKnow] the model on this device could not read the picture; doing the basic check', e);
+    alive(t);
+    return noModelPicture(t, question, pic);
+  }
+  const { kb, settings, reading } = read;
   patch({ reading: false });
   lastSent = null;
 
-  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic, covered, ...(where === 'cloud' ? { cloudWhy: 'no-device-model' as const } : {}) };
+  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic };
   const kind = reading.understanding.kind;
   if (kind === 'quote') return quoteFlow(ctx);
   if (kind === 'bill') return billFlow(ctx);
@@ -518,6 +507,11 @@ interface Ctx {
   src?: PictureSrc;
   /** On the cloud path: the covered copy that was sent, and what was covered on it. */
   covered?: Covered;
+  /**
+   * The basic check: this device has no model of its own, so the paper's words were checked by plain code alone
+   * (core/basicRead.ts). Nothing was sent to be read. `lines` are the words read from a picture on this device.
+   */
+  basic?: { lines?: string[] };
   /** On the cloud path: why the cloud read it (the router's reason). */
   cloudWhy?: Reason;
   /** Set when the device could not answer well and the covered words were checked online. */
@@ -565,19 +559,6 @@ async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: 
 /** The long side a picture is shrunk to before reading: two PDF pages stacked need more to keep small print. */
 const sideFor = (pic: PictureSrc) => (pic.paper ? 2400 : undefined);
 
-/** Shrink the picture and cover its personal details on this device. Undefined when the words could not be read. */
-async function coverFirst(blob: Blob, maxSide?: number): Promise<Covered | undefined> {
-  try {
-    const [{ coverPicture, warmCover }, { shrinkPhoto }] = await Promise.all([import('../coverPicture'), import('../image')]);
-    void warmCover().catch(() => undefined);
-    const small = await shrinkPhoto(blob, maxSide);
-    return await coverPicture(small, blob);
-  } catch (e) {
-    console.warn('[WeKnow] could not cover the picture; nothing was sent', e);
-    return undefined;
-  }
-}
-
 /**
  * A PDF with real text: its words are covered on this device (core/pii.ts) and read into the bill form, by this
  * device's model when it has one, otherwise in the cloud after a yes that shows the exact covered words. Only those
@@ -586,54 +567,16 @@ async function coverFirst(blob: Blob, maxSide?: number): Promise<Covered | undef
  */
 async function paperFlow(t: number, question: string, pic: PictureSrc): Promise<boolean> {
   const paper = pic.paper!;
+  if (deviceStore.get().model !== 'available') await refreshModel();
+  alive(t);
   const d = deviceStore.get();
-  const where: Where = d.model === 'available' ? 'device' : 'cloud';
-  const { mailPayload, readMailText } = await import('../textReader');
+  // No model on this device: the PDF's words are checked by plain code here, and go nowhere.
+  if (d.model !== 'available') return basicPaper(t, question, pic, paper.text.split('\n'), true);
+  const where: Where = 'device';
+  const { readMailText } = await import('../textReader');
   alive(t);
   // Covered on this device first, line by line (a name under its label too); only this form is ever read by a model.
   const { text: coveredText, counts } = coverPaperText(paper.text);
-  const masked = mailPayload(coveredText);
-  let saidCloud = false;
-  if (where === 'cloud') {
-    if (!d.online) {
-      await noInternet(t);
-      return true;
-    }
-    if (getPrefs().internet === 'never') {
-      neverPicture(t);
-      return true;
-    }
-    // The payload guard: the exact outgoing words are scanned again; a personal pattern still in them stops it here.
-    const left = findPII(masked);
-    if (left.length) {
-      lastSent = null;
-      notSent(t, 'guard', left.map((h) => h.kind));
-      return true;
-    }
-    const list = coveredList(counts);
-    const go = await mayUseInternet(
-      t,
-      {
-        kind: 'net',
-        title: PAPER.test(question) ? tr('check.title.bill') : tr('check.title'),
-        hidden: counts,
-        goes: 'words',
-        parcel: [],
-        lines: paperLines(coveredText),
-        not: [],
-        yes: tr('check.yes'),
-        no: tr('check.no'),
-      },
-      [list ? tr('ask.paper.say', { device: dev(), list: coveredList(counts, true) }) : tr('ask.paper.say.none', { device: dev() })],
-    );
-    alive(t);
-    if (go !== 'go') {
-      lastSent = null;
-      await nothingSent(t);
-      return true;
-    }
-    saidCloud = getPrefs().internet === 'auto';
-  }
   const job = (async () => {
     const [kb, settings] = await Promise.all([knowledge(), appSettings()]);
     const r = await readMailText(coveredText, where, settings.cloudModel, 'paper');
@@ -642,8 +585,17 @@ async function paperFlow(t: number, question: string, pic: PictureSrc): Promise<
   job.catch(() => undefined);
   setPhase('looking');
   patch({ reading: true });
-  void narrate(t, [...(saidCloud ? [tr('ask.paper.said')] : []), tr('look.paper')]);
-  const { kb, settings, r, pack } = await withWaits(t, withTimeout(job, READ_TIMEOUT));
+  void narrate(t, [tr('look.paper')]);
+  let read: Awaited<typeof job>;
+  try {
+    read = await withWaits(t, withTimeout(job, READ_TIMEOUT));
+  } catch (e) {
+    if (e instanceof Cancel) throw e;
+    console.warn('[WeKnow] the model on this device could not read the paper; doing the basic check', e);
+    alive(t);
+    return basicPaper(t, question, pic, paper.text.split('\n'), true);
+  }
+  const { kb, settings, r, pack } = read;
   patch({ reading: false });
   if (r.understanding.kind !== 'bill') return false;
   lastSent = null;
@@ -665,23 +617,101 @@ async function paperFlow(t: number, question: string, pic: PictureSrc): Promise<
     picture: pic.blob,
     src: pic,
     paper: { text: paper.text, masked: r.masked, counts },
-    ...(where === 'cloud' ? { cloudWhy: 'no-device-model' as const } : {}),
   });
   return true;
 }
 
-/** The covered words as the paper's own lines, for the sheet: columns kept apart by a dot, up to what is sent. */
-function paperLines(covered: string): string[] {
-  const out: string[] = [];
-  let n = 0;
-  for (const raw of covered.split('\n')) {
-    const line = raw.trim().replace(/\s{2,}/g, ' · ').replace(/[ \t]+/g, ' ');
-    if (!line) continue;
-    if (n + line.length > 4000) break;
-    n += line.length + 1;
-    out.push(line);
+/**
+ * The basic check of a paper, on a device with no model of its own: plain code says what kind of paper it is and who
+ * asks to be paid (core/basicRead.ts), and a bill then goes through the same plain rules as every bill. The words
+ * never leave this device. True when it was answered here.
+ */
+async function basicPaper(t: number, question: string, pic: PictureSrc, lines: string[], fromPdf: boolean): Promise<boolean> {
+  const kind = basicKind(lines);
+  if (kind !== 'bill') {
+    needModel(t, kind === 'quote' ? 'quote' : 'paper');
+    return true;
   }
-  return out;
+  setPhase('looking');
+  patch({ reading: true });
+  void narrate(t, [tr('look.paper')]);
+  const [kb, settings] = await Promise.all([knowledge(), appSettings()]);
+  alive(t);
+  const text = lines.join('\n');
+  const { text: coveredText, counts } = coverPaperText(text);
+  const understanding = basicBill(coveredText.split('\n'), knownPayees(dataStore.get().memory).map((k) => k.name), !fromPdf);
+  patch({ reading: false });
+  lastSent = null;
+  const reading: Reading = { understanding, where: 'device', ms: 0, steps: { read: 0, choose: 0 }, pack: await kb.resolve([]), retrieval: { shards: [], bytes: 0, offered: 0, trimmed: 0 } };
+  alive(t);
+  await billFlow({
+    t,
+    question,
+    where: 'device',
+    reading,
+    kb,
+    settings,
+    picture: pic.blob,
+    src: pic,
+    basic: fromPdf ? {} : { lines },
+    ...(fromPdf ? { paper: { text, masked: flatPayload(coveredText), counts } } : {}),
+  });
+  return true;
+}
+
+/**
+ * A picture on a device with no model of its own. Its words are read here by the text recognizer; a bill gets the
+ * basic check. Anything else cannot be looked at here: a question that names the problem is answered from its
+ * words, and otherwise WeKnow says what the full check needs. The picture is never sent.
+ */
+async function noModelPicture(t: number, question: string, pic: PictureSrc) {
+  const paper = PAPER.test(question);
+  setPhase('looking');
+  patch({ reading: paper });
+  void narrate(t, [paper ? tr('look.paper') : tr('look.thing')]);
+  let lines: string[] | null = null;
+  try {
+    const { readLines } = await import('../coverPicture');
+    lines = await withWaits(t, withTimeout(readLines(pic.blob), READ_TIMEOUT));
+  } catch (e) {
+    if (e instanceof Cancel) throw e;
+    console.warn('[WeKnow] could not read the words on the picture', e);
+  }
+  alive(t);
+  patch({ reading: false });
+  lastSent = null;
+  const kind = lines ? basicKind(lines) : 'unknown';
+  if (lines && kind === 'bill') return void (await basicPaper(t, question, pic, lines, false));
+  if (kind === 'quote') return needModel(t, 'quote');
+  // A thing, not a paper: the words of the question still find a guide or a price ("Why won't this drain?").
+  if (!paper && terms(jobWords(question)).length) {
+    const r = await wordsFlow(t, question);
+    alive(t);
+    if (r === true) return void toldBasic(t);
+    if (r && r.guides.length) return maybeGuides(t, r.ctx, r.guides);
+  }
+  needModel(t, paper ? 'paper' : 'thing');
+}
+
+/** Says, once per answer, that this was the basic check, and opens what the full one needs the first time. */
+function toldBasic(t: number) {
+  alive(t);
+  if (getPrefs().toldBasic) return;
+  setPrefs({ toldBasic: true });
+  openSheet({ type: 'needmodel' });
+}
+
+/** This device cannot look at this by itself, and nothing was sent: what it is, and how to get the full check. */
+function needModel(t: number, what: 'quote' | 'paper' | 'thing') {
+  lastSent = null;
+  topic = null;
+  patch({ looking: false, reading: false, chip: null });
+  clearLines();
+  setHead('plain', tr(`need.${what}.title`, { device: dev() }));
+  settle();
+  void narrate(t, [tr(`need.${what}.line`, { device: dev() }), tr('need.stays', { device: dev() })]);
+  offerNext([{ label: tr('need.how'), act: () => openSheet({ type: 'needmodel' }) }]);
+  patch({ offerSamples: false });
 }
 
 /**
@@ -691,6 +721,7 @@ function paperLines(covered: string): string[] {
  */
 async function paperWords(c: Ctx): Promise<string[] | null> {
   if (c.paper) return c.paper.text.split('\n');
+  if (c.basic?.lines) return c.basic.lines;
   if (c.covered) return c.covered.text ?? null;
   if (!c.picture) return null;
   try {
@@ -701,32 +732,6 @@ async function paperWords(c: Ctx): Promise<string[] | null> {
     console.warn('[WeKnow] could not read the words for the bill checks', e);
     return null;
   }
-}
-
-/** The words on the picture could not be read in time: nothing was sent. The picture goes back on the box. */
-function cannotCover(t: number, question: string, pic: PictureSrc) {
-  lastSent = null;
-  patch({ looking: false, reading: false });
-  attach(pic.blob, pic.sample, pic.camera, pic.paper);
-  if (!boxText().trim()) setBox(question);
-  archive();
-  clearLines();
-  setHead('plain', tr('cover.fail.title'));
-  settle();
-  void narrate(t, [tr('cover.fail.line'), tr('cover.fail.try')]);
-  offerNext([
-    nextQ(tr('cover.fail.again'), (t2) => {
-      if (view().chosen) detach();
-      return pictureFlow(t2, question, pic, false);
-    }),
-    {
-      label: tr('cover.fail.photo'),
-      act: () => {
-        detach();
-        takePicture();
-      },
-    },
-  ]);
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -803,37 +808,6 @@ async function tooDark(t: number) {
   settle();
 }
 
-async function noInternet(t: number) {
-  setPhase('speaking');
-  clearLines();
-  setHead('plain', tr('net.none.title'), 'nonet');
-  await say(t, tr('net.none.line', { device: dev() }));
-  await choice(t, [{ value: 'checks', label: tr('net.none.btn') }], { stack: true, listen: false });
-  settle();
-  ui.navigate('/checks');
-}
-
-async function nothingSent(t: number) {
-  setPhase('speaking');
-  clearLines();
-  patch({ reading: false });
-  setHead('plain', tr('ask.none.title'));
-  await say(t, tr('ask.none.line', { device: dev() }));
-  await say(t, tr('ask.none.again'));
-  settle();
-}
-
-/** A picture, no model on this device, and the person chose never to use the internet: say so, with the way to change it. */
-function neverPicture(t: number) {
-  lastSent = null;
-  patch({ looking: false, reading: false });
-  clearLines();
-  setHead('plain', tr('ask.none.title'));
-  settle();
-  void narrate(t, [tr('route.never.picture', { device: dev() })]);
-  offerNext([{ label: tr('route.settings'), act: () => ui.navigate('/settings#set-privacy') }]);
-}
-
 // ---------- the hybrid route: the cloud when this device cannot answer well (design/HYBRID-ROUTING.md) ----------
 
 /**
@@ -875,9 +849,9 @@ async function escalateFlow(c: Ctx, words: string, reason: Reason, input: 'words
   if (!deviceStore.get().online || getPrefs().internet === 'never') return 'stayed';
   const cov = coverWords(words);
   if (!cov.text) return 'stayed';
-  // Words with no personal details in them go without a sheet (the receipt still shows exactly what went), unless the
-  // person asked to be asked every time; words that had details covered, and words read from a picture or a paper,
-  // need the consent first.
+  // Words with no personal details in them go without a sheet (the lamp shows them as they go, and the receipt
+  // after), unless the person asked to be asked every time; words that had details covered or a sentence kept back,
+  // and words read from a picture or a paper, need the consent first.
   const clean = input === 'words' && !Object.keys(cov.counts).length && getPrefs().internet !== 'every';
   const sheet: SheetRequest = {
     kind: 'net',
@@ -896,6 +870,8 @@ async function escalateFlow(c: Ctx, words: string, reason: Reason, input: 'words
   patch({ reading: false });
   void narrate(t, [tr('route.checking', { device: dev() })]);
   const model = deviceStore.get().model === 'available';
+  // A cloud that is down, slow or out of quota must not cost the person what this device already found: the caller
+  // then answers from the device.
   const res = await withWaits(
     t,
     withTimeout(
@@ -910,8 +886,13 @@ async function escalateFlow(c: Ctx, words: string, reason: Reason, input: 'words
       }),
       READ_TIMEOUT,
     ),
-  );
-  if (res.kind === 'no-index') return 'stayed';
+  ).catch((e) => {
+    if (e instanceof Cancel) throw e;
+    console.warn('[WeKnow] the online step failed; answering from this device', e);
+    return null;
+  });
+  alive(t);
+  if (!res || res.kind === 'no-index') return 'stayed';
   if (res.kind === 'blocked') {
     notSent(t, res.by, res.found);
     return 'answered';
@@ -1089,6 +1070,12 @@ function tech(c: Ctx, extra: string[] = []): string[] {
     return [...read, ...escTech(c), `Pack ${c.kb.id}, version ${c.kb.version}.`, ...extra];
   }
   if (c.words) return wordsTech(c, extra);
+  if (c.basic)
+    return [
+      `Basic check: this ${dev()} has no built-in model, so the paper's own words (${c.paper ? "the PDF's text, taken out here with pdf.js" : 'read here by the text recognizer'}) were checked by plain code alone. No model read the paper, and nothing was sent to be read. Requests to the cloud model for the reading: 0.`,
+      `Pack ${c.kb.id}, version ${c.kb.version}.`,
+      ...extra,
+    ];
   if (c.paper)
     return [
       `Read from the PDF's own text, taken out on this ${dev()} with pdf.js (no text recognition needed); personal details covered on this ${dev()} first (${c.paper.masked.length} characters after covering).`,
@@ -1564,20 +1551,46 @@ async function quoteFlow(c: Ctx) {
     .filter((i) => i.state === 'pending' && i.label.trim())
     .map((i) => {
       try {
-        return { i, payload: buildCloudLookup({ item: i.label.trim().slice(0, 120), region: kb.region }) };
+        // A job's name needs no long number: a house number, a permit or part number is taken out before it goes.
+        return { i, payload: buildCloudLookup({ item: i.label.replace(/#?\b\d{3,}\b/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120), region: kb.region }) };
       } catch {
         return null; // personal data or a malformed line: never offered
       }
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
   const names = unknown.map((x) => x.i.label);
+  /** The words that leave for each unknown line: its label with long numbers taken out, as the sheet shows it. */
+  const lookedUp = unknown.map((x) => x.payload.item);
   const parcel = [...unknown.map((x) => tr('ask.item.price', { item: x.payload.item })), tr('ask.item.region', { region: kb.region })];
   const online = deviceStore.get().online;
   const p = getPrefs();
   // On the cloud path the person already said yes to the picture; then WeKnow only says it looks the lines up.
   const lookNow = unknown.length > 0 && online && route({ input: 'quote-lines', unknown: unknown.length }).escalate && p.internet === 'auto';
 
-  const summary = quoteSummary(items);
+  // A quote or an invoice with priced lines can carry the same traps as a bill. The rules that read a bill for them
+  // (core/verdict.ts) read this paper too: what the model flagged, its line labels, and the paper's own words when
+  // they are already here (a PDF's text). They can only add a warning to the price verdict, never take one away.
+  const ownWords = c.paper ? c.paper.text.split('\n') : (c.basic?.lines ?? []);
+  const signs = billVerdict(u, maskText([u.payee ?? '', ...u.lines.map((l) => l.label), ...ownWords].join(' ')), []).flags.filter(
+    (f): f is 'account-change-notice' | 'urgency' | 'instruction-to-ai' => f === 'account-change-notice' || f === 'urgency' || f === 'instruction-to-ai',
+  );
+  const withSigns = (priced: ReturnType<typeof quoteSummary>): ReturnType<typeof quoteSummary> =>
+    signs.length
+    ? {
+        ...priced,
+        verdict:
+          signs.includes('instruction-to-ai') || signs.includes('account-change-notice')
+            ? { tone: 'stop', text: tr('quote.stop.title') }
+            : priced.verdict.tone === 'stop'
+              ? priced.verdict
+              : { tone: 'warn', text: tr('quote.check.title') },
+        sentences: [
+          ...signs.map((f) => tr(f === 'instruction-to-ai' ? 'letter.sign.ai' : f === 'urgency' ? 'letter.sign.rush' : 'letter.sign.account')),
+          ...priced.sentences,
+        ],
+      }
+    : priced;
+  const summary = withSigns(quoteSummary(items));
   const pending = items.filter((i) => i.state === 'pending').length;
   const matched = reading.pack.prices.filter((x) => u.lines.some((l) => l.ref === x.ref));
 
@@ -1621,9 +1634,10 @@ async function quoteFlow(c: Ctx) {
     const found = await lookUpLines(unknown, kb);
     alive(tt);
     const said = applyFound(items, found);
-    const missed = unknown.filter((x) => !found.some((f) => f.i.n === x.i.n)).map((x) => x.i.label);
-    if (missed.length) fileRequests(missed, kb.region, () => undefined);
-    const after = quoteSummary(items);
+    const notFound = unknown.filter((x) => !found.some((f) => f.i.n === x.i.n));
+    const missed = notFound.map((x) => x.i.label);
+    if (missed.length) fileRequests(notFound.map((x) => x.payload.item), kb.region, () => undefined);
+    const after = withSigns(quoteSummary(items));
     setHead(after.verdict.tone, after.verdict.text);
     receipt = {
       ...receiptFor({ sent: parcel, waiting: missed.length ? tr('where.requested', { names: missed.join(', ') }) : undefined }),
@@ -1666,7 +1680,7 @@ async function quoteFlow(c: Ctx) {
   if (lookNow && c.settings.lookupEnabled) {
     void runLookup(t, true).catch(() => undefined);
   } else if (lookNow) {
-    fileRequests(names, kb.region, (_filed, failed) => {
+    fileRequests(lookedUp, kb.region, (_filed, failed) => {
       if (!failed.length) return;
       receipt = receiptFor({ sent: parcel, waiting: tr('where.waiting', { names: failed.join(', ') }) });
       if (current() === t) patch({ receipt });
@@ -1705,7 +1719,7 @@ async function quoteFlow(c: Ctx) {
         await runLookup(t2);
       } else if (yes) {
         receipt = receiptFor({ sent: parcel, waiting: tr('where.requested', { names: names.join(', ') }) });
-        fileRequests(names, kb.region, () => undefined);
+        fileRequests(lookedUp, kb.region, () => undefined);
         patch({ receipt });
         void narrate(t2, [names.length === 1 ? tr('quote.requested') : tr('quote.requested.n')]);
       } else {
@@ -1818,9 +1832,17 @@ async function billFlow(c: Ctx) {
   // these charges are real, so the web is asked (core/billCheck.ts). Only the company and the names of the charges
   // go; the answer can make the warning stronger, never weaker.
   let online: BillCheckResult | null = null;
+  /** The words that went out for the online check, kept even when no answer came back: they are in the receipt. */
+  let asked: string | null = null;
   const q =
-    v.flags.includes('new-payee') && v.flags.length > 1 && deviceStore.get().online && getPrefs().internet !== 'never'
-      ? billQuestion(u.payee, words?.length ? words : u.lines.map((l) => l.label))
+    // (Words recognized from a photo with no model to read them: only when the company's name was made out.)
+    v.flags.includes('new-payee') && v.flags.length > 1 && deviceStore.get().online && getPrefs().internet !== 'never' && (!c.basic?.lines || !!nameOf(u.payee))
+      ? (() => {
+          // Built from the paper's covered words, never its words as printed: a name the page-wide covering found
+          // ("ACCOUNT HOLDER / Wei-Ling Chen", then "fee for CHEN family") is out of every line before one is picked.
+          const cov = words?.length ? coverPaperText(words.join('\n')) : null;
+          return billQuestion(u.payee, cov ? cov.text.split('\n') : u.lines.map((l) => l.label), cov?.names);
+        })()
       : null;
   if (q) {
     const sheet: SheetRequest = { kind: 'net', title: tr('check.title'), hidden: {}, goes: 'words', parcel: [`“${q}”`], not: [], yes: tr('check.yes'), no: tr('check.no') };
@@ -1828,6 +1850,7 @@ async function billFlow(c: Ctx) {
     alive(t);
     if (go === 'go') {
       void narrate(t, [tr('billcheck.looking')]);
+      asked = q;
       try {
         const { checkBillOnline } = await import('../webSearch');
         online = await withWaits(t, withTimeout(checkBillOnline(q), READ_TIMEOUT));
@@ -1845,7 +1868,10 @@ async function billFlow(c: Ctx) {
       : found?.finding === 'not-found' && ans.verdict.tone !== 'stop'
         ? { tone: 'warn' as const, text: tr('letter.check.title') }
         : ans.verdict;
-  const onlineLines: Said[] = found ? [tr(`billcheck.${found.finding}`), ...found.points] : [];
+  // What the web answer adds in its own words is shown only when it makes the warning stronger. For "real" or
+  // "unclear" WeKnow says its own fixed sentence and nothing more: text that came from the paper could otherwise
+  // steer those lines into saying it is safe.
+  const onlineLines: Said[] = found ? [tr(`billcheck.${found.finding}`), ...(found.finding === 'known-scam-pattern' || found.finding === 'not-found' ? found.points : [])] : [];
 
   const receipt: Receipt = {
     w: whereRan({ where, online: deviceStore.get().online, sent: 0, pending: 0 }),
@@ -1854,8 +1880,8 @@ async function billFlow(c: Ctx) {
       where === 'device'
         ? [c.paper ? tr('where.paper') : tr('where.picture'), tr('where.covered.letter'), ...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })]
         : [...stayedCovered(c), ...(usedNote && match ? [tr('where.note.payee', { digits: match.payTo })] : []), tr('where.rules', { device: dev() })],
-    ...sentCovered(c, online ? [online.sent] : []),
-    ...(online && where === 'device' ? { w: 'mixed' as const, n: 1, why: tr('billcheck.why') } : {}),
+    ...sentCovered(c, online ? [online.sent] : asked ? [asked] : []),
+    ...((online || asked) && where === 'device' ? { w: 'mixed' as const, n: 1, why: tr('billcheck.why') } : {}),
     sources: [
       { label: tr('where.src.rules', { device: dev() }), date: tr('where.checked', { date: longDate(c.kb.version.slice(0, 10)) }) },
       ...(found?.sources ?? []).map((src) => ({ label: tr('where.src.web', { name: src.title ?? new URL(src.url).hostname }), date: '', url: src.url, title: src.title })),
@@ -1873,7 +1899,7 @@ async function billFlow(c: Ctx) {
   // Calling the company makes no sense when the company is the trap.
   const doLine = found?.finding === 'known-scam-pattern' ? tr('billcheck.do.scam') : ans.doLine;
   const reasons: Said[] = [...ans.reasons.map((r) => ({ text: r.text, noteTag: !!r.fromNote })), ...onlineLines, ...(doLine ? [doLine] : [])];
-  const lines: Said[] = [...reasons, ...firstTimeHere(where), ...(where === 'device' ? [tr('letter.stays', { device: dev() })] : [])];
+  const lines: Said[] = [...reasons, ...(c.basic ? [tr('basic.note', { device: dev() })] : []), ...firstTimeHere(where), ...(where === 'device' ? [tr('letter.stays', { device: dev() })] : [])];
 
   clearLines();
   setHead(verdict.tone, verdict.text);

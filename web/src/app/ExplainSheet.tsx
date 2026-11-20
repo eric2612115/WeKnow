@@ -7,7 +7,7 @@ import { closeSheet, useUi, type SheetState } from '../ui/uiStore';
 import { Sheet } from '../ui/Sheet';
 import { DeviceIcon, I } from '../ui/icons';
 import { t } from '../strings';
-import { deviceWord } from '../engine/device';
+import { deviceWord, deviceStore } from '../engine/device';
 import { appSettings } from '../engine/knowledge';
 import { getPrefs, setPrefs } from '../store/prefs';
 import { quiet } from '../engine/speech';
@@ -28,7 +28,8 @@ const LANGS: Array<Pick<Language, 'code' | 'name'>> = [
 
 type Stage =
   | { s: 'pick' }
-  | { s: 'ask'; withPicture: boolean }
+  | { s: 'ask'; withPicture: boolean; words: string }
+  | { s: 'never' }
   | { s: 'working' }
   | { s: 'done'; text: string; where: 'device' | 'cloud'; lang: string }
   | { s: 'fail' };
@@ -66,8 +67,11 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
     if (await m.deviceCanExplain(L, withPicture)) return run('device', withPicture);
     if (withPicture && (await m.deviceCanExplain(L, false))) return run('device', false);
     const p = getPrefs();
-    if (x.sentToCloud && p.internet === 'auto') return run('cloud', withPicture);
-    setStage({ s: 'ask', withPicture });
+    // This device cannot write that language itself. With the internet off or not allowed, nothing is sent.
+    if (!deviceStore.get().online || p.internet === 'never') return setStage({ s: 'never' });
+    // Over the internet only WeKnow's own answer goes (covered again), never the picture. The exact words are shown
+    // first, every time: an earlier yes to a question was not a yes to this.
+    setStage({ s: 'ask', withPicture: false, words: m.explainFacts(x) });
   };
 
   return (
@@ -110,26 +114,17 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
           </p>
           <p className="mt-2 text-body font-medium">{t('ask.explain.body', { device, language: lang.name })}</p>
           <div className="parcel my-3">
-            {stage.withPicture && x.pictureUrl && (
-              <span className="thumb w-32 bg-white">
-                <img src={x.pictureUrl} alt="The picture that would be sent" className="!object-contain" />
-              </span>
-            )}
-            {stage.withPicture && <span>{t(x.pictureCovered ? 'where.sent.covered' : 'where.sent.picture')}</span>}
             <span>{t('ask.explain.answer')}</span>
+            <span className="font-mono text-small font-medium break-words whitespace-pre-wrap">{stage.words}</span>
             <span>{t('ask.explain.lang', { language: lang.name })}</span>
           </div>
-          {stage.withPicture && (
-            <p className="mt-[0.4rem] text-small text-ink-2">{x.pictureCovered ? t('ask.thing.covered', { device }) : t('ask.thing.whole')}</p>
-          )}
           <p className="mt-[0.4rem] text-small text-ink-2">{t('ask.thing.not')}</p>
           <div className="mt-[1.1rem] grid grid-cols-2 gap-[0.7rem]">
             <button
               type="button"
               className="btn btn-yes"
               onClick={() => {
-                if (getPrefs().internet === 'ask-once') setPrefs({ internet: 'auto' });
-                void run('cloud', stage.withPicture);
+                void run('cloud', false);
               }}
             >
               {t('ask.explain.yes')}
@@ -144,6 +139,14 @@ function ExplainBody({ x }: { x: Extract<SheetState, { type: 'explain' }> }) {
       {stage.s === 'fail' && (
         <>
           <p className="py-4 text-caption font-medium">{t('explain.fail')}</p>
+          <button type="button" className="btn" onClick={() => setStage({ s: 'pick' })}>
+            {t('explain.again')}
+          </button>
+        </>
+      )}
+      {stage.s === 'never' && (
+        <>
+          <p className="py-4 text-caption font-medium">{t('explain.never', { device, language: lang.name })}</p>
           <button type="button" className="btn" onClick={() => setStage({ s: 'pick' })}>
             {t('explain.again')}
           </button>

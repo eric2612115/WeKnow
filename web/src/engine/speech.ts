@@ -94,7 +94,11 @@ export function unlockSound() {
 
 let where: Promise<ListenWhere> | null = null;
 export function listening(): Promise<ListenWhere> {
-  where ??= listenWhere('en-US').catch(() => 'unavailable' as const);
+  // Only a recognizer that runs on this device may listen. A browser's own speech service would send the person's
+  // voice to a server, raw and with no lamp lit, so there the microphone is not offered and the question is typed.
+  where ??= listenWhere('en-US')
+    .then((w) => (w === 'device' ? w : ('unavailable' as const)))
+    .catch(() => 'unavailable' as const);
   return where;
 }
 
@@ -149,8 +153,9 @@ async function levelMeter(onLevel: (l: number) => void): Promise<(() => void) | 
 /** Words WeKnow always understands, matched to the choice they mean. */
 export function matchWord(heard: string): 'yes' | 'no' | 'next' | 'again' | 'stop' | 'wait' | 'help' | null {
   const w = heard.toLowerCase();
+  // A no is heard first: "I'm not sure", "no, okay" and "don't" must never count as a yes.
+  if (/\b(no|nope|not|don'?t|do not|never|no thanks)\b/.test(w)) return 'no';
   if (/\b(yes|yeah|yep|sure|okay|ok|please do)\b/.test(w)) return 'yes';
-  if (/\b(no|nope|not now|no thanks)\b/.test(w)) return 'no';
   if (/\b(next|done|ready|finished)\b/.test(w)) return 'next';
   if (/\b(again|repeat)\b/.test(w)) return 'again';
   if (/\b(stop|cancel)\b/.test(w)) return 'stop';

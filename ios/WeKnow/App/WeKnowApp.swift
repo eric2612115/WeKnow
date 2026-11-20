@@ -1,7 +1,8 @@
-// WeKnow for iPhone. Point at a quote, a bill or a problem; the phone reads it, covers your details, and a model
-// that runs on this phone fills a fixed form. Plain code judges it against a sourced knowledge pack and WeKnow
-// says the answer. Only when the phone cannot read by itself, and only after a yes, do the covered words go to
-// Gemini through Firebase AI Logic.
+// WeKnow for iPhone and iPad. Point at a quote, a bill or a problem; the phone reads it, covers your details, and a
+// model that runs on this phone fills a fixed form (without Apple Intelligence, plain code does the basic check of a
+// bill). Plain code judges it against a sourced knowledge pack and WeKnow says the answer. The paper is never sent
+// anywhere to be read; only a covered question, or a new company's name and its charges, may go online through
+// Firebase AI Logic.
 
 import SwiftUI
 

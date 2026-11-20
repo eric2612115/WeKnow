@@ -38,6 +38,7 @@ export function Sheets() {
       <EditSheet s={sheet?.type === 'edit' ? sheet : null} />
       <TrustedSheet open={sheet?.type === 'trusted'} />
       <LightsSheet open={sheet?.type === 'lights'} />
+      <NeedModelSheet open={sheet?.type === 'needmodel'} />
       <ExplainSheet />
     </>
   );
@@ -555,6 +556,34 @@ function TrustedFields({ onSaved }: { onSaved?: () => void }) {
         {t('save')}
       </button>
     </form>
+  );
+}
+
+/** A device with no model of its own: what WeKnow does here, and the two ways to get the full check. */
+function NeedModelSheet({ open }: { open: boolean }) {
+  const device = deviceWord();
+  const d = useDevice();
+  const h = (text: string) => <h3 className="mt-5 text-[1.0625rem] font-semibold text-ink">{text}</h3>;
+  return (
+    <Sheet open={open} onClose={closeSheet} title={t('needmodel.title')}>
+      {h(t('needmodel.here.t', { device }))}
+      <p className="mt-1 text-ink-2">{t('needmodel.here.d')}</p>
+      {h(t('needmodel.full.t'))}
+      <p className="mt-1 text-ink-2">{t('needmodel.full.d')}</p>
+      <h4 className="mt-4 font-semibold text-ink">{t('needmodel.chrome.t')}</h4>
+      <ol className="mt-1 list-decimal space-y-1 pl-5 text-ink-2">
+        <li>{t('needmodel.chrome.1')}</li>
+        <li>{t('needmodel.chrome.2')}</li>
+        <li>{t('needmodel.chrome.3')}</li>
+      </ol>
+      {d.model === 'downloadable' && (
+        <button type="button" className="btn primary mt-3" onClick={() => (closeSheet(), void getReady())}>
+          {t('needmodel.ready')}
+        </button>
+      )}
+      <h4 className="mt-4 font-semibold text-ink">{t('needmodel.app.t')}</h4>
+      <p className="mt-1 text-ink-2">{t('needmodel.app.d')}</p>
+    </Sheet>
   );
 }
 

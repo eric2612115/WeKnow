@@ -15,6 +15,7 @@ export type SheetState =
   | { type: 'edit'; memId: string }
   | { type: 'trusted' }
   | { type: 'lights' }
+  | { type: 'needmodel' }
   | {
       type: 'explain';
       key: string;

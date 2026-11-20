@@ -205,6 +205,8 @@ export function payToEndings(lines: string[]): string[] {
   const text = lines.join(' ');
   const re = new RegExp(String.raw`\b(?:payment|pay to|pay into|remit to|deposit to|transfer to|new)\s+(?:account\s+)?(?:number\s+)?(?:ending\s+(?:in\s+)?)?[:#]?\s*(${D}[${D.slice(1, -1)}\s-]{2,}${D})`, 'gi');
   for (const m of text.matchAll(re)) {
+    // The digits under a barcode ("payment 45405395604430731313") are one unbroken run longer than any account.
+    if (m[1].replace(/\D/g, '').length > 17 && !/[\s-]/.test(m[1].trim())) continue;
     const four = lastFourOf(m[1]);
     if (four && !out.includes(four)) out.push(four);
   }

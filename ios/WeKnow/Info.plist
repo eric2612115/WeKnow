@@ -21,7 +21,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSCameraUsageDescription</key>
-	<string>WeKnow looks at the paper or the thing you point at. The picture stays on this phone unless you say yes.</string>
+	<string>WeKnow looks at the paper or the thing you point at. The picture stays on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Say your question. The sound is turned into words on this phone and is never kept or sent.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -33,6 +33,13 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>

@@ -28,8 +28,31 @@ export type Escalation =
 export function coverWords(question: string): { text: string; counts: Partial<Record<PIIKind, number>> } {
   const counts: Partial<Record<PIIKind, number>> = {};
   for (const h of findPII(question)) counts[h.kind] = (counts[h.kind] ?? 0) + 1;
-  return { text: maskText(question).replace(/\s+/g, ' ').trim().slice(0, 300), counts };
+  // A sentence that carries a personal detail ("My name is ..., my phone is ...") stays on this device whole when
+  // another sentence holds the question (the same rule as the iPhone); a lone sentence has its details covered.
+  const sentences = question.split(/(?<=[.?!。？！])\s+|(?<=[。？！])|\n+/).map((s) => s.trim()).filter(Boolean);
+  const personal = (s: string) => findPII(s).length > 0 || LONG_NUMBER.test(s) || SAYS_WHO.test(s);
+  const kept = sentences.filter((s) => !personal(s));
+  if (kept.length < sentences.length) counts.name = Math.max(counts.name ?? 0, sentences.some((s) => SAYS_WHO.test(s)) ? 1 : 0) || counts.name;
+  if (counts.name === undefined || counts.name === 0) delete counts.name;
+  const said = kept.length ? kept.join(' ') : question;
+  const text = maskText(said)
+    // In a lone sentence, the name after "my name is" / "I'm" / "this is" is covered, and any long run of digits.
+    .replace(WHO_AND_NAME, (_m, lead: string) => `${lead} [name]`)
+    .replace(new RegExp(LONG_NUMBER.source, 'g'), '[number]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 300);
+  if (/\[number\]/.test(text) && !counts.phone) counts.phone = 1;
+  if (/\[name\]/.test(text) && !counts.name) counts.name = 1;
+  return { text, counts };
 }
+
+/** A long run of digits in a question is somebody's number (a phone in any country's format, an account). */
+const LONG_NUMBER = /\+?\d[\d\s().-]{5,}\d/;
+/** A sentence in which the person says who they are. */
+const SAYS_WHO = /\b(?:my name is|my name's|i am called|call me|this is)\s+\p{Lu}|\bi(?:'|’)?m\s+\p{Lu}[\p{L}'’-]+\s+\p{Lu}|我叫|我是|我的名字|我姓/u;
+const WHO_AND_NAME = /\b(my name is|my name's|i am called|call me|this is|i(?:'|’)?m)\s+(?:\p{Lu}[\p{L}'’-]+)(?:[ -]\p{Lu}[\p{L}'’-]+){0,2}/giu;
 
 /**
  * Send covered words to the cloud to be placed in the pack index. `covered` must be what coverWords returned (or

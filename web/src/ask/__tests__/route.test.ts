@@ -22,6 +22,7 @@ vi.mock('../../engine/device', async () => {
     deviceStore: createStore({ online: true, model: 'unavailable', pct: null, almost: false }),
     deviceWord: () => 'computer',
     getReady: async () => true,
+    refreshModel: async () => 'unavailable',
     useDevice: () => ({}),
   };
 });

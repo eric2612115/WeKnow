@@ -1,6 +1,8 @@
 // The Ask conversation: one picture, one question, one answer. Read on the phone (Vision), cover personal
-// details, let a model fill the fixed form, let plain code decide, then show and say the answer with the
-// where-it-ran tag. The only thing that can ever leave the phone is the masked text, and only after a yes.
+// details, let Apple's on-device model fill the fixed form (or, on a phone without Apple Intelligence, plain code do
+// the basic check), let plain code decide, then show and say the answer with the where-it-ran tag. A paper's words
+// and picture never leave the phone; only a covered question, or a new company's name and the names of its charges,
+// may go online, and the receipt shows exactly what went.
 
 import Foundation
 import Observation
@@ -40,7 +42,6 @@ struct Receipt: Sendable {
   var tech: [String]
 }
 
-/// The asking sheet before the masked words go to the cloud (UI-SPEC 7.3, ask.paper.*).
 /// A Yes-or-No pop-up (for example the two checks before remembering a company whose bill raised warnings).
 struct Confirm: Identifiable {
   let id = UUID()
@@ -51,6 +52,8 @@ struct Confirm: Identifiable {
   let answer: (Bool) -> Void
 }
 
+/// The asking sheet before covered words go online (UI-SPEC 7.3): a covered question, or a new company's name and the
+/// names of its charges. Never a paper to be read.
 struct Consent: Identifiable {
   let id = UUID()
   let lines: [String]
@@ -124,6 +127,8 @@ final class AskModel {
   enum NextAction {
     case diy(String), steps(String, Int), pause(String, Int), fixed(String, Bool), proPrice(String)
     case noneOfThese, sayShop, unchecked, doNow, rememberPayee(String, String), haveQuote, quoteOrBill, broken
+    /// What the full check needs, on a phone that cannot read by itself.
+    case fullCheck
     /// A new company whose bill raised warnings: remembered only after two Yes-or-No pop-ups.
     case rememberCareful(String, String, [String])
   }
@@ -480,6 +485,14 @@ final class AskModel {
     case .broken:
       await answer(nil, ["Tell me in a few words what is wrong, then press Send. A picture helps too."])
 
+    case .fullCheck:
+      await answer("How to get the full check", [
+        "The full check reads every part of the page and checks every price on a quote, here on this \(S.device). It needs Apple Intelligence.",
+        Device.fullCheckStep,
+        "When it is ready, give me the paper again. It is read on this \(S.device), even with no internet.",
+        "Until then, I do the basic check of a bill here: the account to pay, the totals, and words that rush you or try to tell a reader it is safe. Your paper is never sent anywhere.",
+      ])
+
     case .sayShop:
       guard case let .quote(items)? = topic, let worst = items.filter({ $0.state == .high }).max(by: { ($0.over ?? 0) < ($1.over ?? 0) }) else {
         return await answer("Every line looked normal.", ["You can pay it as it is."])
@@ -667,53 +680,40 @@ final class AskModel {
     if !paper.bars.isEmpty { await say(Sentence(text: coveredSentence(paper.coveredKinds))) }
     if Task.isCancelled { return }
 
-    // 2. Decide where it reads. On this phone whenever Apple's model is available; otherwise ask first.
-    let place: Where
-    if Device.canRead {
-      place = .device
-    } else if Cloud.isConfigured {
-      let yes = await mayUseInternet(paper.rows.map(\.masked))
-      if !yes {
-        scanning = false
-        verdict = Verdict(tone: .plain, text: "Nothing was sent")
-        tag = nil
-        await say(Sentence(text: "All right. This phone needs the internet to check papers, so I cannot answer this one. Ask me again any time."))
-        phase = .done
-        return
-      }
-      phase = .looking
-      place = .cloud
-    } else {
-      return fail("This phone cannot read papers by itself yet.", tech: "On-device model: \(Device.status). No Firebase config for the internet path.")
-    }
-
-    // 3. Read the masked words into the fixed form, find candidates, let the model choose.
+    // 2. Read it on this phone. With Apple Intelligence, Apple's model reads the covered words; without it, plain code
+    //    does the basic check of a bill, and anything else is not read. A paper is never sent anywhere to be read.
     let reading: Reading
-    do {
+    if Device.canRead {
       do {
-        reading = try await Reader.read(paper, image: cg, question: question, matcher: matcher, where: place)
-      } catch where place == .device && "\(error)".localizedCaseInsensitiveContains("unsafe") && Cloud.isConfigured {
-        // Apple's on-device model declined this paper (its safety filter): the covered words go to the cloud
-        // instead, by the same rules as any other step up (design/HYBRID-ROUTING.md).
-        print("[WeKnow] on-device model declined; stepping up to the cloud with the covered words")
-        guard await mayUseInternet(paper.rows.map(\.masked)) else { throw error }
-        phase = .looking
-        reading = try await Reader.read(paper, question: question, matcher: matcher, where: .cloud)
+        // 3. Read the masked words into the fixed form, find candidates, let the model choose.
+        reading = try await Reader.read(paper, image: cg, question: question, matcher: matcher)
+      } catch {
+        readerLog.error("reading failed on the device: \(String(describing: error), privacy: .public)")
+        print("[WeKnow] reading failed on the device: \(error)")
+        let declined = "\(error)".localizedCaseInsensitiveContains("unsafe") || "\(error)".localizedCaseInsensitiveContains("sensitive")
+        if declined, BasicRead.kind(paper.rows.map(\.masked)) == .bill {
+          // Apple's on-device model declined this paper (its safety filter): a bill still gets the basic check by
+          // plain code, here on the phone. Nothing is sent.
+          print("[WeKnow] on-device model declined; the basic check by plain code instead")
+          reading = basicReading(paper, why: "Apple's on-device model declined this paper (\(error))")
+        } else {
+          fail("I could not finish reading this. Nothing was sent.", tech: "\(Device.engine): \(error)")
+          if declined {
+            // The on-device model's safety filter declined the picture: never a dead end.
+            verdict = Verdict(tone: .plain, text: "I couldn’t read this picture")
+            sentences = [Sentence(text: "Tell me in a few words what is wrong, and I will look it up.")]
+          }
+          choices = [NextQ(label: "Something is broken", action: .broken), NextQ(label: "It’s a quote or a bill", action: .quoteOrBill)]
+          return
+        }
       }
-    } catch {
-      readerLog.error("reading failed on \(place.rawValue, privacy: .public): \(String(describing: error), privacy: .public)")
-      print("[WeKnow] reading failed on \(place.rawValue): \(error)")
-      fail("I could not finish reading this. Nothing else was sent.", tech: "\(place == .device ? Device.engine : Cloud.engine): \(error)")
-      if "\(error)".localizedCaseInsensitiveContains("unsafe") || "\(error)".localizedCaseInsensitiveContains("sensitive") {
-        // The on-device model's safety filter declined the picture: never a dead end.
-        verdict = Verdict(tone: .plain, text: "I couldn’t read this picture")
-        sentences = [Sentence(text: "Tell me in a few words what is wrong, and I will look it up.")]
-      }
-      choices = [NextQ(label: "Something is broken", action: .broken), NextQ(label: "It’s a quote or a bill", action: .quoteOrBill)]
-      return
+    } else {
+      // This phone cannot read by itself: the basic check. Only a bill goes on from here.
+      guard let basic = await basicCheck(paper, question: question) else { return }
+      reading = basic
     }
     if Task.isCancelled { return }
-    let source = "[WeKnow] inference source: \(reading.where_ == .device ? "ON-DEVICE" : "CLOUD") — \(reading.engine) — read \(reading.readMs) ms, choose \(reading.chooseMs) ms — on-device status: \(Device.status)"
+    let source = "[WeKnow] inference source: \(reading.where_ == .device ? "ON-DEVICE" : "BASIC CHECK (plain code, no model)") — \(reading.engine) — read \(reading.readMs) ms, choose \(reading.chooseMs) ms — on-device status: \(Device.status)"
     print(source)
     readerLog.notice("\(source, privacy: .public)")
     scanning = false
@@ -750,7 +750,12 @@ final class AskModel {
     var answer: [Sentence] = []
     var stayed = ["The picture", "The words read from it"]
     var sources: [(String, String, String)] = []
-    var tech: [String] = [
+    var tech: [String] = reading.where_ == .basic ? [
+      "Basic check: \(reading.engine). The words read on this \(S.device) by Apple Vision were checked by plain code alone. No model read the paper, and nothing was sent to be read.",
+      "On-device model: \(Device.status)",
+      "Words read on this \(S.device) by Apple Vision; \(paper.bars.count) personal details covered",
+      "Knowledge pack: \(packVersion)",
+    ] : [
       "Read by: \(reading.engine)",
       "On-device model: \(Device.status)",
       "Read \(reading.readMs) ms, choose \(reading.chooseMs) ms; \(reading.offered) pack items offered",
@@ -768,6 +773,18 @@ final class AskModel {
       verdict = q.verdict
       // The point first, then which lines are not in the price book.
       answer = (q.sentences + Compose.notKnown(items)).map { Sentence(text: $0) }
+      // A quote or an invoice with priced lines can carry the same traps as a bill: the same plain rules read its
+      // covered words. They can only add a warning to the price verdict, never take one away.
+      let signs = Verdicts.bill(u, maskedText: paper.masked, known: []).flags.filter { $0 == .urgency || $0 == .instructionToAI }
+      if !signs.isEmpty {
+        if signs.contains(.instructionToAI) {
+          verdict = Verdict(tone: .stop, text: "Don’t pay this yet")
+        } else if verdict?.tone != .stop {
+          verdict = Verdict(tone: .warn, text: "Check this before you pay")
+        }
+        answer.insert(contentsOf: signs.map { Sentence(text: $0 == .urgency ? "It rushes you to pay." : "It has hidden words that try to tell a reader it is safe.") }, at: 0)
+        tech.append("Warning signs on this paper: \(signs.map(\.rawValue).joined(separator: ", ")).")
+      }
       // Most lines not matched: often the item names came out blurred, or they are not in the price book.
       if items.count >= 3, items.filter({ $0.state == .pending }).count * 2 > items.count {
         answer.append(Sentence(text: "If the photo is blurred, hold the phone still over the paper and take it again."))
@@ -866,7 +883,9 @@ final class AskModel {
       // A company WeKnow has no note of, and something already wrong: the phone cannot know whether this company
       // or these charges are real, so it asks the web (design/HYBRID-ROUTING.md). Only the company and the names
       // of the charges go, built by plain code; the answer can make the warning stronger, never weaker.
+      // (The basic check, with no model to read the words: only when a company's name was made out, as on the web.)
       if v.flags.contains(.newPayee), v.flags.count > 1 || !math.isEmpty,
+         reading.where_ == .device || u.payee != nil,
          let q = CloudPick.billQuestion(payee: u.payee, rows: printedRows, coveredNames: paper.coveredNames) {
         print("[WeKnow] bill check online, would send: \(q.replacingOccurrences(of: "\n", with: " / "))")
         if await mayUseInternet([q]) {
@@ -884,7 +903,9 @@ final class AskModel {
             case .unclear: "I also checked online, and found nothing clear about it."
             }
             answer.append(Sentence(text: said))
-            answer.append(contentsOf: c.points.map { Sentence(text: $0) })
+            // For "real" or "unclear" WeKnow says its own sentence and nothing more: words that came from the paper
+            // could otherwise steer the web's lines into saying it is safe.
+            if c.finding == .knownScamPattern || c.finding == .notFound { answer.append(contentsOf: c.points.map { Sentence(text: $0) }) }
             if c.finding == .knownScamPattern {
               verdict = Verdict(tone: .stop, text: "Don’t pay this yet")
               // Calling the company makes no sense when the company is the trap.
@@ -906,6 +927,9 @@ final class AskModel {
             tech.append("Online check failed: \(e)")
           }
         }
+      }
+      if reading.where_ == .basic {
+        answer.append(Sentence(text: "This was the basic check: accounts, totals and warning words, by plain rules on this \(S.device)."))
       }
       marks = billMarks(v, u: u, paper: paper)
       if let match = Verdicts.knownPayee(u.payee, in: known) {
@@ -934,6 +958,7 @@ final class AskModel {
         if !math.isEmpty { why.append("its numbers don’t add up") }
         next.append(NextQ(label: "I know this company, remember it", action: .rememberCareful(name, to, why)))
       }
+      if reading.where_ == .basic { next.append(NextQ(label: "How to get the full check", action: .fullCheck)) }
     case .problem:
       // Never one guess: the guide the model picked (if any) and the next closest ones, for the person to choose.
       let said = reading.problem.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1014,15 +1039,17 @@ final class AskModel {
       next = [NextQ(label: "It’s a quote or a bill", action: .quoteOrBill), NextQ(label: "Something is broken", action: .broken)]
     }
 
-    tag = reading.where_ == .device && escalated == nil ? .local : .cloud
+    // The paper itself never goes anywhere: only what a separate online step sent (a covered question, or a company
+    // and the names of its charges) is listed, and turns the tag to the internet.
+    tag = escalated == nil ? .local : .cloud
     receipt = Receipt(
       stayed: stayed,
-      sent: reading.where_ == .cloud ? paper.rows.map(\.masked) : (escalated.map { [$0.sent] } ?? []) + alsoSent,
+      sent: (escalated.map { [$0.sent] } ?? []) + alsoSent,
       sources: sources.map { (label: $0.0, date: $0.1, url: $0.2) },
       tech: tech)
     if verdict?.tone == .stop { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
     print("[WeKnow] result: \(verdict?.text ?? "-") | " + tech.joined(separator: " | "))
-    _ = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: reading.where_ == .device)
+    _ = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: escalated == nil)
 
     // 5. Say it, in the person's language (translated on this phone; what was kept above stays as composed).
     if translates {
@@ -1040,16 +1067,86 @@ final class AskModel {
       if Task.isCancelled { return }
       await say(s)
     }
-    if reading.where_ == .device && !toldLocal {
+    if reading.where_ == .device && escalated == nil && !toldLocal {
       toldLocal = true
       UserDefaults.standard.set(true, forKey: "toldLocal")
       await say(Sentence(text: "I worked that out right here, on this \(S.device). Nothing left it."))
-    } else if reading.where_ == .cloud {
-      await say(Sentence(text: "I checked the covered words on the internet. The picture stayed on this \(S.device)."))
     }
     if Task.isCancelled { return }
     choices = next
     phase = .done
+  }
+
+  // MARK: The basic check (a phone that cannot read by itself)
+
+  /// The basic check, for a phone that cannot read by itself (web/src/ask/flows.ts basicPaper and noModelPicture).
+  /// Plain code says what kind of paper this is from its covered words (Core/BasicRead.swift). A bill goes on through
+  /// the same plain rules as every bill (the reading is returned); a quote or anything else is not read, and WeKnow says
+  /// what the full check needs. A picture of a thing, with a question that names the problem, is answered from the
+  /// question's words, as if typed. Nil when it has answered here. The picture and its words never leave the phone.
+  private func basicCheck(_ paper: PaperText, question: String) async -> Reading? {
+    let rows = paper.rows.map(\.masked)
+    let kind = BasicRead.kind(rows)
+    print("[WeKnow] basic check (\(Device.status)): paper kind \(kind.rawValue)")
+    if kind == .bill { return basicReading(paper, why: "this \(S.device) cannot read by itself (\(Device.status))") }
+    scanning = false
+    if kind == .quote {
+      await needFullCheck(.quote, paper: paper)
+      return nil
+    }
+    // A thing, not a paper: the words of the question still find a guide or a price ("Why won't this drain?").
+    let aboutPaper = question.range(of: #"(?i)price|pay|bill|quote|fair|letter|cost|charg|estimate|invoice|owe|statement|fee"#, options: .regularExpression) != nil
+    let asked = PII.mask(question).replacingOccurrences(of: #"\[[a-z ]+(\d{4})?\]"#, with: " ", options: .regularExpression)
+    let named = Lexicon.tokenize(WordsAnswer.topic(asked)).contains { !Lexicon.stop.contains($0) }
+    if !aboutPaper, named {
+      await runWords(question)
+      if receipt != nil {
+        receipt?.stayed.insert("The picture", at: 0)
+        receipt?.tech.insert("This \(S.device) cannot look at pictures by itself (\(Device.status)): answered from the question's words only. The picture was not read or sent.", at: 0)
+      }
+      return nil
+    }
+    let wordy = rows.joined().filter { !$0.isWhitespace }.count >= 40
+    await needFullCheck(aboutPaper || wordy ? .paper : .thing, paper: paper)
+    return nil
+  }
+
+  /// The bill form filled by plain code alone: the kind, and who asks to be paid (a company in the person's notes when
+  /// its name is printed, else a letterhead that sounds like a company).
+  private func basicReading(_ paper: PaperText, why: String) -> Reading {
+    let u = BasicRead.bill(paper.rows.map(\.masked), known: Household.shared.known.map(\.name))
+    return Reading(understanding: u, where_: .basic, engine: "plain code on this \(S.device), because \(why)", readMs: 0, chooseMs: 0, offered: 0)
+  }
+
+  enum Need { case quote, paper, thing }
+
+  /// This phone cannot read this by itself, and nothing was sent: what it is, and what the full check needs.
+  private func needFullCheck(_ what: Need, paper: PaperText) async {
+    scanning = false
+    topic = nil
+    let head: String
+    let line: String
+    switch what {
+    case .quote:
+      head = "A quote needs the full check"
+      line = "I can see this is a quote. Checking each price needs a \(S.device) that can read papers by itself."
+    case .paper:
+      head = "This paper needs the full check"
+      line = "I could not tell what this paper is from its words alone. Reading it needs a \(S.device) that can read papers by itself."
+    case .thing:
+      head = "I can’t look at pictures on this \(S.device)"
+      line = "This \(S.device) cannot look at pictures by itself. Tell me in a few words what is wrong, and I will look that up."
+    }
+    var stayed = ["The picture", "The words read from it"]
+    if !paper.bars.isEmpty { stayed.insert(coveredList(paper.coveredKinds).capitalizedFirst + " (covered)", at: 1) }
+    let found = what == .quote ? "a quote" : "no bill"
+    receipt = Receipt(stayed: stayed, sent: [], sources: [], tech: [
+      "Basic check: this \(S.device) cannot read by itself (\(Device.status)). The words were read here by Apple Vision and \(paper.bars.count) personal details covered; plain code found \(found), so nothing more was read. No model read the paper, and nothing was sent to be read.",
+      "Knowledge pack: \(packVersion)",
+    ])
+    print("[WeKnow] result: \(head) | " + (receipt?.tech ?? []).joined(separator: " | "))
+    await answer(head, [line, Device.fullCheckNeeds, "Nothing was sent. Your \(what == .thing ? "picture" : "paper") stays on this \(S.device)."],
+                 next: [NextQ(label: "How to get the full check", action: .fullCheck)], tag: .local)
   }
 
   private static let carWords = ["brake", "rotor", "oil", "tire", "tyre", "alignment", "transmission", "coolant", "battery",

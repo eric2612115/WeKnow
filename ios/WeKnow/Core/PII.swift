@@ -48,7 +48,10 @@ enum PII {
     // A local number without the area code, "555-0134" (same as web/src/core/pii.ts).
     (.phone, re(#"(?<![\d-])\b\d{3}[\s.-]\d{4}\b(?![\d-])"#, false)),
     (.plate, re(#"\b(?:plate|lic(?:ense)?\.?\s*(?:no|#)?)\b[#:\s.-]*[A-Z0-9-]{4,8}\b"#, true)),
-    (.street, re(#"\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace)\b\.?"#, false)),
+    // The other ways an address is written: a PO box, a flat or unit (same as web/src/core/pii.ts).
+    (.street, re(#"\bP\.?\s?O\.?\s*Box\s+\d+\b"#, true)),
+    (.street, re(#"\b(?:Apt|Apartment|Unit|Suite|Ste)\.?\s*#?\s*(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{1,6}\b"#, true)),
+    (.street, re(#"\b\d{1,6}\s+(?:[A-Z][a-z]+\s){0,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Ter|Terrace|Cir|Circle|Hwy|Highway|Pkwy|Parkway|Trl|Trail|Hollow|Pike|Cove|Aly|Alley|Sq|Square|Loop|Run|Row|Close|Crescent)\b\.?"#, false)),
     // The same street in capitals, as an envelope window prints it: "512 BRAMBLE CT".
     (.street, re(#"\b\d{1,6}\s+(?:[A-Z]+\s){1,3}(?:ST|STREET|AVE|AVENUE|RD|ROAD|BLVD|DR|DRIVE|LN|LANE|CT|COURT|WAY|PL|PLACE|TER)\b\.?"#, false)),
     // A phone number already half hidden on the paper, "555-***-0134": the rest is still covered.

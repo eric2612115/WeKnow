@@ -1,7 +1,7 @@
-// Step 2: a model reads the masked words into a fixed form, plain code finds candidates in the knowledge pack,
-// and the model picks one candidate per line or none (the same three steps as web/src/reader.ts).
-// The model never sees the picture, a personal detail, or a price. Both models sit behind Apple's
-// LanguageModelSession: Apple's on-device model, or Gemini through Firebase AI Logic (Session.swift decides).
+// Step 2: Apple's on-device model reads the masked words into a fixed form, plain code finds candidates in the
+// knowledge pack, and the model picks one candidate per line or none (the same three steps as web/src/reader.ts).
+// The model never sees a personal detail or a price. A phone without Apple Intelligence gets the basic check by
+// plain code instead (Core/BasicRead.swift); a paper is never read anywhere but on the phone (Session.swift).
 
 import Foundation
 import CoreGraphics
@@ -10,10 +10,10 @@ import OSLog
 
 let readerLog = Logger(subsystem: "dev.weknow.app", category: "reader")
 
-enum Where: String, Sendable { case device, cloud }
+/// Where a paper was read: by Apple's on-device model, or by plain code alone (the basic check). Both on the phone.
+enum Where: String, Sendable { case device, basic }
 
-// A. The fixed form. One struct for both models: Apple's guided generation on the device, and the same
-// @Generable schema sent to Gemini as structured output in the cloud.
+// A. The fixed form, filled by Apple's guided generation on the device.
 
 @Generable
 enum PaperKind {

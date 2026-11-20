@@ -220,7 +220,8 @@ export function priceSources(items: PriceItem[]): SourceRow[] {
   return items.slice(0, 6).map((p) => {
     const fetched = p.sources.map((s) => s.fetched).filter(Boolean).sort().pop();
     return {
-      label: t('where.src.price', { name: p.name }),
+      // A price looked up on the web for a line the book did not have is named as that, never as the price book.
+      label: p.ref.startsWith('learned-') ? t('where.src.web', { name: p.name }) : t('where.src.price', { name: p.name }),
       date: fetched ? t('where.checked', { date: longDate(fetched) }) : '',
       url: p.sources[0]?.url,
       title: p.sources[0]?.title,
