@@ -157,6 +157,8 @@ final class AskModel {
     archive()
     picture = image
     self.question = question
+    answerLang = Lang.of(question)
+    asComposed = false
     task = Task { await run(image, question: question) }
   }
 
@@ -164,6 +166,12 @@ final class AskModel {
   /// Nothing is read until the person presses Send, then both go together.
   var draft: UIImage?
   var draftText = ""
+  /// The language of the person's own words in this conversation (Core/Lang.swift): the whole answer is given in it.
+  var answerLang = Lang.english
+  /// A verdict on a bill or a quote stays as composed: a warning about money is never left to a small model's
+  /// translation. Set once the paper's kind is known; cleared with each new question.
+  private var asComposed = false
+  private var translates: Bool { answerLang != Lang.english && !asComposed }
   /// Shown under the input bar when a question needs a picture that is not there yet.
   var draftHint: String?
 
@@ -195,6 +203,8 @@ final class AskModel {
     stop()
     archive()
     question = words
+    answerLang = Lang.of(words)
+    asComposed = false
     task = Task { await runWords(words) }
     return true
   }
@@ -241,7 +251,7 @@ final class AskModel {
         cloud = (ms, sent)
         found.tech.append("Gemini through Firebase AI Logic found nothing in the pack either (\(ms) ms). Sent: “\(sent)”.")
         // Not in WeKnow's own guides: a sourced answer from the web (Google Search grounding).
-        switch await CloudPick.searchGuide(q) {
+        switch await CloudPick.searchGuide(q, lang: answerLang) {
         case let .found(g):
           web = g
           cloud = (ms + g.ms, g.sent)
@@ -299,11 +309,8 @@ final class AskModel {
       return await guideIntro(g, tag: ran)
     case nil where web != nil:
       let g = web!
-      head = "I don’t have this in my guides."
-      lines.append("From \(S.words(g.sources.count)) \(g.sources.count == 1 ? "source" : "sources") on the web, about \(S.lower(g.title)):")
-      if let caution = g.safety { lines.append("First, be careful: \(caution)") }
-      for (i, step) in g.steps.enumerated() { lines.append("Step \(i + 1). \(step)") }
-      if let pro = g.callPro { lines.append("Call a professional if: \(S.lower(pro))") }
+      head = Lang.webWords[answerLang]?[0] ?? "I don’t have this in my guides."
+      lines += await webLines(g)
       for src in g.sources { sources.append((label: "From the web: \(src.title)", date: "found just now", url: src.url)) }
       searchChips = g.entryHTML
       keepWords(kind: .problem, title: g.title, car: false, head: head!, lines: lines)
@@ -328,6 +335,14 @@ final class AskModel {
     #if DEBUG
     print("[WeKnow] answer: \(head ?? "-") | \(lines.joined(separator: " | "))")
     #endif
+    var head = head, lines = lines, next = next
+    if translates {
+      let said = await Lang.say((head.map { [$0] } ?? []) + lines + next.map(\.label), in: answerLang)
+      let h = head == nil ? 0 : 1
+      if h == 1 { head = said[0] }
+      lines = Array(said[h ..< h + lines.count])
+      next = zip(next, said[(h + lines.count)...]).map { NextQ(label: $1, action: $0.action) }
+    }
     verdict = head.map { Verdict(tone: tone, text: $0) }
     tag = where_
     answerFrom = sentences.count
@@ -340,6 +355,28 @@ final class AskModel {
     if Task.isCancelled { return }
     choices = next
     phase = .done
+  }
+
+  /// A how-to from the web as sentences. The steps come back in the person's language; the fixed words around them
+  /// are put in that language too, so no line is half one language and half another.
+  private func webLines(_ g: WebGuide) async -> [String] {
+    var lines: [String] = []
+    let n = g.sources.count
+    if answerLang == Lang.english {
+      lines.append("From \(S.words(n)) \(n == 1 ? "source" : "sources") on the web, about \(S.lower(g.title)):")
+      if let caution = g.safety { lines.append("First, be careful: \(caution)") }
+      for (i, step) in g.steps.enumerated() { lines.append("Step \(i + 1). \(step)") }
+      if let pro = g.callPro { lines.append("Call a professional if: \(S.lower(pro))") }
+      return lines
+    }
+    let fixed: [String]
+    if let table = Lang.webWords[answerLang] { fixed = Array(table[1...]) }
+    else { fixed = await Lang.say(["Here is what I found on the web:", "First, be careful:", "Get a professional's help if:"], in: answerLang) }
+    lines.append("\(fixed[0]) \(g.title)")
+    if let caution = g.safety { lines.append("\(fixed[1]) \(caution)") }
+    for (i, step) in g.steps.enumerated() { lines.append("\(i + 1). \(step)") }
+    if let pro = g.callPro { lines.append("\(fixed[2]) \(pro)") }
+    return lines
   }
 
   private var topicName: String? {
@@ -583,6 +620,8 @@ final class AskModel {
   }
 
   private func say(_ s: Sentence) async {
+    var s = s
+    if translates { s.text = await Lang.say(s.text, in: answerLang) }
     sentences.append(s)
     speaking = sentences.count - 1
     await Voice.shared.say(s.text)
@@ -712,6 +751,7 @@ final class AskModel {
     if !paper.bars.isEmpty { stayed.insert(coveredList(paper.coveredKinds).capitalizedFirst + " (covered)", at: 1) }
 
     var next: [NextQ] = []
+    asComposed = u.kind == .bill || u.kind == .quote
     switch u.kind {
     case .quote:
       let items = Compose.lineItems(Verdicts.quote(u, pack: pack), labels: u.lines.map(\.label))
@@ -822,7 +862,7 @@ final class AskModel {
         print("[WeKnow] bill check online, would send: \(q.replacingOccurrences(of: "\n", with: " / "))")
         if await mayUseInternet([q]) {
           phase = .looking
-          switch await CloudPick.checkOnline(q) {
+          switch await CloudPick.checkOnline(q, pageNames: paper.coveredNames) {
           case let .found(c):
             escalated = (c.ms, c.sent)
             if c.finding == .knownScamPattern { scamOnline = true }
@@ -917,7 +957,7 @@ final class AskModel {
           tech.append("Cloud step failed: \(e)")
         }
         if guides.isEmpty, cloudNote == nil {
-          switch await CloudPick.searchGuide(words) {
+          switch await CloudPick.searchGuide(words, lang: answerLang) {
           case let .found(g):
             web = g
             if escalated == nil { escalated = (g.ms, g.sent) } else if escalated?.sent != g.sent { alsoSent.append(g.sent) }
@@ -938,11 +978,8 @@ final class AskModel {
       let looks = said.isEmpty ? "This looks like a problem at home." : echo ? "Here is what I have that might fit." : "This looks like: \(S.lower(said).trimmingCharacters(in: CharacterSet(charactersIn: ".")))."
       tech.append("Problem read: \(said.isEmpty ? "-" : said); guides offered: \(guides.map(\.ref).joined(separator: ", ").ifEmpty("none"))")
       if guides.isEmpty, let g = web {
-        verdict = Verdict(tone: .plain, text: "I don’t have this in my guides")
-        answer = [Sentence(text: "From \(S.words(g.sources.count)) \(g.sources.count == 1 ? "source" : "sources") on the web, about \(S.lower(g.title)):")]
-        if let caution = g.safety { answer.append(Sentence(text: "First, be careful: \(caution)")) }
-        for (i, step) in g.steps.enumerated() { answer.append(Sentence(text: "Step \(i + 1). \(step)")) }
-        if let pro = g.callPro { answer.append(Sentence(text: "Call a professional if: \(S.lower(pro))")) }
+        verdict = Verdict(tone: .plain, text: Lang.webWords[answerLang]?[0] ?? "I don’t have this in my guides")
+        answer = await webLines(g).map { Sentence(text: $0) }
         for src in g.sources { sources.append(("From the web: \(src.title)", "found just now", src.url)) }
         searchChips = g.entryHTML
       } else if guides.isEmpty {
@@ -972,7 +1009,14 @@ final class AskModel {
     print("[WeKnow] result: \(verdict?.text ?? "-") | " + tech.joined(separator: " | "))
     _ = keep(u, answer: answer, picture: UIImage(cgImage: cg), onDevice: reading.where_ == .device)
 
-    // 5. Say it.
+    // 5. Say it, in the person's language (translated on this phone; what was kept above stays as composed).
+    if translates {
+      let said = await Lang.say((verdict.map { [$0.text] } ?? []) + answer.map(\.text) + next.map(\.label), in: answerLang)
+      let h = verdict == nil ? 0 : 1
+      if let v = verdict { verdict = Verdict(tone: v.tone, text: said[0]) }
+      for i in answer.indices { answer[i].text = said[h + i] }
+      next = zip(next, said[(h + answer.count)...]).map { NextQ(label: $1, action: $0.action) }
+    }
     answerFrom = sentences.count
     phase = .speaking
     // The point is said first (it is shown in bold above the sentences).

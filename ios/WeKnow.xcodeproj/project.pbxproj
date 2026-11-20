@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		00653E0BBF217535DA1152EC /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BFA76F35B33758765E6FE559 /* FirebaseCore */; };
 		055023FCD17EF0EA2D7CDAEC /* PII.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120BB224E2870DFB336B8247 /* PII.swift */; };
+		0E412947C8EC215B0130EA1B /* Lang.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CBCB8F433811C0BE47ED80E /* Lang.swift */; };
 		1191542822C7E8F4C2E577C6 /* Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0A611B7EE4FF438C6226F3 /* Sheets.swift */; };
 		120D3FA27446278E647233B4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41F8BFA0757D95C69D9B2C31 /* Assets.xcassets */; };
 		130DDE22E72408E88619D9E4 /* quote-brakes.png in Resources */ = {isa = PBXBuildFile; fileRef = C55C38A648C97BC0A43950C8 /* quote-brakes.png */; };
@@ -50,6 +51,7 @@
 		09EC1C173EFEDF69F41970A4 /* WordsAnswer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsAnswer.swift; sourceTree = "<group>"; };
 		120BB224E2870DFB336B8247 /* PII.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PII.swift; sourceTree = "<group>"; };
 		1C72F42C38B0B9E2F1E9F80A /* Voice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Voice.swift; sourceTree = "<group>"; };
+		1CBCB8F433811C0BE47ED80E /* Lang.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lang.swift; sourceTree = "<group>"; };
 		1E0565F0DB743C935AB325BB /* CloudPick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudPick.swift; sourceTree = "<group>"; };
 		277F60625D448ED672A27153 /* Matcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matcher.swift; sourceTree = "<group>"; };
 		28E41881706273CAD8C71D94 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 			children = (
 				5EC5F341B909302B135AD694 /* BillMath.swift */,
 				9ED880263D677F644AEA0D86 /* Compose.swift */,
+				1CBCB8F433811C0BE47ED80E /* Lang.swift */,
 				277F60625D448ED672A27153 /* Matcher.swift */,
 				69C8DD1C71891C6D16731D8D /* Pack.swift */,
 				120BB224E2870DFB336B8247 /* PII.swift */,
@@ -349,6 +352,7 @@
 				43E5936879AF6DC7DFBE21EA /* HomeView.swift in Sources */,
 				2105CF9FD68386C6E15AC601 /* Household.swift in Sources */,
 				3B4738DE890C5DEF58EB1B27 /* Knowledge.swift in Sources */,
+				0E412947C8EC215B0130EA1B /* Lang.swift in Sources */,
 				65BE65FBE2B101F0E6B43A79 /* Matcher.swift in Sources */,
 				055023FCD17EF0EA2D7CDAEC /* PII.swift in Sources */,
 				31062B6FF968089248589B95 /* Pack.swift in Sources */,

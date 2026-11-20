@@ -64,7 +64,9 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
     stop()
     try? AVAudioSession.sharedInstance().setActive(true)
     let u = AVSpeechUtterance(string: spoken)
-    u.voice = voice
+    // A sentence in another language is read by a voice of that language (the answer is in the person's language).
+    let code = Lang.of(spoken)
+    u.voice = code == Lang.english ? voice : AVSpeechSynthesisVoice(language: Lang.speech(code)) ?? voice
     u.rate = AVSpeechUtteranceDefaultSpeechRate * Prefs.rate
     u.postUtteranceDelay = 0.3
     await withCheckedContinuation { c in

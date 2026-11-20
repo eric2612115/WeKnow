@@ -36,7 +36,10 @@ enum CloudPick {
   }
 
   /// Apple's on-device model reads the covered text once more. Nil when there is no on-device model.
-  static func reviewOnDevice(_ text: String) async -> Bool? {
+  /// `pageNames`, when the text was built from a paper: the words covered as people's names on that page. A
+  /// capitalised detail then counts only if it holds one of them, so the company that asks for the money (which is
+  /// the question) is not mistaken for a person.
+  static func reviewOnDevice(_ text: String, pageNames: Set<String>? = nil) async -> [String]? {
     guard Device.canRead else { return nil }
     let session = LanguageModelSession(model: Device.model, instructions: "You check text for personal details before it is sent anywhere.")
     guard let r = try? await session.respond(to: "Text:\n\"\"\"\n\(text)\n\"\"\"", generating: PrivacyReview.self, options: GenerationOptions(samplingMode: .greedy)) else { return nil }
@@ -47,11 +50,60 @@ enum CloudPick {
       let t = d.trimmingCharacters(in: .whitespacesAndNewlines)
       guard t.count >= 3, text.contains(t), !t.hasPrefix("[") else { return false }
       let digits = t.filter(\.isNumber).count
-      let name = t.first?.isUppercase == true && !t.hasPrefix(first)
+      var name = t.first?.isUppercase == true && !t.hasPrefix(first)
+      if name, let pageNames { name = t.lowercased().split { !$0.isLetter }.contains { pageNames.contains(String($0)) } }
       return digits >= 3 || t.contains("@") || name
     }
-    if !real.isEmpty { print("[WeKnow] on-device review flagged: \(real)") }
-    return !real.isEmpty
+    if !real.isEmpty { print("[WeKnow] on-device review flagged \(real.count) detail(s); covering them") }
+    return real.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+  }
+
+  enum Cleared { case ok(String), blocked(String) }
+
+  /// The exact text that may leave the phone. Plain code covers what it knows; Apple's on-device model then reads the
+  /// covered text, and anything personal it still finds is covered too (not sent, and not a reason to give up on the
+  /// question). A second reading must come back clean, or nothing goes.
+  static func cleared(_ text: String, limit: Int, pageNames: Set<String>? = nil) async -> Cleared {
+    // 1. Plain code. A sentence that carries a personal detail ("My name is ..., my phone is ...") stays on the phone
+    //    whole when another sentence holds the question; a lone sentence has its details covered in place.
+    let all = sentences(text)
+    var kept = all.filter { PII.spans($0).isEmpty && guardText($0) == nil }
+    if kept.isEmpty { kept = [PII.mask(text)] }
+    var covered = String(kept.joined(separator: " ").prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines)
+    if let why = guardText(covered) { return .blocked(why) }
+    // 2. Apple's on-device model reads what is left. A sentence it finds a detail in stays on the phone too.
+    guard let found = await reviewOnDevice(covered, pageNames: pageNames), !found.isEmpty else { return .ok(covered) }
+    let clean = kept.filter { s in !found.contains { s.contains($0) } }
+    if !clean.isEmpty, clean.count < kept.count {
+      covered = String(clean.joined(separator: " ").prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines)
+    } else {
+      for d in found.sorted(by: { $0.count > $1.count }) { covered = covered.replacingOccurrences(of: d, with: "[covered]") }
+      covered = covered.replacingOccurrences(of: #"(\[covered\][\s,]*)+"#, with: "[covered] ", options: .regularExpression)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    if let why = guardText(covered) { return .blocked(why) }
+    // 3. A second reading must come back clean, or nothing goes.
+    if let again = await reviewOnDevice(covered, pageNames: pageNames), !again.isEmpty {
+      return .blocked("the check on this phone thought a personal detail was left")
+    }
+    return .ok(covered)
+  }
+
+  /// Sentences and lines, each kept with its end mark. A full stop inside a number or an abbreviation does not end one.
+  static func sentences(_ text: String) -> [String] {
+    var out: [String] = []
+    var cur = ""
+    let chars = Array(text)
+    for (i, c) in chars.enumerated() {
+      if c == "\n" { out.append(cur); cur = ""; continue }
+      cur.append(c)
+      let next = i + 1 < chars.count ? chars[i + 1] : " "
+      if "。？！".contains(c) || ("?!".contains(c) && next.isWhitespace) || (c == "." && next.isWhitespace && cur.split(separator: " ").last.map { $0.count > 3 } == true) {
+        out.append(cur); cur = ""
+      }
+    }
+    out.append(cur)
+    return out.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
   }
 
   /// Covers, checks twice, then asks Gemini for the one pack item the words are about.
@@ -59,9 +111,11 @@ enum CloudPick {
   static let catchAll: Set<String> = ["appliance-repair", "handyman-job", "handyman-hourly", "electrician-service-call", "plumber-service-call"]
 
   static func pick(_ words: String, pack: Pack) async -> Outcome {
-    let covered = PII.mask(words).prefix(400).trimmingCharacters(in: .whitespacesAndNewlines)
-    if let why = guardText(covered) { return .blocked(why) }
-    if await reviewOnDevice(covered) == true { return .blocked("the check on this phone thought a personal detail was left") }
+    let covered: String
+    switch await cleared(words, limit: 400) {
+    case let .ok(t): covered = t
+    case let .blocked(why): return .blocked(why)
+    }
 
     let guides = pack.guides.map { "\($0.ref): \($0.name)" }.joined(separator: "\n")
     let prices = pack.prices.map { "\($0.ref): \($0.name)" }.joined(separator: "\n")
@@ -112,22 +166,24 @@ extension CloudPick {
   enum WebOutcome { case found(WebGuide), nothing(ms: Int, sent: String), blocked(String), failed(String) }
 
   /// The model sometimes answers without searching; one more try in that case.
-  static func searchGuide(_ words: String) async -> WebOutcome {
-    let first = await searchGuideOnce(words)
-    if case .nothing = first { return await searchGuideOnce(words) }
+  static func searchGuide(_ words: String, lang: String = Lang.english) async -> WebOutcome {
+    let first = await searchGuideOnce(words, lang: lang)
+    if case .nothing = first { return await searchGuideOnce(words, lang: lang) }
     return first
   }
 
-  private static func searchGuideOnce(_ words: String) async -> WebOutcome {
-    let covered = String(PII.mask(words).prefix(300)).trimmingCharacters(in: .whitespacesAndNewlines)
-    if let why = guardText(covered) { return .blocked(why) }
-    if await reviewOnDevice(covered) == true { return .blocked("the check on this phone thought a personal detail was left") }
+  private static func searchGuideOnce(_ words: String, lang: String) async -> WebOutcome {
+    let covered: String
+    switch await cleared(words, limit: 300) {
+    case let .ok(t): covered = t
+    case let .blocked(why): return .blocked(why)
+    }
     let prompt = """
     Search the web for how a homeowner can safely deal with this: "\(covered)".
     Use what you find with Google Search, then end your answer with one line of JSON:
     {"title": short plain name of the problem, "steps": [at most 6 short plain steps a careful older person can do], \
     "safety": one short caution or null, "callPro": when to call a professional, or null}
-    Do not put prices in the steps.
+    Do not put prices in the steps. Write the title, the steps, safety and callPro in \(Lang.name(lang)).
     """
     let t0 = Date()
     do {
@@ -198,8 +254,13 @@ extension CloudPick {
       }
       if charges.count >= 4 { break }
     }
+    // The story stops at the first covered detail (what follows is about the person), and loses a dangling ending.
     let story = rows.first { $0.range(of: #"(?i)\b(inheritance|unclaimed|lottery|prize|winnings|release of (funds|your fund))\b"#, options: .regularExpression) != nil }
-      .map { String(clean($0).prefix(140)) }
+      .map { row in
+        String(clean(String(row[..<(row.firstIndex(of: "[") ?? row.endIndex)]))
+          .replacingOccurrences(of: #"(?i)\s+(on behalf(\s+of)?(\s+name)?|in the name(\s+of)?|for|to|of)$"#, with: "", options: .regularExpression)
+          .prefix(140))
+      }
     guard !who.isEmpty || !charges.isEmpty else { return nil }
     var lines: [String] = []
     if !who.isEmpty { lines.append("Who asks to be paid: \(who)") }
@@ -210,19 +271,21 @@ extension CloudPick {
 
   /// The model sometimes answers without searching; up to two more tries then, since an answer without sources is
   /// never shown.
-  static func checkOnline(_ question: String) async -> CheckOutcome {
-    var last = await checkOnlineOnce(question)
+  static func checkOnline(_ question: String, pageNames: Set<String> = []) async -> CheckOutcome {
+    var last = await checkOnlineOnce(question, pageNames: pageNames)
     for _ in 0..<2 {
       guard case .nothing = last else { break }
-      last = await checkOnlineOnce(question)
+      last = await checkOnlineOnce(question, pageNames: pageNames)
     }
     return last
   }
 
-  private static func checkOnlineOnce(_ question: String) async -> CheckOutcome {
-    let covered = String(PII.mask(question).prefix(500)).trimmingCharacters(in: .whitespacesAndNewlines)
-    if let why = guardText(covered) { return .blocked(why) }
-    if await reviewOnDevice(covered) == true { return .blocked("the check on this phone thought a personal detail was left") }
+  private static func checkOnlineOnce(_ question: String, pageNames: Set<String>) async -> CheckOutcome {
+    let covered: String
+    switch await cleared(question, limit: 500, pageNames: pageNames) {
+    case let .ok(t): covered = t
+    case let .blocked(why): return .blocked(why)
+    }
     let prompt = """
     A person received a paper asking for money:
     \(covered)
