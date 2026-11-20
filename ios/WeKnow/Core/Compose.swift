@@ -39,7 +39,7 @@ enum S {
     f.currencyCode = "USD"
     f.locale = Locale(identifier: "en_US")
     f.maximumFractionDigits = n.rounded() == n ? 0 : 2
-    f.minimumFractionDigits = 0
+    f.minimumFractionDigits = f.maximumFractionDigits
     return f.string(from: NSNumber(value: n)) ?? "$\(n)"
   }
 

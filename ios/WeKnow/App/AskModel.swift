@@ -698,6 +698,7 @@ final class AskModel {
       u.kind = .problem
     }
     var escalated: (ms: Int, sent: String)?
+    var alsoSent: [String] = [] // a second request with different words (the web search), listed too
     var answer: [Sentence] = []
     var stayed = ["The picture", "The words read from it"]
     var sources: [(String, String, String)] = []
@@ -888,20 +889,68 @@ final class AskModel {
       var refs: [String] = u.problemRef.map { [$0] } ?? []
       for c in matcher.candidates("\(said) \(question)", kind: .guide, minCoverage: 0.2) where !refs.contains(c.ref) { refs.append(c.ref) }
       var guides = refs.prefix(3).compactMap { pack.guide($0) }
-      // Nothing on the phone fits: the covered description goes to the cloud by itself (after the one-time yes).
-      if guides.isEmpty, reading.where_ == .device, await mayUseInternet([PII.mask("\(said) \(question)")]) {
-        if case let .found(ref, ms, sent) = await CloudPick.pick("\(said) \(question)", pack: pack), let g = pack.guide(ref) {
-          guides = [g]
+      var web: WebGuide?
+      var cloudNote: String?
+      // Nothing on the phone fits: the covered description goes to the cloud by itself (after the one-time yes):
+      // first the whole pack index, then, when no guide fits, a sourced how-to from the web, as for typed questions.
+      // Anything that left the phone is listed in the receipt and turns the tag to "Checked online", found or not.
+      // The same words twice (the picture's reading only echoed the question) are sent once.
+      let norm = { (t: String) in t.lowercased().trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)) }
+      let words = said.isEmpty || norm(said) == norm(question) ? question : "\(said) \(question)"
+      if guides.isEmpty, reading.where_ == .device, await mayUseInternet([PII.mask(words)]) {
+        switch await CloudPick.pick(words, pack: pack) {
+        case let .found(ref, ms, sent):
           escalated = (ms, sent)
-          tech.append("The phone found no guide, so Gemini through Firebase AI Logic chose \(ref) from the whole pack index in \(ms) ms. Sent: “\(sent)”.")
+          if let g = pack.guide(ref) {
+            guides = [g]
+            tech.append("The phone found no guide, so Gemini through Firebase AI Logic chose \(ref) from the whole pack index in \(ms) ms. Sent: “\(sent)”.")
+          } else {
+            tech.append("Gemini through Firebase AI Logic named \(ref), which is not a guide (\(ms) ms). Sent: “\(sent)”.")
+          }
+        case let .nothing(ms, sent):
+          escalated = (ms, sent)
+          tech.append("Gemini through Firebase AI Logic found no guide in the pack either (\(ms) ms). Sent: “\(sent)”.")
+        case let .blocked(why):
+          cloudNote = "I did not use the internet, because \(why)."
+          tech.append("Cloud step stopped on the phone: \(why).")
+        case let .failed(e):
+          tech.append("Cloud step failed: \(e)")
+        }
+        if guides.isEmpty, cloudNote == nil {
+          switch await CloudPick.searchGuide(words) {
+          case let .found(g):
+            web = g
+            if escalated == nil { escalated = (g.ms, g.sent) } else if escalated?.sent != g.sent { alsoSent.append(g.sent) }
+            tech.append("Google Search grounding through Firebase AI Logic: \(g.sources.count) web sources, \(g.ms) ms. Sent: “\(g.sent)”.")
+          case let .nothing(ms, sent):
+            if escalated == nil { escalated = (ms, sent) } else if escalated?.sent != sent { alsoSent.append(sent) }
+            tech.append("Web search came back without usable sources (\(ms) ms).")
+          case let .blocked(why):
+            cloudNote = "I did not use the internet, because \(why)."
+            tech.append("Web search stopped on the phone: \(why).")
+          case let .failed(e):
+            cloudNote = "I tried to look this up online, but it did not work this time."
+            tech.append("Web search failed: \(e)")
+          }
         }
       }
       let echo = said.lowercased().trimmingCharacters(in: .punctuationCharacters) == question.lowercased().trimmingCharacters(in: .punctuationCharacters)
       let looks = said.isEmpty ? "This looks like a problem at home." : echo ? "Here is what I have that might fit." : "This looks like: \(S.lower(said).trimmingCharacters(in: CharacterSet(charactersIn: ".")))."
       tech.append("Problem read: \(said.isEmpty ? "-" : said); guides offered: \(guides.map(\.ref).joined(separator: ", ").ifEmpty("none"))")
-      if guides.isEmpty {
+      if guides.isEmpty, let g = web {
+        verdict = Verdict(tone: .plain, text: "I don’t have this in my guides")
+        answer = [Sentence(text: "From \(S.words(g.sources.count)) \(g.sources.count == 1 ? "source" : "sources") on the web, about \(S.lower(g.title)):")]
+        if let caution = g.safety { answer.append(Sentence(text: "First, be careful: \(caution)")) }
+        for (i, step) in g.steps.enumerated() { answer.append(Sentence(text: "Step \(i + 1). \(step)")) }
+        if let pro = g.callPro { answer.append(Sentence(text: "Call a professional if: \(S.lower(pro))")) }
+        for src in g.sources { sources.append(("From the web: \(src.title)", "found just now", src.url)) }
+        searchChips = g.entryHTML
+      } else if guides.isEmpty {
         verdict = Verdict(tone: .plain, text: "I don’t have steps for this yet")
-        answer = [Sentence(text: looks), Sentence(text: "Tell me in a few words what is wrong, and I will look again.")]
+        answer = [Sentence(text: looks), Sentence(text: escalated == nil
+          ? "Tell me in a few words what is wrong, and I will look again."
+          : "I looked in my guides and online, and found nothing I can trust. Tell me in a few words what is wrong, and I will look again.")]
+        if let cloudNote { answer.append(Sentence(text: cloudNote)) }
       } else {
         verdict = Verdict(tone: .plain, text: "Which one is it?")
         answer = [Sentence(text: looks)]
@@ -916,7 +965,7 @@ final class AskModel {
     tag = reading.where_ == .device && escalated == nil ? .local : .cloud
     receipt = Receipt(
       stayed: stayed,
-      sent: reading.where_ == .cloud ? paper.rows.map(\.masked) : escalated.map { [$0.sent] } ?? [],
+      sent: reading.where_ == .cloud ? paper.rows.map(\.masked) : (escalated.map { [$0.sent] } ?? []) + alsoSent,
       sources: sources.map { (label: $0.0, date: $0.1, url: $0.2) },
       tech: tech)
     if verdict?.tone == .stop { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
