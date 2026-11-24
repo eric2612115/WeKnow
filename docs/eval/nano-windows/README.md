@@ -98,3 +98,13 @@ Same method as above (375 px in a 375 x 812 frame; Welcome by setting `started` 
 | h2-03-welcome-375.png | Welcome, 375 px: the same cards |
 | h2-04-welcome-1280.png | Welcome, 1280 px |
 | h2-05-help-desktop.png | Help, desktop (cards about 390 px): the whole crop, with the amount box and the due date |
+
+## Round 8, real Wi-Fi off (2026-11-24, live build 35b4d67, `index-BhQVAu0p.js`)
+
+Eric turned Wi-Fi off by hand (offline 15:38:23 to 15:39:27 UTC) and pressed Send in tabs that had been staged while online. These were taken after Wi-Fi was back on, so the top bar no longer says "No internet". The answers and tags are as they were made.
+
+| File | What it shows |
+|---|---|
+| r8-01-wifi-off-paper3.png | Paper 3 (bill-3 PDF): Stop, new account ending 7730, paid at 4821 before (from notes), rushes you; "No internet. Answered on this computer." |
+| r8-02-wifi-off-paper6.png | Paper 6 (quote-1 PNG): line 4 $185 high, lines 1-3 and 5-9 Fair, line 10 Below usual; "No internet. Answered on this computer." |
+| r8-03-wifi-off-q10.png | Question 10: "This one needs the internet, and this computer has no connection right now. Ask me again when it is back." |
