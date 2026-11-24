@@ -67,3 +67,9 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 | r6-02-clean-paper6-line10-fair.jpg | Paper 6 after Delete my data: line 9 not checked, line 10 "Fair" (matched to "Clean a dryer vent") |
 | r6-03-never-setting-q10.jpg | Use the internet = Never: question 10 answers "I don't know that one yet ... You set WeKnow to answer only from this computer" |
 | r6-04-simulated-offline-q10.jpg | Simulated offline (page told it is offline, its network requests blocked): question 10, "No internet" in the top bar |
+
+## Round 7 (2026-11-24, live build 95f2419)
+
+| File | What it shows |
+|---|---|
+| r7-01-simulated-offline-q10-needs-internet.jpg | Simulated offline: question 10 now says "This one needs the internet, and this computer has no connection right now. Ask me again when it is back." |
