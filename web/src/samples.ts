@@ -1,6 +1,6 @@
 // Sample pictures for anyone without a quote or a bill to hand: the labelled fixtures (fictional names and numbers),
 // the same two the iPhone offers. Choosing one attaches the whole paper to the question box; its card shows the top
-// of the paper, large enough to read.
+// of the paper, large enough to read (assets/samples/*-top.png: fixtures/*.html rendered at 2x, 720x320 from 40,62).
 
 import quoteUrl from '../fixtures/quote-brakes.png';
 import billUrl from '../fixtures/bill-changed-account.png';

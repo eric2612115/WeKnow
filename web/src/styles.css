@@ -523,15 +523,26 @@
       background 0.14s,
       transform 0.14s var(--ease-wk);
   }
-  .sample-card img {
+  /* the whole crop at every card width (it is 9:4); lines that run on past it fade out like the rest of the page */
+  .sample-pic {
+    position: relative;
     display: block;
-    width: 100%;
-    height: 6.875rem;
-    object-fit: cover;
-    object-position: left top;
+    overflow: hidden;
     border-radius: 0.875rem;
     background: #fff;
     box-shadow: 0 0 0 1px var(--hair);
+  }
+  .sample-pic img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 9 / 4;
+  }
+  .sample-pic::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 12%;
+    background: linear-gradient(to right, rgb(255 255 255 / 0), #fff 90%);
   }
   .sample-title {
     font: 600 1rem/1.25 var(--font-sans);

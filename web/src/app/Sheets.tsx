@@ -241,7 +241,9 @@ function ConfirmSheet({ s }: { s: Extract<SheetState, { type: 'confirm' }> | nul
 export function SampleCard({ s, pressed, onPress }: { s: Sample; pressed?: boolean; onPress: () => void }) {
   return (
     <button type="button" className="sample-card" aria-pressed={pressed} onClick={onPress}>
-      <img src={s.top} alt="" />
+      <span className="sample-pic">
+        <img src={s.top} alt="" />
+      </span>
       <span className="sample-title">{t(s.title)}</span>
       <span className="sample-q">“{t(s.q)}”</span>
     </button>
