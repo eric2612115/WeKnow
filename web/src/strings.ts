@@ -6,9 +6,10 @@
 export const EN = {
   // Welcome and Allow
   'welcome.line': 'Point at it. Ask out loud. Hear what to do.',
-  'welcome.q1': 'Why won’t this drain?',
   'welcome.q2': 'Is this a fair price?',
   'welcome.q3': 'Should I pay this?',
+  'sample.quote': 'A repair quote',
+  'sample.bill': 'A bill',
   'welcome.start': 'Start',
   'welcome.fine': 'No account. Show it, say it or type it. Turn your sound up.',
   'allow.title': 'Press Allow',

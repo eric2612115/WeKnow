@@ -1,9 +1,11 @@
-// Sample pictures for anyone without a sink, a quote or a bill to hand. The quote and the bill are the labelled
-// fixtures (fictional names and numbers); the sink is a drawing. Choosing one attaches it to the question box.
+// Sample pictures for anyone without a quote or a bill to hand: the labelled fixtures (fictional names and numbers),
+// the same two the iPhone offers. Choosing one attaches the whole paper to the question box; its card shows the top
+// of the paper, large enough to read.
 
 import quoteUrl from '../fixtures/quote-brakes.png';
 import billUrl from '../fixtures/bill-changed-account.png';
-import drainUrl from './assets/samples/drain.jpg';
+import quoteTop from './assets/samples/quote-top.png';
+import billTop from './assets/samples/bill-top.png';
 import { attach, detach, startOver, view, type Paper } from './ask/conversation';
 import { isPdf, openPdf } from './pdf';
 import { cannotTake } from './ask/flows';
@@ -11,15 +13,17 @@ import { setBox } from './ask/box';
 import { t, type StringId } from './strings';
 
 export interface Sample {
-  id: 'drain' | 'quote' | 'bill';
+  id: 'quote' | 'bill';
   url: string;
+  /** the top of the paper, for its card */
+  top: string;
+  title: StringId;
   q: StringId;
 }
 
 export const SAMPLES: Sample[] = [
-  { id: 'drain', url: drainUrl, q: 'welcome.q1' },
-  { id: 'quote', url: quoteUrl, q: 'welcome.q2' },
-  { id: 'bill', url: billUrl, q: 'welcome.q3' },
+  { id: 'quote', url: quoteUrl, top: quoteTop, title: 'sample.quote', q: 'welcome.q2' },
+  { id: 'bill', url: billUrl, top: billTop, title: 'sample.bill', q: 'welcome.q3' },
 ];
 
 export const sampleQuestion = (s: Sample) => t(s.q);

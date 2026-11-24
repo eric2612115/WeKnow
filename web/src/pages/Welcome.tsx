@@ -1,4 +1,4 @@
-// First open: what WeKnow is, in one line and three pictures, and one button. Start is the press that unlocks
+// First open: what WeKnow is, in one line and two sample papers, and one button. Start is the press that unlocks
 // sound and opens the system box for the camera and microphone; "Press Allow" points at that box.
 
 import { useState } from 'react';
@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { Wordmark } from '../ui/controls';
 import { t } from '../strings';
 import { attachSample, SAMPLES, type Sample } from '../samples';
+import { SampleCard } from '../app/Sheets';
 import { setPrefs } from '../store/prefs';
 import { permission, requestCameraAndMic } from '../engine/camera';
 import { deviceWord } from '../engine/device';
@@ -16,7 +17,7 @@ export default function Welcome() {
   const [allow, setAllow] = useState(false);
   const device = deviceWord();
 
-  // Start, or one of the three pictures: the same press, and a picture then asks its own question at once.
+  // Start, or one of the sample papers: the same press, and a picture then asks its own question at once.
   const start = async (sample?: Sample['id']) => {
     unlockSound();
     const [cam, mic] = await Promise.all([permission('camera'), permission('microphone')]);
@@ -75,19 +76,10 @@ export default function Welcome() {
             ))}
         </h1>
       </div>
-      <ul className="grid w-full max-w-[46rem] grid-cols-3 gap-[0.7rem] lg:max-w-[44rem] lg:gap-[1.4rem]">
+      <ul className="grid w-full max-w-[34rem] grid-cols-2 gap-3">
         {SAMPLES.map((s) => (
-          <li key={s.id}>
-            <button
-              type="button"
-              className="flex w-full flex-col items-center gap-2 transition-transform duration-150 hover:-translate-y-0.5"
-              onClick={() => void start(s.id)}
-            >
-              <span className="thumb">
-                <img src={s.url} alt="" />
-              </span>
-              <q className="text-small leading-tight font-semibold lg:text-[1.2rem]">{t(s.q)}</q>
-            </button>
+          <li key={s.id} className="flex">
+            <SampleCard s={s} onPress={() => void start(s.id)} />
           </li>
         ))}
       </ul>

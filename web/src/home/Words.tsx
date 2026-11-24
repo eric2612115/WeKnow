@@ -20,7 +20,7 @@ import { openPicture } from '../ui/PictureViewer';
 import { t, money } from '../strings';
 import { projectName, useData } from '../store/data';
 import { explainCurrent } from '../app/explainOpen';
-import { SampleButtons } from '../app/Sheets';
+import { SampleButtons, SampleCard } from '../app/Sheets';
 import type { LineItem, Receipt } from '../answer/types';
 
 /** The first sentence: the point, in bold. A tag only for a warning or a stop; never a band, never a green tick. */
@@ -280,7 +280,7 @@ function Buttons() {
   );
 }
 
-/** Offered inside an answer (no camera, say): the three sample pictures, each attaching itself with its question. */
+/** Offered inside an answer (no camera, say): the sample papers, each attaching itself with its question. */
 export function SamplesRow() {
   return (
     <div className="mt-4 max-w-[26rem]">
@@ -297,15 +297,9 @@ function SampleCards() {
   return (
     <section aria-label={t('home.samples.short')}>
       <p className="mb-2 text-center text-[0.9375rem] font-medium text-ink-2">{t('home.samples.short')}</p>
-      <div className="mx-auto grid max-w-[34rem] grid-cols-3 gap-2 md:gap-3">
+      <div className="mx-auto grid max-w-[34rem] grid-cols-2 gap-3">
         {SAMPLES.map((s) => (
-          <button key={s.id} type="button" className="sample-card" aria-pressed={v.chosen?.sample === s.id} onClick={() => void attachSample(s.id)}>
-            {/* a paper is shown from its top-left corner, close enough for its printed lines to be seen */}
-            <div className="overflow-hidden bg-fill-2">
-              <img src={s.url} alt="" className={s.id === 'drain' ? '' : 'origin-[6%_4%] scale-[1.7]'} />
-            </div>
-            <span>{t(s.q)}</span>
-          </button>
+          <SampleCard key={s.id} s={s} pressed={v.chosen?.sample === s.id} onPress={() => void attachSample(s.id)} />
         ))}
       </div>
     </section>

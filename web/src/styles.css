@@ -505,19 +505,20 @@
     border-radius: 1rem;
     cursor: zoom-in;
   }
-  /* a sample picture on the start screen: a small card, the picture over its question */
+  /* a sample paper as a card (as on the iPhone): the top of the paper, what it is, and its question */
   .sample-card {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
     min-width: 0;
-    padding: 0;
+    padding: 0.625rem;
     border: 0;
-    border-radius: 1rem;
-    overflow: hidden;
+    border-radius: 1.25rem;
     background: var(--card-2);
     color: var(--ink);
     text-align: left;
-    font: 500 0.9375rem/1.3 var(--font-sans);
     transition:
       background 0.14s,
       transform 0.14s var(--ease-wk);
@@ -525,12 +526,20 @@
   .sample-card img {
     display: block;
     width: 100%;
-    aspect-ratio: 4 / 3;
+    height: 6.875rem;
     object-fit: cover;
-    background: var(--fill-2);
+    object-position: left top;
+    border-radius: 0.875rem;
+    background: #fff;
+    box-shadow: 0 0 0 1px var(--hair);
   }
-  .sample-card span {
-    padding: 0.55rem 0.7rem 0.65rem;
+  .sample-title {
+    font: 600 1rem/1.25 var(--font-sans);
+  }
+  .sample-q {
+    margin-top: -0.25rem;
+    color: var(--ink-2);
+    font: 400 0.875rem/1.3 var(--font-sans);
     overflow-wrap: normal;
   }
   .sample-card[aria-pressed="true"] {

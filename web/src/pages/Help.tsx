@@ -1,4 +1,4 @@
-// Help: how it works (and hear it), the three sample pictures, the words WeKnow always understands, and setting
+// Help: how it works (and hear it), the sample papers, the words WeKnow always understands, and setting
 // it up for someone else. At most 52rem wide.
 
 import { Link, useNavigate } from 'react-router';
