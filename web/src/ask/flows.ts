@@ -12,7 +12,7 @@ import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts, withBillMath } from '../core/verdict';
-import { amountsFromRows, amountsIn, billMath, keepPrinted, payToOf, type BillMath } from '../core/billMath';
+import { amountsFromRows, amountsIn, billMath, endingPrinted, keepPrinted, namePrinted, payToOf, type BillMath } from '../core/billMath';
 import { guideByRef, priceByRef, proPrice } from '../core/packs';
 import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, sharesJobWord, terms, type ItemKind, type Scored } from './words';
 import { afterConsent, gate, route, type Reason } from './router';
@@ -1892,6 +1892,14 @@ async function billFlow(c: Ctx) {
   // The paper's own words (a PDF's text or the recognizer's lines), read on this device only.
   const words = await paperWords(c);
   alive(t);
+  // A company or account ending the model gave that is printed nowhere on the paper was made up: it is not used, so
+  // no note can match it and no account check rests on it (the letterhead below may still name the company).
+  if (words?.length) {
+    const r = reading.understanding;
+    const payee = r.payee && namePrinted(r.payee, words) ? r.payee : null;
+    const payTo = r.payTo && endingPrinted(r.payTo, words) ? r.payTo : null;
+    if (payee !== r.payee || payTo !== r.payTo) reading.understanding = { ...r, payee, payTo };
+  }
   // When the model named no one, plain code reads who asks to be paid off the letterhead. When it named a bank and
   // the letterhead names someone else, the letterhead wins: the bank in the payment box only holds the account
   // (seen on Gemini Nano: "Thistlewick Savings Bank" for a letter from "Palisade Sovereign Reserve Trust").
@@ -1990,7 +1998,7 @@ async function billFlow(c: Ctx) {
         : []),
       `Bill flags: ${v.flags.join(', ') || 'none'}.`,
       math
-        ? `Plain-code checks on the paper's own words (${words?.length ?? 0} lines, on this ${dev()}): ${math.checked} printed ${math.checked === 1 ? 'sum' : 'sums'} checked, ${math.misses.length} off by more than $1; ${math.accounts.length} customer account ${math.accounts.length === 1 ? 'number' : 'numbers'} found.`
+        ? `Plain-code checks on the paper's own words (${words?.length ?? 0} lines, on this ${dev()}): ${math.checked} printed ${math.checked === 1 ? 'sum' : 'sums'} checked, ${math.misses.length} off by more than $1;${math.conflicts.length ? ` printed with two different amounts, so not taken: ${math.conflicts.join(', ')};` : ''} ${math.accounts.length} customer account ${math.accounts.length === 1 ? 'number' : 'numbers'} found.`
         : `Plain-code checks on the paper's own words: none (no words could be read on this ${dev()}).`,
     ]),
   };

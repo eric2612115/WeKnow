@@ -26,9 +26,16 @@ enum BillMath {
   /// A money amount; a rate such as "(2.00%)" is not one.
   static let money = #"\$?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})(?!\d|\s?%)"#
 
-  /// The labelled amounts on the paper (first one wins), from rows like "Subtotal ........ $324.99".
+  /// The labelled amounts on the paper, from rows like "Subtotal ........ $324.99". One amount printed beside a label
+  /// is the paper's fact; a label printed beside two different amounts ("Amount due $120.00" at the top, "Amount due
+  /// $210.00" on the stub) confirms neither, so it is left out and no sum is checked or said with either.
   static func amounts(_ rows: [String]) -> [Field: Double] {
+    readAmounts(rows).amounts
+  }
+
+  static func readAmounts(_ rows: [String]) -> (amounts: [Field: Double], conflicts: [Field]) {
     var out: [Field: Double] = [:]
+    var conflicts: [Field] = []
     for raw in rows {
       // OCR often reads 0 as O inside numbers.
       let row = raw.replacingOccurrences(of: #"(?<=\d)[Oo](?=[\d.,])|(?<=[\d.,])[Oo](?=\d|\b)"#, with: "0", options: .regularExpression)
@@ -40,16 +47,51 @@ enum BillMath {
         var lower = cell.lowercased().trimmingCharacters(in: .whitespaces)
         if lower.contains("[") { continue } // "Payment [account ending 0931]" is not a label
         if lower.hasPrefix("includes ") { lower.removeFirst("includes ".count) }
-        guard let (field, _) = labels.first(where: { lower.range(of: $0.1, options: .regularExpression) != nil }),
-              out[field] == nil else { continue }
+        guard let (field, _) = labels.first(where: { lower.range(of: $0.1, options: .regularExpression) != nil }) else { continue }
         let rest = cells[i...].joined(separator: "   ")
         guard let m = rest.range(of: money, options: .regularExpression),
               let n = Double(rest[m].replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces))
         else { continue }
-        out[field] = n
+        guard let first = out[field] else { out[field] = n; continue }
+        // Only an amount in the label's own cell can be a second amount for it; one found in a cell further right
+        // may belong to another column.
+        let beside = cell.range(of: money, options: .regularExpression) != nil
+        if beside, abs(first - n) > 0.005, !conflicts.contains(field) { conflicts.append(field) }
       }
     }
-    return out
+    for f in conflicts { out[f] = nil }
+    return (out, conflicts)
+  }
+
+  /// Words a company's name may carry or drop between the paper and a reading of it ("Riverbend Electric Co-op").
+  static let nameFiller: Set<String> = ["the", "and", "of", "inc", "llc", "ltd", "co", "op", "corp", "company", "corporation", "group"]
+  static func nameWords(_ s: String) -> [String] {
+    s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).filter { $0.count >= 2 && !nameFiller.contains($0) }
+  }
+
+  /// One letter misread, added or dropped by the text recognizer ("Rlverbend", "Riverbnd").
+  static func nearlySame(_ a: String, _ b: String) -> Bool {
+    if a == b { return true }
+    let x = Array(a), y = Array(b)
+    guard min(x.count, y.count) >= 5, abs(x.count - y.count) <= 1 else { return false }
+    var i = 0
+    while i < x.count, i < y.count, x[i] == y[i] { i += 1 }
+    if x.count == y.count { return x.dropFirst(i + 1).elementsEqual(y.dropFirst(i + 1)) }
+    return x.count > y.count ? x.dropFirst(i + 1).elementsEqual(y.dropFirst(i)) : x.dropFirst(i).elementsEqual(y.dropFirst(i + 1))
+  }
+
+  /// Whether a company name the model gave is printed on the paper: every word of it is among the paper's words, or
+  /// among the words covered on it (one misread letter allowed in a long word). A name printed nowhere was made up.
+  static func namePrinted(_ name: String, in text: String, covered: Set<String> = []) -> Bool {
+    let want = nameWords(name)
+    guard !want.isEmpty else { return false }
+    let have = Set(nameWords(text)).union(covered.map { $0.lowercased() })
+    let flat = text.lowercased().filter { !$0.isWhitespace }
+    return want.allSatisfy { w in
+      have.contains(w)
+        // Words without spaces between them (Chinese) are looked for as printed, anywhere in the text.
+        || (w.unicodeScalars.contains { $0.properties.isIdeographic } ? flat.contains(w) : have.contains { nearlySame(w, $0) })
+    }
   }
 
   /// Every number printed in a text, whole, as amounts: "$1,200.00", "160", "16.50". The digits inside a date

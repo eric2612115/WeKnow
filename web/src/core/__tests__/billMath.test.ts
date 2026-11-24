@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amountsIn, billMath, findAccounts, findAmounts, parseAmount } from '../billMath';
+import { amountsIn, billMath, findAccounts, findAmounts, parseAmount, endingPrinted, namePrinted, readAmounts } from '../billMath';
 
 describe('amounts as printed', () => {
   it('reads dollar amounts, with cents, commas and signs', () => {
@@ -136,5 +136,50 @@ describe('two different account numbers', () => {
 
   it('a covered number ([account]) is never read', () => {
     expect(findAccounts(['Account [account]', 'Account [account]'])).toEqual([]);
+  });
+});
+
+describe('one value beside a label is the paper’s; two different values confirm neither', () => {
+  it('the same amount due at the top and on the stub is kept', () => {
+    expect(readAmounts(['Amount due $89.00', 'Detach and return', 'Amount due $89.00'])).toEqual({ amounts: { due: 89 }, conflicts: [] });
+  });
+
+  it('two different amounts due: neither is taken, and no sum is checked with either', () => {
+    const lines = ['Previous balance $84.20', 'Payments -$84.20', 'New charges $96.15', 'Amount due $96.15', 'PAYMENT STUB', 'Amount due $312.40'];
+    expect(readAmounts(lines).conflicts).toEqual(['due']);
+    expect(billMath(lines)).toMatchObject({ checked: 0, misses: [], conflicts: ['due'] });
+  });
+
+  it('a label further off on the line only fills an empty label, it never makes a second amount', () => {
+    expect(readAmounts(['Amount due: $89.00', 'AMOUNT DUE  3. Retail counter. Cash or debit at participating stores; $1.50 handling'])).toEqual({
+      amounts: { due: 89 },
+      conflicts: [],
+    });
+  });
+});
+
+describe('what a model gave, held to the paper', () => {
+  const paper = ['RIVERBEND ELECTRIC CO-OP', 'Amount due $89.00', 'Payment account 3305 7719 4821'];
+
+  it('a company printed on the paper, in any case, with one misread letter', () => {
+    expect(namePrinted('Riverbend Electric Co-op', paper)).toBe(true);
+    expect(namePrinted('Riverbend Electric Cooperative', ['Rlverbend Electric Cooperative'])).toBe(true);
+  });
+
+  it('a company printed nowhere on the paper is made up', () => {
+    expect(namePrinted('Pacific Gas & Electric', paper)).toBe(false);
+    expect(namePrinted('Inc.', paper)).toBe(false);
+  });
+
+  it('Chinese names are looked for as printed', () => {
+    expect(namePrinted('台灣電力公司', ['台灣電力公司 電費通知單'])).toBe(true);
+    expect(namePrinted('中華電信', ['台灣電力公司 電費通知單'])).toBe(false);
+  });
+
+  it('an account ending printed at the end of a number or after "ending"', () => {
+    expect(endingPrinted('4821', paper)).toBe(true);
+    expect(endingPrinted('4821', ['Pay to account ending 4821.'])).toBe(true);
+    expect(endingPrinted('1234', paper)).toBe(false);
+    expect(endingPrinted('7719', paper)).toBe(false);
   });
 });

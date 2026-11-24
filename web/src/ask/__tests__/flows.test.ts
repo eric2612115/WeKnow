@@ -162,7 +162,7 @@ describe('a picture answer in the conversation', () => {
   it('a bill whose printed numbers do not add up: Stop, the numbers said, and "Which numbers?"', async () => {
     understanding = { ...base, kind: 'bill', payee: 'Riverbend Electric Co-op', payTo: '9917' };
     readingPack = sub([]);
-    ocrLines = ['Previous balance $84.20', 'Payment received - thank you -$84.2O', 'New charges $96.15', 'Amount due $312.40'];
+    ocrLines = ['Riverbend Electric Co-op', 'Previous balance $84.20', 'Payment received - thank you -$84.2O', 'New charges $96.15', 'Amount due $312.40', 'Pay to account ending 9917'];
     C.attach(new Blob(['b'], { type: 'image/png' }), 'bill');
     F.send('Should I pay this?');
     await vi.waitFor(() => expect(nextLabels()).toContain('Which numbers?'));
@@ -190,11 +190,23 @@ describe('a picture answer in the conversation', () => {
   it('a bill with partial numbers raises no number warning', async () => {
     understanding = { ...base, kind: 'bill', payee: 'Riverbend Electric Co-op', payTo: '9917' };
     readingPack = sub([]);
-    ocrLines = ['Basic service charge $18.00', 'Total due $90.75'];
+    ocrLines = ['Riverbend Electric Co-op', 'Basic service charge $18.00', 'Total due $90.75', 'Pay to account ending 9917'];
     C.attach(new Blob(['b'], { type: 'image/png' }), 'bill');
     F.send('Should I pay this?');
     await vi.waitFor(() => expect(nextLabels()).toEqual(['What should I do now?', 'Remember this company', 'Remind me to pay it']));
     expect(C.view().head?.tone).toBe('warn');
+  });
+
+  it('a company and an account ending the model gave that are printed nowhere on the paper are not used', async () => {
+    understanding = { ...base, kind: 'bill', payee: 'Riverbend Electric Co-op', payTo: '4821' };
+    readingPack = sub([]);
+    ocrLines = ['Basic service charge $18.00', 'Total due $90.75'];
+    C.attach(new Blob(['b'], { type: 'image/png' }), 'bill');
+    F.send('Should I pay this?');
+    // With no company to name, nothing is offered to remember, and nothing is said about Riverbend.
+    await vi.waitFor(() => expect(nextLabels()).toContain('What should I do now?'));
+    expect(nextLabels()).not.toContain('Remember this company');
+    expect(C.view().lines.map((l) => l.text).some((x) => /Riverbend|4821/.test(x))).toBe(false);
   });
 
   it('a text PDF is read from its own words, not its picture; two account numbers are a Careful with their own question', async () => {

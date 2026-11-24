@@ -15,8 +15,10 @@ export type SumMiss =
   | { rule: 'paid'; total: number; paid: number; due: number; expected: number };
 
 export interface BillMath {
-  /** The first amount printed under each label. Payments are kept as a positive number. */
+  /** The amount printed under each label, when the paper prints only one. Payments are kept as a positive number. */
   amounts: Partial<Record<AmountLabel, number>>;
+  /** Labels printed with two different amounts: neither is taken as the paper's (see readAmounts). */
+  conflicts: AmountLabel[];
   /** How many relations had all their parts and were checked. */
   checked: number;
   /** The relations that were off by more than the tolerance. */
@@ -193,9 +195,25 @@ function labelOf(text: string): AmountLabel | null {
  * Payments -$84.20") stay apart. A label with no amount after it takes the amount that starts the next line.
  */
 export function findAmounts(lines: string[]): Partial<Record<AmountLabel, number>> {
+  return readAmounts(lines).amounts;
+}
+
+/**
+ * The labelled amounts, and the labels printed with two different amounts. One amount printed beside a label is the
+ * paper's fact; a label that carries two different amounts ("Amount due $120.00" at the top, "Amount due $210.00" on
+ * the stub) confirms neither, so it is left out of the amounts and no sum is checked with either.
+ */
+export function readAmounts(lines: string[]): { amounts: Partial<Record<AmountLabel, number>>; conflicts: AmountLabel[] } {
   const out: Partial<Record<AmountLabel, number>> = {};
-  const put = (label: AmountLabel | null, value: number) => {
-    if (label && !(label in out)) out[label] = label === 'paid' || label === 'discount' ? Math.abs(value) : value;
+  const conflicts: AmountLabel[] = [];
+  // `beside`: the label is printed right next to the amount. Only such a reading can show that a label carries two
+  // different amounts; a label found further off on the line, or on the line above, is a weaker reading and only
+  // fills a label that has no amount yet ("AMOUNT DUE  3. Retail counter … $1.50 handling" is not a second amount due).
+  const put = (label: AmountLabel | null, raw: number, beside = true) => {
+    if (!label) return;
+    const value = label === 'paid' || label === 'discount' ? Math.abs(raw) : raw;
+    if (!(label in out)) out[label] = value;
+    else if (beside && Math.abs((out[label] as number) - value) > 0.005 && !conflicts.includes(label)) conflicts.push(label);
   };
   lines.forEach((line, i) => {
     const hits = amountsIn(line);
@@ -216,17 +234,21 @@ export function findAmounts(lines: string[]): Partial<Record<AmountLabel, number
       const words = line.slice(from, h.index);
       // The words nearest the amount name it: "Thistlewick Savings Bank, bank code TWSB-0142 Total $1,091.00" is a
       // total, whatever the bank is called. Only when they say nothing is the whole stretch read.
-      if (/[a-z]/i.test(words)) put(labelOf(words.slice(-40)) ?? labelOf(words), h.value);
+      if (/[a-z]/i.test(words)) {
+        const near = labelOf(words.slice(-40));
+        put(near ?? labelOf(words), h.value, !!near);
+      }
       from = h.end;
     }
     const rest = line.slice(from);
     const label = /[a-z]/i.test(rest) ? labelOf(rest) : null;
-    if (!label || label in out) return;
+    if (!label) return;
     const next = (lines[i + 1] ?? '').trim();
     const first = amountsIn(next)[0];
-    if (first && !/[a-z]/i.test(next.slice(0, first.index))) put(label, first.value);
+    if (first && !/[a-z]/i.test(next.slice(0, first.index))) put(label, first.value, false);
   });
-  return out;
+  for (const label of conflicts) delete out[label];
+  return { amounts: out, conflicts };
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -338,7 +360,49 @@ export const toLines = (text: string | string[]): string[] =>
 
 export function billMath(text: string | string[]): BillMath {
   const lines = toLines(text);
-  const amounts = findAmounts(lines);
+  const { amounts, conflicts } = readAmounts(lines);
   const { checked, misses } = checkSums(amounts);
-  return { amounts, checked, misses, accounts: findAccounts(lines) };
+  return { amounts, conflicts, checked, misses, accounts: findAccounts(lines) };
+}
+
+// ---------- what a model gave, held to the paper ----------
+
+/** Words a company's name may carry or drop between the paper and a reading of it ("Riverbend Electric Co-op"). */
+const NAME_FILLER = new Set(['the', 'and', 'of', 'inc', 'llc', 'ltd', 'co', 'op', 'corp', 'company', 'corporation', 'group']);
+const nameWords = (s: string) => (s.toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => w.length >= 2 && !NAME_FILLER.has(w));
+/** One letter misread, added or dropped by a text recognizer ("Rlverbend", "Riverbnd"). */
+function nearlySame(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.min(a.length, b.length) < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+
+/**
+ * Whether a company name a model gave is printed on the paper: every word of it is among the paper's own words (one
+ * misread letter allowed in a long word). A name printed nowhere on the paper was made up, and is not used.
+ */
+export function namePrinted(name: string, words: string[]): boolean {
+  const want = nameWords(name);
+  if (!want.length) return false;
+  const flat = words.join(' ').toLowerCase().normalize('NFKC');
+  const have = new Set(nameWords(flat));
+  // Words without spaces between them (Chinese) are looked for as printed, anywhere in the text.
+  return want.every((w) => have.has(w) || (/\p{Script=Han}/u.test(w) ? flat.replace(/\s+/g, '').includes(w) : [...have].some((h) => nearlySame(w, h))));
+}
+
+/**
+ * Whether the account ending a model gave (its last four digits) is printed on the paper, in a number or after
+ * "ending". Digits printed nowhere on the paper are not an account (a page too small to read can come back "1234").
+ */
+export function endingPrinted(ending: string, words: string[]): boolean {
+  const four = lastFourOf(ending);
+  if (!four) return false;
+  return words.some((w) => {
+    const t = fixDigitsInNumbers(w);
+    // The last four of a number: no more digits after them, even across a space or a dash ("7719" in "3305 7719 4821" is not).
+    return new RegExp(`${four}(?!\\d|[ \\t-]\\d)`).test(t);
+  });
 }

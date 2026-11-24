@@ -835,6 +835,12 @@ final class AskModel {
       // Which account to pay into is printed next to "payment account"; plain code takes it from the paper, so a
       // member number the model copied by mistake never stands in for it.
       let printedRows = paper.rows.map(\.masked)
+      // A company the model named that is printed nowhere on the paper was made up: it is not used, so no note can
+      // match it (same rule as the web app).
+      if let name = u.payee, !BillMath.namePrinted(name, in: paper.masked, covered: paper.coveredNames) {
+        tech.append("The model named “\(name)”, which is printed nowhere on the paper, so it was not used.")
+        u.payee = nil
+      }
       if let to = BillMath.payTo(printedRows, lastTime: Verdicts.knownPayee(u.payee, in: known)?.payTo) { u.payTo = to }
       // Account digits the model gave that are printed nowhere on the paper are not an account (seen on a real
       // phone: a page too small to read came back with "1234"). They are dropped, so no warning is built on them.
