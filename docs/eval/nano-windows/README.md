@@ -73,3 +73,16 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 | File | What it shows |
 |---|---|
 | r7-01-simulated-offline-q10-needs-internet.jpg | Simulated offline: question 10 now says "This one needs the internet, and this computer has no connection right now. Ask me again when it is back." |
+
+## Home sample cards (2026-11-24, live build f93f2fd, `index-CDf4FnWO.js`)
+
+The 375 px views are the page in a 375 x 812 frame on the Windows desktop (Chrome's window could not be made narrower). Welcome was shown by setting `started` to false in `weknow.prefs.v1` for the check; the original value was put back afterwards.
+
+| File | What it shows |
+|---|---|
+| h1-01-home-desktop-two-cards.png | Home, desktop: two cards, "A repair quote" / "A bill", each with the top of the paper, a title and the quoted question |
+| h1-02-home-375-names-cut.png | Home, 375 px: the pictures are cut on the right: "Sunrise Auto C", "Riverbend Elec", "Amount due: $86.4" |
+| h1-03-home-375-bill-card-pressed.png | Home, 375 px, after pressing the bill card: ring on the card, the whole bill attached, "Should I pay this?" in the box |
+| h1-04-welcome-375.png | Welcome, 375 px: the same cards, cut on the right in the same way |
+| h1-05-welcome-1280.png | Welcome, 1280 px: the cards with the full names and the amount |
+| h1-06-help-cards-zoomed-in.png | Help, desktop (cards about 390 px wide): the pictures are zoomed in and cut at the bottom; the bill shows no amount |
