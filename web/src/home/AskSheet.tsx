@@ -3,8 +3,8 @@
 // notebook and a solid box: this stays here. No Close, no press outside; Escape counts as No.
 //
 // A check online (a sheet with `hidden`) is read at a glance, not word by word: three short points (what is hidden
-// here, as pills with counts; that only the rest goes; the picture), two closed sections ("What stays hidden", "See
-// exactly what goes": the covered words as the paper's own lines, a covered detail as a small mark, in a box with
+// here, as pills with counts; that only the rest goes; the picture), two sections ("What stays hidden" closed, "See
+// exactly what goes" open: the covered words as the paper's own lines, a covered detail as a small mark, in a box with
 // its own scroll), and Yes and No always in view at the bottom.
 
 import type { ReactNode } from 'react';
@@ -58,9 +58,9 @@ export function CoveredLine({ text }: { text: string }) {
   );
 }
 
-function Fold({ title, children, testId }: { title: string; children: ReactNode; testId: string }) {
+function Fold({ title, children, testId, open = false }: { title: string; children: ReactNode; testId: string; open?: boolean }) {
   return (
-    <details className="fold" data-testid={testId}>
+    <details className="fold" data-testid={testId} open={open}>
       <summary>
         <span>{title}</span>
         <I.down />
@@ -128,7 +128,8 @@ function CheckSheet({ s, icon }: { s: SheetRequest; icon: ReactNode }) {
           </ul>
         </Fold>
       )}
-      <Fold title={t('check.what.goes')} testId="fold-goes">
+      {/* What goes is open from the start: the exact words are the point of asking. */}
+      <Fold title={t('check.what.goes')} testId="fold-goes" open>
         <div className="parcel lines goes-box" data-testid="parcel">
           {picture && s.picture && (
             <span className="thumb w-32 bg-white">

@@ -87,7 +87,8 @@ export function parseWebAnswer(text: string, sources: Source[]): WebParse {
   if (!https.length) return { answer: null, reason: 'no web sources' };
   return {
     answer: {
-      title: plain(json.title, 80) ?? 'What to try',
+      // A heading starts with a capital, whatever case the model wrote it in ("vacuum not picking up").
+      title: capitalFirst(plain(json.title, 80)) ?? 'What to try',
       steps,
       safety: plain(json.safety, 220),
       callPro: plain(json.callPro, 220),
@@ -95,3 +96,5 @@ export function parseWebAnswer(text: string, sources: Source[]): WebParse {
     },
   };
 }
+
+const capitalFirst = (s: string | undefined | null): string | undefined => (s ? s.charAt(0).toUpperCase() + s.slice(1) : undefined);

@@ -138,6 +138,7 @@ export const EN = {
   'next.none': 'None of these',
   'next.step': 'Next step',
   'next.again': 'Say it again',
+  'next.askagain': 'Ask it again', // added: a question that needed the internet while there was none
   'next.stop': 'Stop',
   'next.fixed': 'It’s fixed',
   'next.broken': 'Still broken',
@@ -421,13 +422,13 @@ export const EN = {
   'ask.item.price': '“{item}” price',
   'ask.item.region': 'Region: {region}',
   // added: what was covered, said first in one plain line, on the picture and the words sheets alike
-  // added: the consent sheet for a check online (picture, PDF words, words): short points, two closed sections,
+  // added: the consent sheet for a check online (picture, PDF words, words): short points, what stays hidden closed and what goes open,
   // Yes and No always in view (home/AskSheet.tsx)
   'check.title': 'Check this online?',
   'check.title.bill': 'Check this bill online?',
   'check.hidden': 'Hidden here:',
   'check.hidden.none': 'Nothing personal found to hide.',
-  'check.rest.words': 'Only the rest of the words go online.',
+  'check.rest.words': 'Only the words below go online.',
   'check.rest.picture': 'Only the covered picture and your question go online.',
   'check.picture.goes': 'Black bars hide your details on it.',
   'check.picture.stays': 'The picture stays here.',

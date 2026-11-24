@@ -1284,7 +1284,7 @@
     border: 1.5px solid var(--go);
     background: var(--ok-bg);
   }
-  /* a check online: three short points, two closed sections, Yes and No always in view (home/AskSheet.tsx) */
+  /* a check online: three short points, two sections, Yes and No always in view (home/AskSheet.tsx) */
   .check-points {
     display: flex;
     flex-direction: column;

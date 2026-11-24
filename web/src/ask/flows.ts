@@ -312,7 +312,7 @@ async function wordsOnly(t: number, question: string) {
   }
   if (r && r.guides.length) return maybeGuides(t, r.ctx, r.guides, never);
   if (aboutPicture(question)) return needPicture(t);
-  dontKnow(t, never);
+  dontKnow(t, never, question);
 }
 
 interface PictureSrc {
@@ -1513,7 +1513,7 @@ function wordsTech(c: Ctx, extra: string[]): string[] {
 }
 
 /** A question in words that the pack does not know, with no camera to look instead. Never a made-up price. */
-function dontKnow(t: number, never = false) {
+function dontKnow(t: number, never = false, question?: string) {
   clearLines();
   setHead('plain', tr('words.none.title'));
   patch({ offerSamples: true, still: null, looking: false });
@@ -1521,6 +1521,8 @@ function dontKnow(t: number, never = false) {
   // With no connection, say that the internet is what is missing, and that it can be asked again then.
   const offline = !never && !deviceStore.get().online;
   void narrate(t, [tr('words.none.line'), ...(offline ? [tr('route.offline', { device: dev() })] : [tr('words.none.more')]), ...(never ? [tr('route.never', { device: dev() })] : [])]);
+  // When the connection is back, one press asks the same question again: nothing to type twice.
+  if (offline && question) offerNext([nextQ(tr('next.askagain'), (t2) => wordsOnly(t2, question))]);
 }
 
 // ---------- a quote ----------

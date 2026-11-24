@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe('the asking sheet', () => {
-  it('a check online: short points with hidden pills, two closed sections, Yes and No always there', async () => {
+  it('a check online: short points with hidden pills, what stays hidden closed, what goes open, Yes and No always there', async () => {
     const lines = ['Riverbend Electric Co-op · STATEMENT', '[name] · [account]', '[street], Riverbend, OR', ...Array.from({ length: 30 }, (_, i) => `Line ${i + 4}`)];
     let answer: boolean | null = null;
     const done = C.run(async (t) => {
@@ -33,11 +33,11 @@ describe('the asking sheet', () => {
     const pills = await screen.findByTestId('hidden-pills');
     expect([...pills.querySelectorAll('.hid-pill')].map((x) => x.textContent)).toEqual(['1 name', '2 phones', '1 email', '2 addresses', '4 account numbers']);
     expect(screen.getByText('Hidden here:')).toBeTruthy();
-    expect(screen.getByText('Only the rest of the words go online.')).toBeTruthy();
+    expect(screen.getByText('Only the words below go online.')).toBeTruthy();
     expect(screen.getByText('The picture stays here.')).toBeTruthy();
-    // Both sections start closed; the words are inside the second, with their marks.
+    // What stays hidden starts closed; what goes starts open, with its marks: the exact words are the point.
     expect((screen.getByTestId('fold-hidden') as HTMLDetailsElement).open).toBe(false);
-    expect((screen.getByTestId('fold-goes') as HTMLDetailsElement).open).toBe(false);
+    expect((screen.getByTestId('fold-goes') as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText('See exactly what goes')).toBeTruthy();
     const parcel = screen.getByTestId('parcel');
     expect(parcel.querySelectorAll('.pline')).toHaveLength(33);

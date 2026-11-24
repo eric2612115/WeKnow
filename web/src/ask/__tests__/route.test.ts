@@ -235,6 +235,20 @@ describe('words this device cannot answer', () => {
     expect(getPrefs().internet).toBe('every');
   });
 
+  it('with no connection it says the internet is missing, and one press asks again when it is back', async () => {
+    setPrefs({ internet: 'every' });
+    deviceStore.set((s) => ({ ...s, online: false }));
+    F.send('My tap keeps dripping');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('I don’t know that one yet'));
+    await vi.waitFor(() => expect(C.view().next.map((n) => n.label)).toEqual(['Ask it again']));
+    expect(sent).toEqual([]);
+    deviceStore.set((s) => ({ ...s, online: true }));
+    C.view().next[0].act();
+    // The same question, not typed again: this time the check sheet asks to send it.
+    await vi.waitFor(() => expect(C.view().sheet?.parcel[0]).toBe('“My tap keeps dripping”'));
+    C.answerSheet(false);
+  });
+
   it('Never answers from this device only, and says how to change it', async () => {
     setPrefs({ internet: 'never' });
     F.send('My tap keeps dripping');
