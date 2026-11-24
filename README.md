@@ -61,6 +61,8 @@ deny-by-default rules), Remote Config (cloud model, pack version, warning phrase
 
 - [`docs/claims.md`](docs/claims.md): every claim and the test or recorded run behind it.
 - [`docs/technical-report.md`](docs/technical-report.md): the design, the argument and the evaluation.
+- [`docs/eval/nano-chrome-windows-2026-11-24.md`](docs/eval/nano-chrome-windows-2026-11-24.md): Gemini Nano in Chrome on a
+  Windows PC reading the test papers on the device, the same answer run after run, and every request quoted.
 - [`docs/prior-art.md`](docs/prior-art.md): what already exists and what WeKnow adds.
 - `web/src/core/__tests__/wall.test.ts`: the property tests behind the core claims (`npm test` in `web/`).
 - [`docs/test-sheets/`](docs/test-sheets/): five fictional papers to try it with (print them or drop the PDF), and
