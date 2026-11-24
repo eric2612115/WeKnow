@@ -38,3 +38,10 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 | r3-02-bill7-pdf-payee-is-the-bank.jpg | bill-7 PDF: payee read as "Thistlewick Savings Bank" (the bank in the remittance box), not the letterhead |
 | r3-03-paper6-run3-rows.jpg | Paper 6 run 3: clean names; line 8 read as "Shops, repair, hardware $6.50"; "3 items not checked" |
 | r3-04-paper3-explain-spanish-placeholders.jpg | Paper 3, Spanish: a faithful translation, shown with `"""` marks and [cuenta] / [número] placeholders |
+
+## Round 4 (2026-11-24, Chrome 158.0.8127.89, live build 3c610f4)
+
+| File | What it shows |
+|---|---|
+| r4-01-paper6-run2-rushes-you-row8.jpg | Paper 6 run 2: bold line "Check this before you pay." with "It rushes you to pay.", line 8 read as "Shop repairs, hardware $6.50" |
+| r4-02-paper3-explain-spanish.jpg | Paper 3, Spanish: sentence by sentence, with 7730 and 4821, no quotation marks |
