@@ -59,6 +59,26 @@ struct WeKnowApp: App {
               if let c { model.choose(c) }
             }
           }
+          // `-WeKnowHear question.wav` (in Documents) turns a recording into words with the newer speech model.
+          if let name = UserDefaults.standard.string(forKey: "WeKnowHear") {
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(name)
+            let start = Date()
+            for attempt in 1...2 {
+              let words = await Ear.hear(file: url)
+              print("[WeKnow] heard (try \(attempt), \(String(format: "%.1f", Date().timeIntervalSince(start))) s): \(words ?? "<speech model not ready>")")
+              if words != nil { break }
+              try? await Task.sleep(for: .seconds(20))
+            }
+          }
+          // `-WeKnowListen YES` listens once through the microphone, as the speak button does, and prints the words.
+          if UserDefaults.standard.bool(forKey: "WeKnowListen") {
+            let ear = Ear()
+            await ear.start { print("[WeKnow] heard from the microphone: \($0)") }
+            if case let .unavailable(why) = ear.state { print("[WeKnow] listening failed: \(why)") }
+            var loudest = 0.0
+            while ear.listening { loudest = max(loudest, ear.level); try? await Task.sleep(for: .milliseconds(100)) }
+            print("[WeKnow] loudest sound while listening: \(String(format: "%.2f", loudest))")
+          }
           if let t = UserDefaults.standard.string(forKey: "WeKnowTheme"), let c = ThemeChoice(rawValue: t) { themeRaw = c.rawValue }
         }
     }
