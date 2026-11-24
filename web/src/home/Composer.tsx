@@ -4,7 +4,7 @@
 // the words, it does not send), a round dark send arrow when it holds words or a picture, the level bars while WeKnow
 // listens and a stop square while it looks or speaks. One soft pill, no border.
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cutNarration, detach, finishListening, hush, patch, useAsk, view, type AskView } from '../ask/conversation';
 import { boxStore, setBoxFocus, useBox } from '../ask/box';
 import { dictate, send as sendNow, takePicture } from '../ask/flows';
@@ -76,6 +76,19 @@ export function Composer() {
   const text = useBox();
   const ref = useRef<HTMLTextAreaElement>(null);
   const file = useRef<HTMLInputElement>(null);
+  // The front page's "Take a photo" and "Upload" open Ask with ?start=camera or ?start=upload: do that once.
+  useEffect(() => {
+    const url = new URL(location.href);
+    const start = url.searchParams.get('start');
+    if (!start) return;
+    url.searchParams.delete('start');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    // After Ask has handed the flows its camera (the page's own effect runs after this one).
+    setTimeout(() => {
+      if (start === 'camera') takePicture();
+      else if (start === 'upload') file.current?.click();
+    }, 0);
+  }, []);
   const listening = v.phase === 'listening';
   const heard = listening ? v.heard : '';
   // While WeKnow listens, the heard words show after anything already typed.

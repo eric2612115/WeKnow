@@ -1905,3 +1905,177 @@
 }
 .lamp-on { animation: lamp 1.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .lamp-on { animation: none; } }
+
+/* ---------- The front page (pages/How.tsx), in the product site's calm system ----------
+   White, ink, one grey, hairlines. Green only for the mark and for what went online; red and amber only as the small
+   dot before an answer. Five sizes: 16, 18, 21, 32/40, 44/68 px. Everything is scoped to .site so the app keeps its look. */
+.site {
+  --s-bg: #ffffff;
+  --s-surface: #f5f6f4;
+  --s-ink: #15181a;
+  --s-muted: #646b70;
+  --s-hair: #e4e6e3;
+  --s-accent: #0b6b4a;
+  --s-stop: #c43a2f;
+  --s-warn: #b7791f;
+  --s-glow-a: #d6efe3;
+  --s-glow-b: #dcebf7;
+  background: var(--s-bg);
+  color: var(--s-ink);
+  font-size: 1.125rem;
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: -0.011em;
+}
+:root[data-theme="dark"] .site {
+  --s-bg: #111312;
+  --s-surface: #1a1d1c;
+  --s-ink: #eef0ef;
+  --s-muted: #9aa29f;
+  --s-hair: #2a2e2c;
+  --s-accent: #4fcb95;
+  --s-stop: #ff8a7e;
+  --s-warn: #f0b44c;
+  --s-glow-a: #123326;
+  --s-glow-b: #12263a;
+}
+@theme inline {
+  --color-s-bg: var(--s-bg);
+  --color-s-surface: var(--s-surface);
+  --color-s-ink: var(--s-ink);
+  --color-s-muted: var(--s-muted);
+  --color-s-hair: var(--s-hair);
+  --color-s-accent: var(--s-accent);
+  --color-s-stop: var(--s-stop);
+  --color-s-warn: var(--s-warn);
+}
+@layer components {
+  .site h1,
+  .site h2,
+  .site h3 {
+    text-wrap: balance;
+  }
+  .site p {
+    text-wrap: pretty;
+  }
+  .site :focus-visible {
+    outline: 2px solid var(--s-accent);
+    outline-offset: 3px;
+    border-radius: 0.5rem;
+  }
+  .site [id] {
+    scroll-margin-top: 5rem;
+  }
+  .site .s-small {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .site .s-body {
+    font-size: 1.125rem;
+    line-height: 1.55;
+  }
+  .site .s-lead {
+    font-size: 1.3125rem;
+    line-height: 1.45;
+  }
+  .site .s-h2 {
+    font-size: 2rem;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .site .s-display {
+    font-size: 2.75rem;
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+  }
+  @media (min-width: 48rem) {
+    .site .s-h2 {
+      font-size: 2.5rem;
+    }
+    .site .s-display {
+      font-size: 4.25rem;
+    }
+  }
+  /* Pills: the solid one is the one thing to do on screen. */
+  .site .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0 1.4rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color 0.2s,
+      border-color 0.2s,
+      color 0.2s;
+  }
+  .site .pill svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: none;
+  }
+  .site .pill-solid {
+    background: var(--s-ink);
+    color: var(--s-bg);
+  }
+  .site .pill-solid:hover {
+    background: color-mix(in srgb, var(--s-ink) 85%, var(--s-bg));
+  }
+  .site .pill-line {
+    border: 1px solid var(--s-hair);
+    color: var(--s-ink);
+  }
+  .site .pill-line:hover {
+    border-color: var(--s-muted);
+  }
+  /* The soft light behind the question box: the one colourful thing on the page. */
+  .site .glow {
+    position: absolute;
+    inset: -6rem -10% auto;
+    height: 34rem;
+    z-index: -1;
+    background:
+      radial-gradient(40% 55% at 30% 55%, var(--s-glow-a), transparent 70%),
+      radial-gradient(40% 55% at 70% 50%, var(--s-glow-b), transparent 70%);
+    filter: blur(20px);
+    pointer-events: none;
+  }
+  /* A redrawn test paper: white in both themes, covered details as solid bars, what went online in green. */
+  .site .paper {
+    border-radius: 0.6rem;
+    background: #ffffff;
+    color: #1b1e20;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.06),
+      0 8px 24px -12px rgb(0 0 0 / 0.18);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+  .site .cover {
+    display: inline-block;
+    height: 0.95em;
+    margin: 0 0.1em;
+    border-radius: 0.2em;
+    background: #1b1e20;
+    vertical-align: -0.1em;
+  }
+  .site .sent {
+    border-radius: 0.2em;
+    background: #e3f1ea;
+    box-shadow: inset 0 -2px 0 #0b6b4a;
+    padding: 0 0.15em;
+    font-weight: 600;
+  }
+  .site .flagged {
+    margin-inline: -0.35rem;
+    padding-inline: 0.35rem;
+    border-radius: 0.3rem;
+    background: #fff3d4;
+  }
+}
