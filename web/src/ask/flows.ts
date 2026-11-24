@@ -2005,7 +2005,7 @@ async function billFlow(c: Ctx) {
   // Calling the company makes no sense when the company is the trap.
   const doLine = found?.finding === 'known-scam-pattern' ? tr('billcheck.do.scam') : ans.doLine;
   const reasons: Said[] = [...ans.reasons.map((r) => ({ text: r.text, noteTag: !!r.fromNote })), ...onlineLines, ...(doLine ? [doLine] : [])];
-  const lines: Said[] = [...reasons, ...(c.basic ? [tr('basic.note', { device: dev() })] : []), ...firstTimeHere(where), ...(where === 'device' ? [tr('letter.stays', { device: dev() })] : [])];
+  const lines: Said[] = [...reasons, ...(c.basic ? [tr('basic.note', { device: dev() })] : []), ...(online || asked ? [] : firstTimeHere(where)), ...(where === 'device' ? [tr('letter.stays', { device: dev() })] : [])];
 
   clearLines();
   setHead(verdict.tone, verdict.text);

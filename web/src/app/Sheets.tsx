@@ -561,6 +561,7 @@ function TrustedFields({ onSaved }: { onSaved?: () => void }) {
 function NeedModelSheet({ open }: { open: boolean }) {
   const device = deviceWord();
   const d = useDevice();
+  const hereCanGetReady = 'LanguageModel' in globalThis && (d.model === 'downloadable' || d.model === 'downloading');
   const h = (text: string) => <h3 className="mt-5 text-[1.0625rem] font-semibold text-ink">{text}</h3>;
   return (
     <Sheet open={open} onClose={closeSheet} title={t('needmodel.title')}>
@@ -570,7 +571,8 @@ function NeedModelSheet({ open }: { open: boolean }) {
       <p className="mt-1 text-ink-2">{t('needmodel.full.d')}</p>
       <h4 className="mt-4 font-semibold text-ink">{t('needmodel.chrome.t')}</h4>
       <ol className="mt-1 list-decimal space-y-1 pl-5 text-ink-2">
-        <li>{t('needmodel.chrome.1')}</li>
+        {/* Already in a Chrome that can get ready: the steps start at Get ready. */}
+        {!hereCanGetReady && <li>{t('needmodel.chrome.1')}</li>}
         <li>{t('needmodel.chrome.2')}</li>
         <li>{t('needmodel.chrome.3')}</li>
       </ol>

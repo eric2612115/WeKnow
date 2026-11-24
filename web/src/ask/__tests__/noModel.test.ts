@@ -148,7 +148,7 @@ const pdf = (lines: string[]) => C.attach(new Blob(['the drawn pages'], { type: 
 describe('a picture on a device with no model is never sent', () => {
   for (const internet of ['ask-once', 'auto', 'every', 'never'] as const)
     it(`a photo of a bill gets the basic check here, with the internet set to ${internet}`, async () => {
-      setPrefs({ internet });
+      setPrefs({ internet, toldLocal: false });
       ocrText = BILL;
       const original = new Blob(['original with names'], { type: 'image/png' });
       C.attach(original, 'bill');
@@ -167,6 +167,8 @@ describe('a picture on a device with no model is never sent', () => {
         'One. The numbers on this bill don’t add up: the last bill of $84.20, minus $84.20 paid, plus $96.15 in new charges is $96.15, but it asks for $312.40.',
       );
       expect(said).toContain('This was the basic check: accounts, totals and warning words, by plain rules on this computer.');
+      // After a question went online, the answer never says that nothing left the computer.
+      if (askedOnline.length) expect(said.some((x) => /Nothing left it/.test(x))).toBe(false);
       const r = C.view().receipt!;
       expect(r.sentPicture).toBeFalsy();
       expect(r.sent).toEqual(askedOnline);
