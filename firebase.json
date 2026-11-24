@@ -11,6 +11,10 @@
     ],
     "rewrites": [
       {
+        "source": "/packs",
+        "destination": "/index.html"
+      },
+      {
         "source": "/!(packs|assets|fixtures|tessdata|pdfjs|test-sheets)",
         "destination": "/index.html"
       },
