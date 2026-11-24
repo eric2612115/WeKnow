@@ -86,3 +86,15 @@ The 375 px views are the page in a 375 x 812 frame on the Windows desktop (Chrom
 | h1-04-welcome-375.png | Welcome, 375 px: the same cards, cut on the right in the same way |
 | h1-05-welcome-1280.png | Welcome, 1280 px: the cards with the full names and the amount |
 | h1-06-help-cards-zoomed-in.png | Help, desktop (cards about 390 px wide): the pictures are zoomed in and cut at the bottom; the bill shows no amount |
+
+## Home sample cards, crop fix (2026-11-24, live build 722ec55, `index-B3eihYZx.js` + `index-QGSQKdso.css`)
+
+Same method as above (375 px in a 375 x 812 frame; Welcome by setting `started` to false for the check, then the original value put back).
+
+| File | What it shows |
+|---|---|
+| h2-01-home-desktop.png | Home, desktop: the whole 9:4 crop; words that run past the right edge fade out ("77 O", "Account ho") |
+| h2-02-home-375.png | Home, 375 px: picture 146 x 65 px; full names and "Amount due: $86.40", nothing cut top or bottom; the small print is tiny at this size |
+| h2-03-welcome-375.png | Welcome, 375 px: the same cards |
+| h2-04-welcome-1280.png | Welcome, 1280 px |
+| h2-05-help-desktop.png | Help, desktop (cards about 390 px): the whole crop, with the amount box and the due date |
