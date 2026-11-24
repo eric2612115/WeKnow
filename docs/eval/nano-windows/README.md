@@ -16,3 +16,16 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 | r1-07-internet-light-paper4.jpg | Paper 4 (bill-4 PDF): internet light on, the words on their way shown under it |
 | r1-08-paper5-scam-read-as-quote.jpg | Paper 5 (bill-7 PNG): read as a repair quote ("Two lines cost more than usual."), then "Shall I remember this shop for next time?" |
 | r1-09-what-the-lights-mean.jpg | "What the lights mean", opened by pressing the lights while paper 6 was read |
+
+## Round 2 (2026-11-24, Chrome 158.0.8127.89, live build 72b8c3d)
+
+| File | What it shows |
+|---|---|
+| r2-01-computer-light-paper1.jpg | Paper 1 while it is read: computer light on |
+| r2-02-internet-light-paper4.jpg | Paper 4: internet light on with the company and charge names under it |
+| r2-03-paper3-explain-spanish.jpg | Paper 3, Explain in my language, Spanish: no numbers now |
+| r2-04-paper5-png-second-run.jpg | Paper 5 (bill-7 PNG), second run: "Don't pay this bill yet." and the online scam check, but no sums check |
+| r2-05-bill7-pdf-extra-null-payee.jpg | Extra: bill-7 as PDF: "The numbers on this bill don't add up" and the scam check, with "I have no note of paying null before." |
+| r2-06-paper6-run4-row3-misread-remember-prompt.jpg | Paper 6 run 4: amounts right, names with row numbers, line 3 named from other text, and the "remember this shop" prompt |
+| r2-07-q10-internet-light.jpg | Question 10: checked online, the sentence shown under the internet light |
+| r2-08-q11-only-the-vacuum-sentence.jpg | Question 11: only "My vacuum won't pick anything up." under the internet light |
