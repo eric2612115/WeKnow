@@ -1874,9 +1874,14 @@ async function billFlow(c: Ctx) {
   // The paper's own words (a PDF's text or the recognizer's lines), read on this device only.
   const words = await paperWords(c);
   alive(t);
-  // When the model named no one, plain code reads who asks to be paid off the letterhead.
-  if (!reading.understanding.payee && words?.length)
-    reading.understanding = { ...reading.understanding, payee: basicPayee(words, known.map((k) => k.name), !c.paper) };
+  // When the model named no one, plain code reads who asks to be paid off the letterhead. When it named a bank and
+  // the letterhead names someone else, the letterhead wins: the bank in the payment box only holds the account
+  // (seen on Gemini Nano: "Thistlewick Savings Bank" for a letter from "Palisade Sovereign Reserve Trust").
+  const letterhead = words?.length ? basicPayee(words, known.map((k) => k.name), !c.paper) : null;
+  const BANK = /\b(bank|savings|credit union|bancorp|banking)\b/i;
+  const said = reading.understanding.payee;
+  if (letterhead && (!said || (BANK.test(said) && !BANK.test(letterhead) && norm(said) !== norm(letterhead))))
+    reading.understanding = { ...reading.understanding, payee: letterhead };
   const u = reading.understanding;
   const masked = maskText([u.payee ?? '', ...u.lines.map((l) => l.label), ...(words ?? [])].join(' '));
   // Which account to pay into is printed next to "payment account": plain code takes it from the paper's own words, so

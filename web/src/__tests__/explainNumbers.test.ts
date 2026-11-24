@@ -22,3 +22,12 @@ test('every account ending in a list is covered, not only the first', () => {
   const f = explainFacts({ verdict: 'Don’t pay this bill yet.', sentences: ['This bill shows two different account numbers (ending 0583 and 4821).'] });
   expect(f).not.toMatch(/0583|4821/);
 });
+
+test('on this device the real answer is translated (nothing leaves), and wrapping quotes are taken off', async () => {
+  const { deviceFacts, unwrapQuotes, translatePrompt } = await import('../explain');
+  const x = { verdict: 'Don’t pay this bill yet.', sentences: ['It asks you to pay a new account ending 7730.'] };
+  expect(deviceFacts(x)).toContain('7730');
+  expect(translatePrompt({ english: 'Spanish', code: 'es' } as never, x)).not.toContain('"""');
+  expect(unwrapQuotes('"""No pagues esta factura todavía."""')).toBe('No pagues esta factura todavía.');
+  expect(unwrapQuotes('«No pagues.»')).toBe('No pagues.');
+});

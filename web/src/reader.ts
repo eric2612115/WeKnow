@@ -325,10 +325,7 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
         choices = [];
       }
     }
-    for (const ch of choices) {
-      const allowed = askable.find((it) => it.i === ch.i)?.options.some((o) => o.ref === ch.ref);
-      chosen.set(ch.i, allowed ? ch.ref : null);
-    }
+    applyChoices(askable, choices, chosen);
   }
   const t2 = performance.now();
 
@@ -370,6 +367,23 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
  * item the question is about (the same choose step as a reading, text only, never the cloud). Returns a ref that
  * was offered, or null.
  */
+/**
+ * The model's choices, kept only for lines it was asked about, and only its first answer for each: a small model also
+ * answers for line numbers it never saw, which must not undo what plain code already matched (seen on Gemini Nano:
+ * the brake lines lost their price-book match this way). A ref it was not offered for that line counts as none.
+ */
+export function applyChoices(
+  askable: ReadonlyArray<{ i: number; options: ReadonlyArray<{ ref: string }> }>,
+  choices: ReadonlyArray<{ i: number; ref: string | null }>,
+  chosen: Map<number, string | null>,
+): void {
+  for (const ch of choices) {
+    const line = askable.find((it) => it.i === ch.i);
+    if (!line || chosen.has(ch.i)) continue;
+    chosen.set(ch.i, line.options.some((o) => o.ref === ch.ref) ? ch.ref : null);
+  }
+}
+
 export async function chooseForQuestion(question: string, options: Candidate[]): Promise<{ ref: string | null; offered: number; trimmed: number }> {
   const asked = question.replace(/"/g, "'").slice(0, 200);
   const fitted = fitChoices([{ i: 0, text: asked, options }].filter((it) => it.options.length), BUDGETS.nano);
