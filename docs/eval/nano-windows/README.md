@@ -51,3 +51,10 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 | File | What it shows |
 |---|---|
 | r5-01-paper6-same-every-run.jpg | Paper 6 run 3 (runs 1-3 identical): lines 1-8 from the price book, line 4 high, line 9 below usual, line 10 looked up |
+
+## Round 5, clean start (2026-11-24, after Settings > Delete my data, live build c8a8704)
+
+| File | What it shows |
+|---|---|
+| r5c-01-clean-paper6-line10-not-checked.jpg | Paper 6 after Delete my data: same ten lines every run, line 10 "Not checked yet" and no online lookup or ask |
+| r5c-02-clean-first-online-ask-paper5.jpg | Paper 5 after Delete my data: the first-time "Check this online?" ask |
