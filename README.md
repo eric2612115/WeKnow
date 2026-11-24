@@ -21,6 +21,18 @@ usually cost?), only that question goes online, with your details covered. Then 
 
 Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hybrid inference**.
 
+## Try it in a minute
+
+1. Open https://weknow-6092f.web.app and press **Start** (or **Open WeKnow**).
+2. Tap the sample **A bill**. WeKnow reads it on your computer and says "Don't pay this bill yet": the bill asks you to
+   pay a new account, not the one you paid last time.
+3. Tap **Where this answer came from**: what stayed on your computer, what went online (for this bill, nothing), and
+   the rules and sources behind every line.
+4. Tap the sample **A repair quote**: every line checked against a sourced price book, the one too high named, with
+   how much.
+5. Turn your Wi-Fi off and ask again: the same answer, from the computer alone
+   ([recorded run](docs/eval/wifi-off-chrome-2026-11-24.md)).
+
 ## How it works
 
 1. **Read on the device.** On iPhone and iPad, Apple's text recognition reads the words, personal details are
@@ -39,7 +51,8 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
    yes/no questions about each part, in two wordings, and only answers both agree on count. One sentence about a new
    account in a box of tips is found, and WeKnow says where on the page.
 5. **Plain code decides.** Price verdicts and bill warnings are rules, not model output. Text hidden in a document can
-   raise a warning but can never clear one.
+   raise a warning but can never clear one. An amount counts only when the paper prints one value beside its label, and
+   a company or account number the model gives that is printed nowhere on the paper is dropped.
 6. **Only the question goes online.** A line the price book lacks goes as a masked line item and region. A suspicious
    bill from a company you never paid goes as the company and the names of its charges, and Gemini checks them with
    Google Search grounding through Firebase AI Logic; answers count only with web sources and can make a warning
@@ -63,6 +76,8 @@ deny-by-default rules), Remote Config (cloud model, pack version, warning phrase
 - [`docs/technical-report.md`](docs/technical-report.md): the design, the argument and the evaluation.
 - [`docs/eval/nano-chrome-windows-2026-11-24.md`](docs/eval/nano-chrome-windows-2026-11-24.md): Gemini Nano in Chrome on a
   Windows PC reading the test papers on the device, the same answer run after run, and every request quoted.
+- [`docs/eval/wifi-off-chrome-2026-11-24.md`](docs/eval/wifi-off-chrome-2026-11-24.md): the Wi-Fi turned off by hand, and
+  a bill, a quote and a fresh page all answered from the computer alone.
 - [`docs/prior-art.md`](docs/prior-art.md): what already exists and what WeKnow adds.
 - `web/src/core/__tests__/wall.test.ts`: the property tests behind the core claims (`npm test` in `web/`).
 - [`docs/test-sheets/`](docs/test-sheets/): five fictional papers to try it with (print them or drop the PDF), and
