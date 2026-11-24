@@ -114,6 +114,8 @@ const STOP: BillFlag[] = ['account-change-notice', 'changed-account', 'numbers-d
 
 /** One relation that did not hold, said plainly with its numbers. */
 export function sumWhy(m: SumMiss): string {
+  if (m.rule === 'tax' && m.discount)
+    return t('math.why.tax.discount', { subtotal: cents(m.subtotal), discount: cents(m.discount), tax: cents(m.tax), sum: cents(m.expected), total: cents(m.total) });
   if (m.rule === 'tax') return t('math.why.tax', { subtotal: cents(m.subtotal), tax: cents(m.tax), sum: cents(m.expected), total: cents(m.total) });
   if (m.rule === 'balance')
     return t('math.why.balance', { previous: cents(m.previous), paid: cents(m.paid), charges: cents(m.charges), sum: cents(m.expected), due: cents(m.due) });
@@ -137,7 +139,7 @@ export function sumLines(m: BillMath): string[] {
   const row = (id: StringId, n: number) => t(id, { amount: cents(n) });
   const rows =
     miss.rule === 'tax'
-      ? [row('math.row.subtotal', miss.subtotal), row('math.row.tax', miss.tax), row('math.row.total', miss.total)]
+      ? [row('math.row.subtotal', miss.subtotal), ...(miss.discount ? [row('math.row.discount', miss.discount)] : []), row('math.row.tax', miss.tax), row('math.row.total', miss.total)]
       : miss.rule === 'balance'
         ? [row('math.row.previous', miss.previous), row('math.row.paid', miss.paid), row('math.row.charges', miss.charges), row('math.row.due', miss.due)]
         : [row('math.row.total', miss.total), row('math.row.paid', miss.paid), row('math.row.due', miss.due)];

@@ -1,5 +1,5 @@
 // Two bill checks in plain code, on the phone, from the words read off the paper (no model involved):
-//  - the numbers don't add up (subtotal + tax = total; previous − payments + new charges = amount due;
+//  - the numbers don't add up (subtotal − discount + tax = total; previous − payments + new charges = amount due;
 //    total − paid = balance due), within a dollar;
 //  - the paper shows two different account numbers for the customer (top section vs payment stub).
 // Same rules as web/src/core/billMath.ts. They can only add warnings.
@@ -9,13 +9,14 @@ import Foundation
 enum BillMath {
   struct Finding: Equatable { let text: String; let stop: Bool }
 
-  enum Field: String { case subtotal, tax, total, previous, paid, newCharges, due }
+  enum Field: String { case subtotal, discount, tax, total, previous, paid, newCharges, due }
 
   /// Labels, most specific first; a row counts for the first label it starts with.
   static let labels: [(Field, String)] = [
     (.previous, #"^(previous balance|amount of last bill|last bill amount|balance forward)"#),
     (.paid, #"^(payments?( received)?|paid|payment received|amount paid|less payments?)"#),
     (.newCharges, #"^(total )?(new|current) charges"#),
+    (.discount, #"^(discount|savings|coupon|promo)"#),
     (.subtotal, #"^sub-?\s?total"#),
     (.tax, #"^(sales )?tax(es)?\b(?! and fees on)"#),
     (.due, #"^(total )?(amount|balance) due|^total due|^total amount due|^please pay"#),
@@ -112,8 +113,11 @@ enum BillMath {
     let a = amounts(rows)
     // A reading can misplace a number; only a clear gap counts.
     func off(_ x: Double, _ y: Double) -> Bool { abs(x - y) > 5.0 }
-    if let s = a[.subtotal], let t = a[.tax], let total = a[.total], off(s + t, total) {
-      found.append(Finding(text: "The numbers on this bill don’t add up: \(S.money(s)) plus \(S.money(t)) tax is \(S.money(s + t)), but it says the total is \(S.money(total)).", stop: false))
+    // A discount printed between them comes off the subtotal ("Discount -$188.68"; the sign is not read).
+    if let s = a[.subtotal], let t = a[.tax], let total = a[.total], off(s - (a[.discount] ?? 0) + t, total) {
+      let sum = s - (a[.discount] ?? 0) + t
+      let parts = a[.discount].map { "\(S.money(s)) minus a \(S.money($0)) discount, plus \(S.money(t)) tax," } ?? "\(S.money(s)) plus \(S.money(t)) tax"
+      found.append(Finding(text: "The numbers on this bill don’t add up: \(parts) is \(S.money(sum)), but it says the total is \(S.money(total)).", stop: false))
     }
     if let p = a[.previous], let paid = a[.paid], let n = a[.newCharges], let due = a[.due], off(p - paid + n, due) {
       found.append(Finding(text: "The numbers on this bill don’t add up: the last balance, payments and new charges come to \(S.money(p - paid + n)), but it asks for \(S.money(due)).", stop: false))

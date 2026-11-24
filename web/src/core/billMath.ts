@@ -1,16 +1,16 @@
 // Two plain-code checks on a bill's own words, on this device, with no model:
-//  1. Do the printed numbers add up? (subtotal + tax = total; last bill − payments + new charges = amount due;
+//  1. Do the printed numbers add up? (subtotal − discount + tax = total; last bill − payments + new charges = amount due;
 //     total − paid = balance due), each checked only when every part of it is printed, within $1.
 //  2. Does the bill show two different account numbers for the customer (say, one at the top and another on the
 //     payment stub)?
 // The words come from the paper itself: a PDF's own text, the text recognizer's lines, or an email's covered words.
 // Like every rule on a bill, these can only add a warning; nothing here can clear one.
 
-export type AmountLabel = 'subtotal' | 'tax' | 'total' | 'paid' | 'previous' | 'charges' | 'due' | 'minimum';
+export type AmountLabel = 'subtotal' | 'discount' | 'tax' | 'total' | 'paid' | 'previous' | 'charges' | 'due' | 'minimum';
 
 /** A relation between printed amounts that did not hold. `expected` is what the parts add up to. */
 export type SumMiss =
-  | { rule: 'tax'; subtotal: number; tax: number; total: number; expected: number }
+  | { rule: 'tax'; subtotal: number; discount?: number; tax: number; total: number; expected: number }
   | { rule: 'balance'; previous: number; paid: number; charges: number; due: number; expected: number }
   | { rule: 'paid'; total: number; paid: number; due: number; expected: number };
 
@@ -94,6 +94,7 @@ const LABELS: Array<[AmountLabel, RegExp]> = [
     /\b(?:total\s+)?payments?(?:\s+received)?(?:\s*[-,]?\s*thank\s+you)?\b|\b(?:amount|deposit)\s+paid\b|\bpaid\b|\bless\s+payments?\b/i,
   ],
   ['charges', /\b(?:total\s+)?(?:new|current)\s+charges\b|\bcharges\s+this\s+period\b/i],
+  ['discount', /\b(?:discount|savings|coupon|promo(?:tion)?)\b/i],
   ['subtotal', /\bsub[\s-]?total\b/i],
   ['tax', /\b(?:total\s+)?(?:sales\s+)?tax(?:es)?\b/i],
   ['total', /\b(?:grand\s+)?total\b/i],
@@ -122,7 +123,7 @@ function labelOf(text: string): AmountLabel | null {
 export function findAmounts(lines: string[]): Partial<Record<AmountLabel, number>> {
   const out: Partial<Record<AmountLabel, number>> = {};
   const put = (label: AmountLabel | null, value: number) => {
-    if (label && !(label in out)) out[label] = label === 'paid' ? Math.abs(value) : value;
+    if (label && !(label in out)) out[label] = label === 'paid' || label === 'discount' ? Math.abs(value) : value;
   };
   lines.forEach((line, i) => {
     const hits = amountsIn(line);
@@ -151,8 +152,9 @@ export function checkSums(a: Partial<Record<AmountLabel, number>>): { checked: n
   let checked = 0;
   if (a.subtotal !== undefined && a.tax !== undefined && a.total !== undefined) {
     checked++;
-    const expected = round2(a.subtotal + a.tax);
-    if (off(expected, a.total)) misses.push({ rule: 'tax', subtotal: a.subtotal, tax: a.tax, total: a.total, expected });
+    // A discount printed between them comes off the subtotal ("Discount -$188.68").
+    const expected = round2(a.subtotal - (a.discount ?? 0) + a.tax);
+    if (off(expected, a.total)) misses.push({ rule: 'tax', subtotal: a.subtotal, ...(a.discount ? { discount: a.discount } : {}), tax: a.tax, total: a.total, expected });
   }
   if (a.previous !== undefined && a.paid !== undefined && a.charges !== undefined && a.due !== undefined) {
     checked++;
@@ -178,7 +180,7 @@ const ACCOUNT = new RegExp(
 /** A label alone on its line ("ACCOUNT NUMBER"), its number on the next line. */
 const ACCOUNT_ALONE = /^\s*(?:your\s+)?(?:account|acct|customer)\s*(?:number|no\.?|num|#|id)?\s*:?\s*$/i;
 /** An account that is not the customer's: where money is sent, or the company's own. */
-const PAY_TO = /\b(?:new|old|bank|banking|routing|remit|remittance|send|sent|transfer|deposit|wire|iban|our|their|payment|pay(?:ing)?\s+to|payable\s+to|billing\s+account\s+of)\b[^.]{0,25}$/i;
+const PAY_TO = /\b(?:new|old|former|formerly|previous|prior|replac(?:es|ed|ing)|instead\s+of|bank|banking|routing|remit|remittance|send|sent|transfer|deposit|wire|iban|our|their|payment|pay(?:ing)?\s+to|payable\s+to|billing\s+account\s+of)\b[^.]{0,25}$/i;
 
 const lastFourOf = (raw: string): string | null => {
   const digits = fixDigits(raw).replace(/\D/g, '');
@@ -215,8 +217,11 @@ export function findAccounts(lines: string[]): string[] {
  */
 export function payToEndings(lines: string[]): string[] {
   const out: string[] = [];
-  const text = lines.join(' ');
-  const re = new RegExp(String.raw`\b(?:payment|pay to|pay into|remit to|deposit to|transfer to|new)\s+(?:account\s+)?(?:number\s+)?(?:ending\s+(?:in\s+)?)?[:#]?\s*(${D}[${D.slice(1, -1)}\s-]{2,}${D})`, 'gi');
+  // Lines are joined with a mark that a number never spans, so the digits at the end of one line never take
+  // letters that look like digits ("l", "O") from the next. Only a label at the end of a line may take the number
+  // that starts the next one ("Payment account" / "3305 7719 4821").
+  const text = lines.join(' ¦ ');
+  const re = new RegExp(String.raw`\b(?:payment|pay to|pay into|remit to|deposit to|transfer to|new)\s+(?:account\s+)?(?:number\s+)?(?:ending\s+(?:in\s+)?)?[:#]?\s*(?:¦\s*)?(${D}[${D.slice(1, -1)} \t-]{2,}${D})`, 'gi');
   for (const m of text.matchAll(re)) {
     // The digits under a barcode ("payment 45405395604430731313") are one unbroken run longer than any account.
     if (m[1].replace(/\D/g, '').length > 17 && !/[\s-]/.test(m[1].trim())) continue;
