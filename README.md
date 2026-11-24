@@ -25,7 +25,8 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
 
 1. Open https://weknow-6092f.web.app and press **Start** (or **Open WeKnow**).
 2. Tap the sample **A bill**. WeKnow reads it on your computer and says "Don't pay this bill yet": the bill asks you to
-   pay a new account, not the one you paid last time.
+   pay a new account, not the one you paid last time. In a browser without Chrome's built-in model it first asks
+   "Check this online?", showing the one line that would go (the company's name); either answer gives the verdict.
 3. Tap **Where this answer came from**: what stayed on your computer, what went online (for this bill, nothing), and
    the rules and sources behind every line.
 4. Tap the sample **A repair quote**: every line checked against a sourced price book, the one too high named, with
