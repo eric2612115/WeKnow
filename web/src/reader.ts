@@ -282,17 +282,14 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
     const text = `${read.problem ?? ''} ${question}`;
     items.push({ i: 0, text, options: await kb.candidates(text, { kind: 'guide', k: 5 }) });
   }
-  const fitted = fitChoices(
-    items.filter((it) => it.options.length),
-    where === 'device' ? BUDGETS.nano : BUDGETS.cloud,
-  );
-
   // C. A line that names a price-book item in full is matched by plain code (surePick); the model chooses among
-  //    the candidates for the rest only.
+  //    the candidates for the rest only. This runs on every candidate, before the lists are trimmed to fit the
+  //    prompt, so a long quote can never lose the item a line names to the trimming.
   const chosen = new Map<number, string | null>();
-  if (where === 'device' && read.kind === 'quote' && fitted.items.length) {
-    const named = await kb.resolve(fitted.items.flatMap((it) => it.options.map((o) => o.ref))).catch(() => null);
-    for (const it of named ? [...fitted.items] : []) {
+  const withOptions = items.filter((it) => it.options.length);
+  if (where === 'device' && read.kind === 'quote' && withOptions.length) {
+    const named = await kb.resolve(withOptions.flatMap((it) => it.options.map((o) => o.ref))).catch(() => null);
+    for (const it of named ? withOptions : []) {
       // The price book first: a price looked up earlier for a line of the same name never stands in for it.
       const opts = it.options.map((o) => ({ ...(named!.prices.find((p) => p.ref === o.ref) ?? { ref: o.ref, name: o.name }), learned: o.learned }));
       const sure = surePick(it.text, opts.filter((o) => !o.learned)) ?? surePick(it.text, opts);
@@ -308,7 +305,12 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
       if (!it.options.length) chosen.set(it.i, null);
     }
   }
-  const askable = fitted.items.filter((it) => !chosen.has(it.i));
+  // Only the lines still open go to the model, so only they are trimmed to fit its prompt.
+  const fitted = fitChoices(
+    withOptions.filter((it) => !chosen.has(it.i)),
+    where === 'device' ? BUDGETS.nano : BUDGETS.cloud,
+  );
+  const askable = fitted.items;
   if (askable.length) {
     let choices: Array<{ i: number; ref: string | null }>;
     if (where === 'cloud') {
@@ -348,7 +350,9 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
   const slice = await kb.resolve([...chosen.values()].filter((r): r is string => !!r));
   const loaded = kb.stats();
 
-  const offered = new Set(fitted.items.flatMap((it) => it.options.map((o) => o.ref)));
+  // Every candidate a line kept counts as offered: plain code's sure picks are among them, and the model's answers
+  // were already held to the options it was shown for that line (applyChoices).
+  const offered = new Set(withOptions.flatMap((it) => it.options.map((o) => o.ref)));
   const raw = {
     kind: read.kind,
     // A label is covered again here by plain code, whatever the model copied (a customer name in a line, say).

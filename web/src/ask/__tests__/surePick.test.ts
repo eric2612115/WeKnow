@@ -24,3 +24,12 @@ test('an item that shares only the kind of work with a line is not offered for i
   expect(sharesTellingWord('Hazardous waste / environmental fee', ['Shop supplies fee (per repair order)', 'environmental fee'])).toBe(true);
   expect(sharesTellingWord('Brake inspection', ['Replace brake pads (one axle)'])).toBe(true);
 });
+
+test('the shipped price book names paper 6’s fee line in full, so plain code matches it every time', async () => {
+  const { shippedPack } = await import('../../core/__tests__/fixtures');
+  const fee = shippedPack().prices.find((p) => p.ref === 'shop-supplies-fee')!;
+  // "fee" is a filler word, so "environmental fee" alone names too little; "hazardous waste" names it.
+  for (const line of ['Hazardous waste / environmental fee', 'Hazardous waste/ environmental fee', 'Hazardous waste fee']) {
+    expect(surePick(line, [fee])?.ref).toBe('shop-supplies-fee');
+  }
+});

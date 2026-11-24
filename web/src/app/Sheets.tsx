@@ -240,7 +240,7 @@ function ConfirmSheet({ s }: { s: Extract<SheetState, { type: 'confirm' }> | nul
 /** One sample as a card, the same as on the iPhone: the top of the paper, what it is, and its question. */
 export function SampleCard({ s, pressed, onPress }: { s: Sample; pressed?: boolean; onPress: () => void }) {
   return (
-    <button type="button" className="sample-card" aria-pressed={pressed} onClick={onPress}>
+    <button type="button" className="sample-card" aria-pressed={pressed} aria-label={`${t(s.title)}. ${t(s.q)}`} onClick={onPress}>
       <span className="sample-pic">
         <img src={s.top} alt="" />
       </span>

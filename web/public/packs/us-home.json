@@ -4593,7 +4593,10 @@
     "hazmat fee",
     "hazardous materials fee",
     "environmental disposal fee",
-    "hazardous waste disposal"
+    "hazardous waste disposal",
+    "hazardous waste fee",
+    "hazardous waste / environmental fee",
+    "waste disposal fee"
    ],
    "unit": "invoice",
    "low": 5,

@@ -1,7 +1,7 @@
 {
   "addAliases": {
     "oil-change": ["engine oil and filter", "oil and filter", "lube oil filter", "LOF"],
-    "shop-supplies-fee": ["environmental disposal fee", "environmental fee", "hazardous waste disposal"]
+    "shop-supplies-fee": ["environmental disposal fee", "environmental fee", "hazardous waste disposal", "hazardous waste fee", "hazardous waste / environmental fee", "waste disposal fee"]
   },
   "addProRefs": {
     "diy-wiper-blades": ["wiper-blades"],
