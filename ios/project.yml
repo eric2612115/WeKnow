@@ -39,6 +39,8 @@ targets:
         NSPhotoLibraryUsageDescription: Choose a picture of a quote, a bill or a problem at home for WeKnow to check.
         NSMicrophoneUsageDescription: Say your question. The sound is turned into words on this phone and is never kept or sent.
         NSSpeechRecognitionUsageDescription: Your spoken question is turned into words on this phone, so WeKnow can answer it.
+        # Only HTTPS and a SHA-256 file check (Knowledge.swift): exempt, so uploads skip the export question.
+        ITSAppUsesNonExemptEncryption: false
     # WeKnow/GoogleService-Info.plist is git-ignored. When it is there it is copied into the app; without it the
     # app still builds and reads on the device, and says the internet path is not set up.
     postBuildScripts:
@@ -68,3 +70,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+      configs:
+        # App Attest is signed into release builds only (TestFlight, App Store), which use AppAttestProvider.
+        # Debug builds use the App Check debug provider, so a phone install for testing needs no extra capability.
+        Release:
+          CODE_SIGN_ENTITLEMENTS: WeKnow/WeKnow.entitlements

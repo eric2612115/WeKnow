@@ -29,6 +29,7 @@
 		577CB63A1852864B67A91705 /* PhotoViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B693556928517354101753C3 /* PhotoViewer.swift */; };
 		65BE65FBE2B101F0E6B43A79 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277F60625D448ED672A27153 /* Matcher.swift */; };
 		714026EB715E1F41B9C7BB3E /* Straighten.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C19C7EA8A6134A04FD674DE /* Straighten.swift */; };
+		874464213C167EFD4FD6B000 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 29D5B0E88282644C1CC250A3 /* PrivacyInfo.xcprivacy */; };
 		8968B40B8C8B21AEB4EF4139 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41FFDDB63A22B55479421D60 /* Session.swift */; };
 		8C3005F17FCE5AB69076D259 /* Reader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CF733B3374849CB155AB9B /* Reader.swift */; };
 		93631ABAF1A1F95393FED156 /* BillMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC5F341B909302B135AD694 /* BillMath.swift */; };
@@ -57,6 +58,7 @@
 		1E0565F0DB743C935AB325BB /* CloudPick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudPick.swift; sourceTree = "<group>"; };
 		277F60625D448ED672A27153 /* Matcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matcher.swift; sourceTree = "<group>"; };
 		28E41881706273CAD8C71D94 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		29D5B0E88282644C1CC250A3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2BC3B8378CA639D022EE300F /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		2DF51A4CEC1AB34360E02BA6 /* us-home.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "us-home.json"; sourceTree = "<group>"; };
 		2F9A531BFEF2C87C45F0F51A /* PaperFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperFile.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 		C2865A504511B30DB079C6DE /* Drawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Drawer.swift; sourceTree = "<group>"; };
 		C429EC4BF421D8541A510110 /* bill-changed-account.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "bill-changed-account.png"; sourceTree = "<group>"; };
 		C55C38A648C97BC0A43950C8 /* quote-brakes.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "quote-brakes.png"; sourceTree = "<group>"; };
+		C768508E504480F2E4606820 /* WeKnow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WeKnow.entitlements; sourceTree = "<group>"; };
 		D15757AC618EBC5143F513E7 /* Pages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pages.swift; sourceTree = "<group>"; };
 		E0CF733B3374849CB155AB9B /* Reader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reader.swift; sourceTree = "<group>"; };
 		E47DA87F52B780DC30B684B7 /* catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = catalog.json; sourceTree = "<group>"; };
@@ -199,6 +202,8 @@
 			children = (
 				41F8BFA0757D95C69D9B2C31 /* Assets.xcassets */,
 				28E41881706273CAD8C71D94 /* Info.plist */,
+				29D5B0E88282644C1CC250A3 /* PrivacyInfo.xcprivacy */,
+				C768508E504480F2E4606820 /* WeKnow.entitlements */,
 				CBB74E8180D2E96E955AAA76 /* App */,
 				84CF33207CBB73ECA4695841 /* Core */,
 				6A466E38A51D27A013618727 /* Reading */,
@@ -312,6 +317,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				120D3FA27446278E647233B4 /* Assets.xcassets in Resources */,
+				874464213C167EFD4FD6B000 /* PrivacyInfo.xcprivacy in Resources */,
 				F5426BAB70AAA4612932DB8D /* bill-changed-account.png in Resources */,
 				1F74D7C4AD040D3C55C71558 /* catalog.json in Resources */,
 				130DDE22E72408E88619D9E4 /* quote-brakes.png in Resources */,
@@ -412,6 +418,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = WeKnow/WeKnow.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
