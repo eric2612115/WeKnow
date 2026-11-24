@@ -58,3 +58,12 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 |---|---|
 | r5c-01-clean-paper6-line10-not-checked.jpg | Paper 6 after Delete my data: same ten lines every run, line 10 "Not checked yet" and no online lookup or ask |
 | r5c-02-clean-first-online-ask-paper5.jpg | Paper 5 after Delete my data: the first-time "Check this online?" ask |
+
+## Round 6 (2026-11-24, live build d76b586)
+
+| File | What it shows |
+|---|---|
+| r6-01-clean-paper6-one-time-internet-ask.jpg | Paper 6 after Delete my data: "When this computer can't answer, may I use the internet?" for line 9 |
+| r6-02-clean-paper6-line10-fair.jpg | Paper 6 after Delete my data: line 9 not checked, line 10 "Fair" (matched to "Clean a dryer vent") |
+| r6-03-never-setting-q10.jpg | Use the internet = Never: question 10 answers "I don't know that one yet ... You set WeKnow to answer only from this computer" |
+| r6-04-simulated-offline-q10.jpg | Simulated offline (page told it is offline, its network requests blocked): question 10, "No internet" in the top bar |
