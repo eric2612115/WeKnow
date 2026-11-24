@@ -1554,7 +1554,7 @@ async function lookUpLines(
 }
 
 /** Puts looked-up prices on their lines: high when over the found top, otherwise fair (looked up). */
-function applyFound(items: LineItem[], found: Array<{ i: LineItem; item: PriceItem }>): string[] {
+export function applyFound(items: LineItem[], found: Array<{ i: LineItem; item: PriceItem }>): string[] {
   const said: string[] = [];
   for (const f of found) {
     const line = items.find((x) => x.n === f.i.n);
@@ -1566,6 +1566,10 @@ function applyFound(items: LineItem[], found: Array<{ i: LineItem; item: PriceIt
       line.state = 'high';
       line.over = line.amount - f.item.high;
       said.push(tr('quote.found.high', { label: line.label, low: money(f.item.low), high: money(f.item.high), over: money(line.over) }));
+    } else if (line.amount !== null && line.amount < f.item.low) {
+      // Below the range found online: said as it is, the same way a price-book line below its range is.
+      line.state = 'low';
+      said.push(tr('quote.found.low', { label: line.label, low: money(f.item.low), high: money(f.item.high) }));
     } else {
       line.state = 'found';
       said.push(tr('quote.found.fair', { label: line.label, low: money(f.item.low), high: money(f.item.high) }));

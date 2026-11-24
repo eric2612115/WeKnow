@@ -263,3 +263,19 @@ describe('a picture answer in the conversation', () => {
     expect(C.view().history.some((m) => m.who === 'wk' && m.steps?.n === 1)).toBe(true);
   });
 });
+
+describe('a price looked up online for a quote line', () => {
+  it('is said as it is: inside, above or below the range found', async () => {
+    const { applyFound } = await import('../flows');
+    const found = (n: number, amount: number) => {
+      const i = { n, label: 'Fuel induction cleaning service', amount, state: 'pending' as const };
+      const item = { ref: 'learned-fuel', name: 'Fuel induction cleaning service', category: 'learned', unit: 'job', low: 150, typical: 225, high: 300, aliases: [], sources: [] } as unknown as PriceItem;
+      return { i, item };
+    };
+    const items = [found(1, 114.5).i, found(2, 200).i, found(3, 385).i];
+    const said = applyFound(items as never, [found(1, 114.5), found(2, 200), found(3, 385)].map((f, k) => ({ ...f, i: items[k] })) as never);
+    expect(items.map((x) => x.state)).toEqual(['low', 'found', 'high']);
+    expect(said[0]).toMatch(/below that/);
+    expect(said[1]).toMatch(/inside that/);
+  });
+});

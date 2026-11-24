@@ -153,6 +153,7 @@ export const EN = {
   'quote.unchecked.none': 'I checked every line.',
   'quote.looking.now': 'Looking those prices up online…',
   'quote.found.fair': '{label}: usually {low} to {high}, from price guides online. This one is inside that.',
+  'quote.found.low': '{label}: usually {low} to {high}, from price guides online. This one is below that.',
   'quote.found.high': '{label}: usually {low} to {high}, from price guides online. This one is {over} more than the usual top.',
   'quote.notfound': 'I could not find a sourced price for {names}. Ask the shop what it is for.',
   'pro.none': 'I don’t have a pro price for this one yet.',
