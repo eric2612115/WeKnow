@@ -1518,7 +1518,9 @@ function dontKnow(t: number, never = false) {
   setHead('plain', tr('words.none.title'));
   patch({ offerSamples: true, still: null, looking: false });
   settle();
-  void narrate(t, [tr('words.none.line'), tr('words.none.more'), ...(never ? [tr('route.never', { device: dev() })] : [])]);
+  // With no connection, say that the internet is what is missing, and that it can be asked again then.
+  const offline = !never && !deviceStore.get().online;
+  void narrate(t, [tr('words.none.line'), ...(offline ? [tr('route.offline', { device: dev() })] : [tr('words.none.more')]), ...(never ? [tr('route.never', { device: dev() })] : [])]);
 }
 
 // ---------- a quote ----------

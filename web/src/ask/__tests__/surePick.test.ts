@@ -16,3 +16,11 @@ test('a line with a word the item does not know is left to the model', () => {
   expect(surePick('Brake pads inspection', [pads, padsRotors])).toBeNull();
   expect(surePick('Brake inspection', [pads, padsRotors])).toBeNull();
 });
+
+test('an item that shares only the kind of work with a line is not offered for it', async () => {
+  const { sharesTellingWord } = await import('../words');
+  expect(sharesTellingWord('Fuel induction cleaning service', ['Clean a dryer vent', 'dryer vent cleaning'])).toBe(false);
+  expect(sharesTellingWord('Fuel induction cleaning service', ['Fuel system cleaning', 'fuel injector cleaning'])).toBe(true);
+  expect(sharesTellingWord('Hazardous waste / environmental fee', ['Shop supplies fee (per repair order)', 'environmental fee'])).toBe(true);
+  expect(sharesTellingWord('Brake inspection', ['Replace brake pads (one axle)'])).toBe(true);
+});

@@ -15,7 +15,7 @@ import { BUDGETS, capLines, fitChoices } from './core/budget';
 import { checkUnderstanding, type Understanding } from './core/understanding';
 import { isDailyQuota, lastFour, parseChoice, parseLine, withRetry } from './core/templateParse';
 import { linesFromRows, numberedRows } from './core/billMath';
-import { surePick } from './ask/words';
+import { sharesTellingWord, surePick } from './ask/words';
 
 export type Where = 'device' | 'cloud';
 
@@ -296,7 +296,16 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
       // The price book first: a price looked up earlier for a line of the same name never stands in for it.
       const opts = it.options.map((o) => ({ ...(named!.prices.find((p) => p.ref === o.ref) ?? { ref: o.ref, name: o.name }), learned: o.learned }));
       const sure = surePick(it.text, opts.filter((o) => !o.learned)) ?? surePick(it.text, opts);
-      if (sure) chosen.set(it.i, sure.ref);
+      if (sure) {
+        chosen.set(it.i, sure.ref);
+        continue;
+      }
+      // The model is offered only items that share a telling word with the line, not just "clean" or "replace":
+      // Gemini Nano matched "Fuel induction cleaning service" to "Clean a dryer vent". A line left with nothing to
+      // choose from stays unmatched (never "fair") and can be looked up.
+      const keep = new Set(opts.filter((o) => sharesTellingWord(it.text, [o.name, ...('aliases' in o ? (o.aliases ?? []) : [])])).map((o) => o.ref));
+      it.options = it.options.filter((o) => keep.has(o.ref));
+      if (!it.options.length) chosen.set(it.i, null);
     }
   }
   const askable = fitted.items.filter((it) => !chosen.has(it.i));

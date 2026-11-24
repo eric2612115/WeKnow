@@ -156,6 +156,19 @@ export function sharesJobWord(question: string, phrases: string[]): boolean {
   return asked.some((a) => named.some((n) => sameWord(a, n)));
 }
 
+/** Job words that say what is done, not to what: on their own they do not tie a line to an item. */
+const GENERIC = new Set(
+  ['clean', 'cleaning', 'replace', 'replacement', 'repair', 'install', 'installation', 'service', 'services', 'fix', 'fee', 'fees', 'charge', 'labor', 'part', 'parts', 'job', 'check', 'inspect', 'inspection', 'new', 'remove', 'removal', 'cost', 'flat', 'rate', 'per', 'one', 'pair', 'set', 'kit']
+    .map(stem),
+);
+
+/** Whether an item shares a telling word with a quote line (a word that names the thing, not the work). */
+export function sharesTellingWord(line: string, phrases: string[]): boolean {
+  const said = terms(line).filter((w) => !GENERIC.has(w));
+  const named = new Set(phrases.flatMap((p) => terms(p)).filter((w) => !GENERIC.has(w)));
+  return said.some((w) => named.has(w));
+}
+
 /** Words that say where on the car or house, not which job. */
 const SIDES = new Set(['front', 'rear', 'left', 'right', 'both', 'side', 'driver', 'passenger'].map(stem));
 

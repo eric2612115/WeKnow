@@ -56,6 +56,9 @@ const PRESSURE =
 /** Words about a new or changed account or bank; the model's "account changed" counts only with one printed. */
 const CHANGE_CUE =
   /\b(?:new|changed|updated|different|replacement)\s+(?:[\w-]+\s+){0,2}(?:account|bank|routing|payment details)\b|\b(?:account|bank)\s+(?:[\w-]+\s+){0,3}(?:changed|updated|moved)\b|\breplaces?\s+(?:the|your)\s+(?:old\s+)?(?:\[?account)/i;
+/** Words that speak to an AI or an automated reader; the model's "addressed to AI" counts only with one printed. */
+const TO_A_READER =
+  /\b(?:a\.?i\.?|al)\s+(?:assistants?|models?|readers?|systems?|tools?|agents?)\b|\b(?:artificial intelligence|chatbots?|language models?|llms?|automated (?:readers?|review|checks?|systems?)|assistants? reading|reading this (?:page|bill|letter|document)|(?:this|the) (?:bill|invoice|page) is (?:verified|safe|legitimate))\b|\bignore (?:all|any|previous|prior)\b/i;
 const AI_INSTRUCTION =
   /\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))/i;
 
@@ -76,7 +79,7 @@ export function billVerdict(u: Understanding, maskedText: string, known: KnownPa
   if (!match) flags.push('new-payee');
   else if (!u.payTo || u.payTo !== match.payTo) flags.push('changed-account');
   if (model(u.urgent, PRESSURE) || URGENCY.test(maskedText)) flags.push('urgency');
-  if (u.addressedToAI || AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
+  if (model(u.addressedToAI, TO_A_READER) || AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
   return { safe: flags.length === 0, flags };
 }
 

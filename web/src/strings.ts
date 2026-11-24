@@ -811,6 +811,7 @@ export const EN = {
   'route.blocked.again': 'Ask it differently',
   'route.blocked.photo': 'Take a picture',
   'route.never': 'You set WeKnow to answer only from this {device}. You can change that in Settings.',
+  'route.offline': 'This one needs the internet, and this {device} has no connection right now. Ask me again when it is back.',
   'route.never.picture': 'This {device} cannot read pictures by itself, and WeKnow is set never to use the internet. You can change that in Settings.',
   'route.settings': 'Open Settings',
   'route.why.no-device-model': 'This {device} cannot tell by itself which item your words mean.',
