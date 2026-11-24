@@ -29,3 +29,12 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 | r2-06-paper6-run4-row3-misread-remember-prompt.jpg | Paper 6 run 4: amounts right, names with row numbers, line 3 named from other text, and the "remember this shop" prompt |
 | r2-07-q10-internet-light.jpg | Question 10: checked online, the sentence shown under the internet light |
 | r2-08-q11-only-the-vacuum-sentence.jpg | Question 11: only "My vacuum won't pick anything up." under the internet light |
+
+## Round 3 (2026-11-24, Chrome 158.0.8127.89, live build 7c5ae84)
+
+| File | What it shows |
+|---|---|
+| r3-01-paper5-png-numbers-dont-add-up.jpg | Paper 5 (bill-7 PNG, paste), run 1: "The numbers on this bill don't add up" and the online scam check |
+| r3-02-bill7-pdf-payee-is-the-bank.jpg | bill-7 PDF: payee read as "Thistlewick Savings Bank" (the bank in the remittance box), not the letterhead |
+| r3-03-paper6-run3-rows.jpg | Paper 6 run 3: clean names; line 8 read as "Shops, repair, hardware $6.50"; "3 items not checked" |
+| r3-04-paper3-explain-spanish-placeholders.jpg | Paper 3, Spanish: a faithful translation, shown with `"""` marks and [cuenta] / [número] placeholders |
