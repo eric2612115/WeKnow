@@ -1747,41 +1747,44 @@ async function quoteFlow(c: Ctx) {
   const myself = await guidesFor(kb, refs, matched.map((m) => m.name)).catch(() => [] as Guide[]);
   alive(t);
   let looked = lookNow;
+  // Ask before the unknown lines go over the internet (only the masked line names and the region), then look them up.
+  const lookUpWithConsent = async (t2: number) => {
+    // Ask before one line goes over the internet: only the masked line names and the region.
+    const go = await mayUseInternet(
+      t2,
+      {
+        kind: 'net',
+        title: unknown.length === 1 ? tr('ask.item.title') : tr('ask.items.title', { n: unknown.length }),
+        body: tr('ask.send'),
+        parcel,
+        not: [tr('ask.item.not')],
+        yes: tr('ask.item.yes'),
+        no: tr('ask.item.no'),
+      },
+      [tr('ask.item.say')],
+    );
+    const yes = go === 'go';
+    looked = true;
+    if (yes && c.settings.lookupEnabled) {
+      await runLookup(t2);
+    } else if (yes) {
+      receipt = receiptFor({ sent: parcel, waiting: tr('where.requested', { names: names.join(', ') }) });
+      fileRequests(lookedUp, kb.region, () => undefined);
+      patch({ receipt });
+      void narrate(t2, [names.length === 1 ? tr('quote.requested') : tr('quote.requested.n')]);
+    } else {
+      receipt = receiptFor({ sent: [], waiting: tr('where.declined', { names: names.join(', ') }) });
+      patch({ receipt });
+      void narrate(t2, [names.length === 1 ? tr('quote.skip') : tr('quote.skip.n'), ...(go === 'never' ? [tr('route.never', { device: dev() })] : [])]);
+    }
+  };
   const unchecked = async (t2: number) => {
     const pend = items.filter((i) => i.state === 'pending').map((i) => i.label);
     setHead('plain', pend.length ? tr('quote.unchecked', { names: listNames(pend) }) : tr('quote.unchecked.none'));
     patch({ receipt, items });
     settle();
-    if (unknown.length && online && !looked) {
-      // Ask before one line goes over the internet: only the masked line names and the region.
-      const go = await mayUseInternet(
-        t2,
-        {
-          kind: 'net',
-          title: unknown.length === 1 ? tr('ask.item.title') : tr('ask.items.title', { n: unknown.length }),
-          body: tr('ask.send'),
-          parcel,
-          not: [tr('ask.item.not')],
-          yes: tr('ask.item.yes'),
-          no: tr('ask.item.no'),
-        },
-        [tr('ask.item.say')],
-      );
-      const yes = go === 'go';
-      looked = true;
-      if (yes && c.settings.lookupEnabled) {
-        await runLookup(t2);
-      } else if (yes) {
-        receipt = receiptFor({ sent: parcel, waiting: tr('where.requested', { names: names.join(', ') }) });
-        fileRequests(lookedUp, kb.region, () => undefined);
-        patch({ receipt });
-        void narrate(t2, [names.length === 1 ? tr('quote.requested') : tr('quote.requested.n')]);
-      } else {
-        receipt = receiptFor({ sent: [], waiting: tr('where.declined', { names: names.join(', ') }) });
-        patch({ receipt });
-        void narrate(t2, [names.length === 1 ? tr('quote.skip') : tr('quote.skip.n'), ...(go === 'never' ? [tr('route.never', { device: dev() })] : [])]);
-      }
-    } else void narrate(t2, []);
+    if (unknown.length && online && !looked) await lookUpWithConsent(t2);
+    else void narrate(t2, []);
     offerNext(quoteNext('unchecked'));
   };
   const say = summary.worst
@@ -1826,6 +1829,13 @@ async function quoteFlow(c: Ctx) {
   offerNext(quoteNext());
   await narrated();
   alive(t);
+  // The first time WeKnow would use the internet, it asks once, as it does for a bill (before, a quote only asked
+  // when "Which lines did you not check?" was pressed, so on a fresh start the line was simply left unchecked).
+  if (!looked && unknown.length && online && getPrefs().internet === 'ask-once') {
+    await lookUpWithConsent(t);
+    alive(t);
+    offerNext(quoteNext());
+  }
   const asked = knownShop ? await rememberShop(t, shop, items, u.lines.map((l) => l.ref)) : false;
   settle();
   if (!asked) await offerReady(t);

@@ -519,3 +519,15 @@ describe('learned prices', () => {
     expect(same[0]).toMatchObject({ ref: 'learned-front-brake-pad-replacement', learned: true });
   });
 });
+
+describe('Delete my data', () => {
+  it('forgets the prices this device looked up, also after the pack is opened again', async () => {
+    const s = server(files);
+    const kb = await open(s);
+    const item: PriceItem = { ref: 'learned-fuel-induction-cleaning-abc123', name: 'Fuel induction cleaning service', category: 'learned', unit: 'job', low: 100, typical: 200, high: 300, aliases: [], sources: [{ url: 'https://example.com/fuel', title: 'Fuel', fetched: new Date().toISOString().slice(0, 10) }] } as unknown as PriceItem;
+    await kb.learn(item);
+    expect((await kb.candidates('Fuel induction cleaning service', { kind: 'price' })).some((c) => c.learned)).toBe(true);
+    await kb.forgetLearned();
+    expect((await kb.candidates('Fuel induction cleaning service', { kind: 'price' })).some((c) => c.learned)).toBe(false);
+  });
+});

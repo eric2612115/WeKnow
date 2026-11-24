@@ -395,6 +395,13 @@ export class LayeredKnowledge implements Knowledge {
     return !first;
   }
 
+  /** Forget every price this device looked up (Delete my data). The price book itself stays. */
+  async forgetLearned(): Promise<void> {
+    this.overlay = new Overlay(this.pipe);
+    this.entries = undefined;
+    await this.o.cache?.delete(learnedKey(this.o.base, this.o.packId)).catch(() => undefined);
+  }
+
   /** Restore the prices this device learned earlier. */
   async restoreLearned(): Promise<void> {
     const body = await this.o.cache?.get(learnedKey(this.o.base, this.o.packId)).catch(() => undefined);

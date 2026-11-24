@@ -274,6 +274,8 @@ export default function Settings() {
                     yes: t('set.delete.yes'),
                     onYes: async () => {
                       await wipeAll();
+                      // Prices this device looked up online go too: the next check starts from the price book alone.
+                      await import('../engine/knowledge').then(({ knowledge }) => knowledge()).then((kb) => kb.forgetLearned()).catch(() => undefined);
                       resetPrefs();
                       startAgain();
                       void mailState.disconnect();

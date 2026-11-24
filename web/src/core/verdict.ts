@@ -50,6 +50,11 @@ export interface BillVerdict {
 
 const URGENCY = /\b(urgent|immediately|today only|within 24 hours|final notice|act now|avoid (?:suspension|disconnection|penalt))/i;
 const ACCOUNT_CHANGE = /\b(bank (?:has |have )?changed|new (?:bank|account)(?: details| number)?|changed (?:our )?(?:bank|account)|updated (?:bank|payment) (?:details|information))\b/i;
+/** Words that put time pressure on the reader; the model's "urgent" counts only with one of them printed. */
+const PRESSURE =
+  /\b(urgent|immediate(?:ly)?|today|right away|asap|within \d+ (?:hours?|days?|business days?)|\d+ hours|final (?:notice|warning|reminder)|last (?:chance|notice|warning)|disconnect(?:ion|ed)?|shut ?off|suspen(?:d|ded|sion)|penalt(?:y|ies)|overdue|past due|deadline|legal action|collections?)\b/i;
+/** Words about a new or changed account or bank; the model's "account changed" counts only with one printed. */
+const CHANGE_CUE = /\b(?:new|chang\w*|updat\w*|different|replac\w*|switch\w*|moved?)\b[^.]{0,50}\b(?:account|bank|routing|payment details)|\b(?:account|bank)\b[^.]{0,30}\b(?:new|chang\w*|updat\w*)/i;
 const AI_INSTRUCTION =
   /\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))/i;
 
@@ -60,11 +65,16 @@ const AI_INSTRUCTION =
 export function billVerdict(u: Understanding, maskedText: string, known: KnownPayee[]): BillVerdict {
   const flags: BillFlag[] = [];
   // A letter that says the bank or account changed is the classic payment-redirection trick: always warn first.
-  if (u.accountChange || ACCOUNT_CHANGE.test(maskedText)) flags.push('account-change-notice');
+  // With the paper's own words at hand, a warning the model raises needs a cue printed on the paper: Gemini Nano
+  // raised "it rushes you" and "new account" on bills that print neither, in some runs and not others. Without the
+  // words (a short text: only the model's own fields), the model's flag counts as it is.
+  const printed = maskedText.length >= 200;
+  const model = (flag: boolean, cue: RegExp) => flag && (!printed || cue.test(maskedText));
+  if (model(u.accountChange, CHANGE_CUE) || ACCOUNT_CHANGE.test(maskedText)) flags.push('account-change-notice');
   const match = known.find((k) => u.payee && k.name.toLowerCase() === u.payee.toLowerCase());
   if (!match) flags.push('new-payee');
   else if (!u.payTo || u.payTo !== match.payTo) flags.push('changed-account');
-  if (u.urgent || URGENCY.test(maskedText)) flags.push('urgency');
+  if (model(u.urgent, PRESSURE) || URGENCY.test(maskedText)) flags.push('urgency');
   if (u.addressedToAI || AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
   return { safe: flags.length === 0, flags };
 }
