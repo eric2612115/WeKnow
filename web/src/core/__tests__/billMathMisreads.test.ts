@@ -56,3 +56,16 @@ test('an old account named across lines ("replaces the" / "account ending 4821")
   const m = billMath(['Member account  40-2271-0583', 'New account number — replaces the', 'Service address  512 Bramble Ct', 'account ending 4821. Pay within 24 hours.']);
   expect(m.accounts).toEqual(['0583']);
 });
+
+test('a bank name with "Savings" in it does not make the total a discount; "in payment of" is not money paid', () => {
+  const m = billMath([
+    'In payment of processing fee for release of unclaimed inheritance fund of USD 482,700.00 held on PSRT Clearing',
+    'Include non taxable items Subtotal $1,050.00',
+    'Remittance instruction Includes tax (2.00%) $21.00',
+    'Thistlewick Savings Bank, bank code TWSB-0142 Total $1,091.00',
+    'Account number: 4410 2278 6092 Paid $1,091.00',
+    'Wire, cashier check or prepaid voucher accepted. Balance due $4,827.00',
+  ]);
+  expect(m.amounts).toMatchObject({ subtotal: 1050, tax: 21, total: 1091, paid: 1091, due: 4827 });
+  expect(m.misses.map((x) => x.rule)).toEqual(['tax', 'paid']);
+});

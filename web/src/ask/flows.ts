@@ -1659,6 +1659,8 @@ async function quoteFlow(c: Ctx) {
   }
 
   const receiptFor = (o: { sent: string[]; waiting?: string }): Receipt => {
+    // Counted now, not when the answer first showed: a line looked up since then is checked.
+    const pending = items.filter((i) => i.state === 'pending').length;
     const w = whereRan({ where, online, sent: o.sent.length ? unknown.length : 0, pending });
     return {
       w,
@@ -1795,10 +1797,25 @@ async function quoteFlow(c: Ctx) {
     void narrate(current(), verdictLines);
     offerNext(quoteNext());
   };
+  // Remembering a new shop is offered as a button, never a pop-up over the answer (it used to open by itself once
+  // the lookups were done and took the next click). A shop already in the notes gets today's prices added quietly.
+  const knownShop = !!shop && dataStore.get().memory.some((m) => m.kind === 'job' && norm(m.shop) === norm(shop));
+  let remembered = false;
+  const rememberQ = (): Next[] =>
+    shop && !knownShop && !remembered && getPrefs().offerNotes
+      ? [
+          nextQ(tr('next.remember.shop'), async (t2) => {
+            remembered = true;
+            await rememberShop(t2, shop, items, u.lines.map((l) => l.ref));
+            offerNext(quoteNext());
+          }),
+        ]
+      : [];
   const quoteNext = (skip?: 'say' | 'unchecked' | 'myself'): Next[] => [
     ...(say && skip !== 'say' ? [nextQ(tr('next.say'), say)] : []),
     ...(pending && skip !== 'unchecked' ? [nextQ(tr('next.unchecked'), unchecked)] : []),
     ...(myself.length && skip !== 'myself' ? [nextQ(tr('next.myself.any'), (t2) => chooseGuide(t2, { ...c, t: t2 }, myself))] : []),
+    ...rememberQ(),
   ];
   topic = { kind: 'quote', c, again, next: () => quoteNext(), say, myself };
 
@@ -1807,7 +1824,7 @@ async function quoteFlow(c: Ctx) {
   offerNext(quoteNext());
   await narrated();
   alive(t);
-  const asked = await rememberShop(t, shop, items, u.lines.map((l) => l.ref));
+  const asked = knownShop ? await rememberShop(t, shop, items, u.lines.map((l) => l.ref)) : false;
   settle();
   if (!asked) await offerReady(t);
 }
@@ -1852,12 +1869,15 @@ async function rememberShop(t: number, shop: string | null, items: LineItem[], r
 
 async function billFlow(c: Ctx) {
   const { t, reading, settings, where } = c;
-  const u = reading.understanding;
   const mem = dataStore.get().memory;
   const known = knownPayees(mem);
   // The paper's own words (a PDF's text or the recognizer's lines), read on this device only.
   const words = await paperWords(c);
   alive(t);
+  // When the model named no one, plain code reads who asks to be paid off the letterhead.
+  if (!reading.understanding.payee && words?.length)
+    reading.understanding = { ...reading.understanding, payee: basicPayee(words, known.map((k) => k.name), !c.paper) };
+  const u = reading.understanding;
   const masked = maskText([u.payee ?? '', ...u.lines.map((l) => l.label), ...(words ?? [])].join(' '));
   // Which account to pay into is printed next to "payment account": plain code takes it from the paper's own words, so
   // a member number the model copied by mistake never stands in for it (same as the iPhone).

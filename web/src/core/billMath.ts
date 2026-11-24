@@ -98,20 +98,19 @@ export function printedRow(label: string, words: string[]): { name: string; amou
   let bestShare = 0;
   for (const w of words) {
     const hits = amountsIn(w);
-    if (!hits.length) continue;
+    // A row of a quote ends with its total; a note that only mentions a measure ("run-out 0.03 mm") is not one.
+    if (!hits.length || hits[hits.length - 1].value < 1) continue;
     const set = new Set(toks(w));
     const share = want.filter((x) => set.has(x)).length / want.length;
     if (share > bestShare) [best, bestShare] = [{ w, hits }, share];
   }
   if (!best || bestShare < 0.6) return null;
-  const name = best.w
-    .slice(0, best.hits[0].index)
-    .replace(/^\s*#?\d{1,2}[.):]?\s+(?=\p{L})/u, '')
-    .split(/\s{2,}/)[0]
-    .replace(/(?:\s+[\d.,—–-]+)+\s*$/, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return { name, amount: best.hits[best.hits.length - 1].value };
+  // The name: the words before the first amount, in the first column, without the row number in front or the
+  // quantity and table marks after it ("1 | Check engine light diagnostic (scan and test) 1 —| 1").
+  const said = best.w.slice(0, best.hits[0].index).split(/\s{2,}/)[0].replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
+  while (said.length && !/\p{L}/u.test(said[0])) said.shift();
+  while (said.length && !/\p{L}/u.test(said[said.length - 1])) said.pop();
+  return { name: said.join(' '), amount: best.hits[best.hits.length - 1].value };
 }
 
 /** Quote lines with the name and the total taken from their own printed rows, by plain code. */
@@ -144,13 +143,13 @@ const LABELS: Array<[AmountLabel, RegExp]> = [
     /\b(?:total\s+)?payments?(?:\s+received)?(?:\s*[-,]?\s*thank\s+you)?\b|\b(?:amount|deposit)\s+paid\b|\bpaid\b|\bless\s+payments?\b/i,
   ],
   ['charges', /\b(?:total\s+)?(?:new|current)\s+charges\b|\bcharges\s+this\s+period\b/i],
-  ['discount', /\b(?:discount|savings|coupon|promo(?:tion)?)\b/i],
+  ['discount', /\b(?:discount|coupon|promo(?:tion)?)\b/i],
   ['subtotal', /\bsub[\s-]?total\b/i],
   ['tax', /\b(?:total\s+)?(?:sales\s+)?tax(?:es)?\b/i],
   ['total', /\b(?:grand\s+)?total\b/i],
 ];
 /** Words that make a "payment" line about something else: when, how or where to pay, not money paid. */
-const NOT_PAID = /\bpayments?\s+(?:due|date|stub|coupon|address|options?|methods?|by|to|plan|portal|center|terms)\b|\bminimum\b|\bhow\s+to\s+pay\b|\bunpaid\b|\bpast\s+due\b/i;
+const NOT_PAID = /\bpayments?\s+(?:of|for|due|date|stub|coupon|address|options?|methods?|by|to|plan|portal|center|terms)\b|\bin\s+payment\b|\bminimum\b|\bhow\s+to\s+pay\b|\bunpaid\b|\bpast\s+due\b/i;
 /** "Tax" that is not an amount of tax. */
 const NOT_TAX = /\btax\s+(?:id|exempt|number|no\b|rate)|\b(?:before|pre-?|excl\.?|incl\.?|including|excluding|plus)\s*tax\b/i;
 
@@ -192,7 +191,9 @@ export function findAmounts(lines: string[]): Partial<Record<AmountLabel, number
     let from = 0;
     for (const h of hits) {
       const words = line.slice(from, h.index);
-      if (/[a-z]/i.test(words)) put(labelOf(words), h.value);
+      // The words nearest the amount name it: "Thistlewick Savings Bank, bank code TWSB-0142 Total $1,091.00" is a
+      // total, whatever the bank is called. Only when they say nothing is the whole stretch read.
+      if (/[a-z]/i.test(words)) put(labelOf(words.slice(-40)) ?? labelOf(words), h.value);
       from = h.end;
     }
     const rest = line.slice(from);

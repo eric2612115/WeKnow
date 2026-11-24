@@ -51,7 +51,9 @@ export function checkUnderstanding(raw: unknown, offeredRefs: ReadonlySet<string
   if (problemRef !== null && (typeof problemRef !== 'string' || !offeredRefs.has(problemRef))) {
     throw new UnderstandingError(`problemRef ${String(problemRef)} was not offered`);
   }
-  const str = (v: unknown) => (v === null || v === undefined ? null : typeof v === 'string' ? v : undefined);
+  // A small model sometimes writes the word "null" (or "none", "unknown") instead of leaving a field empty.
+  const str = (v: unknown) =>
+    v === null || v === undefined ? null : typeof v === 'string' ? (/^\s*(null|none|n\/a|unknown|-+)?\s*$/i.test(v) ? null : v) : undefined;
   const payee = str(u.payee);
   const payTo = str(u.payTo);
   if (payee === undefined || payTo === undefined) throw new UnderstandingError('payee/payTo must be text');

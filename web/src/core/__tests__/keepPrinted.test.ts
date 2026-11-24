@@ -54,3 +54,29 @@ test('a quote line takes its name as printed on its row, without the row number 
     { label: 'Hazardous waste / environmental fee', amount: 6.5 },
   ]);
 });
+
+test('names read off a photo lose the row number and the table marks; a note with a measure is not a row', async () => {
+  const { linesFromRows } = await import('../billMath');
+  const words = [
+    'rear 6 mm; rotors within spec (lateral run-out 0.03 mm) but lightly scored; brake fluid 3.1% moisture',
+    '1 | Check engine light diagnostic (scan and test) 1 —| 1 $145.00 $145.00',
+    '3 | Brake fluid flush 1 $21.00 | 08 $116.00 $137.00',
+    '8 | Shop supplies 1 —- = — $24.50',
+    '9 | Hazardous waste / environmental fee 1 —-| - — $6.50',
+  ];
+  const out = linesFromRows(
+    [
+      { label: 'Check engine light diagnostic', amount: 145 },
+      { label: 'Brake fluid flush', amount: 116 },
+      { label: 'Shop supplies', amount: null },
+      { label: 'Hazardous waste environmental fee', amount: 114.5 },
+    ],
+    words,
+  );
+  expect(out).toEqual([
+    { label: 'Check engine light diagnostic (scan and test)', amount: 145 },
+    { label: 'Brake fluid flush', amount: 137 },
+    { label: 'Shop supplies', amount: 24.5 },
+    { label: 'Hazardous waste / environmental fee', amount: 6.5 },
+  ]);
+});
