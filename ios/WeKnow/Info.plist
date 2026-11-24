@@ -20,6 +20,8 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>WeKnow looks at the paper or the thing you point at. The picture stays on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>
