@@ -1970,7 +1970,7 @@ async function billFlow(c: Ctx) {
     ],
     tech: tech(c, [
       ...(online
-        ? [`Checked online with Google Search grounding through Firebase AI Logic (${online.model}): ${found ? `${found.finding}, ${found.sources.length} web sources` : 'no answer with web sources'}, ${online.tries} ${online.tries === 1 ? 'try' : 'tries'}, ${online.ms} ms.`]
+        ? [`Checked online with Google Search grounding through Firebase AI Logic (${online.model}): ${found ? `${found.finding}, ${found.sources.length} web ${found.sources.length === 1 ? 'source' : 'sources'}` : 'no answer with web sources'}, ${online.tries} ${online.tries === 1 ? 'try' : 'tries'}, ${online.ms} ms.`]
         : []),
       `Bill flags: ${v.flags.join(', ') || 'none'}.`,
       math

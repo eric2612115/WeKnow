@@ -578,6 +578,7 @@ export const EN = {
   'where.sent.question': 'Your question: “{q}”',
   'where.src.price': 'Repair price book: {name}',
   'where.src.web': 'Looked up online just now: {name}',
+  'where.src.learned': 'Looked up online earlier: {name}',
   'where.src.guide': 'Home repair guide: {name}',
   'where.src.rules': 'Bill checks on this {device}',
   'where.src.kept': 'Kept with the answer',
