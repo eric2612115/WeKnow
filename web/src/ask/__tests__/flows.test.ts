@@ -130,6 +130,7 @@ describe('a picture answer in the conversation', () => {
     await vi.waitFor(() => expect(C.view().head?.text).toBe('Line 1 is $146 more than usual.'));
   });
 
+  // On a quote, "it rushes you" comes from the printed words only, not from the model's flag (it varied run to run).
   it('an invoice with priced lines still gets a bill’s warning signs: words aimed at a reader stop it, fair prices or not', async () => {
     understanding = { ...base, kind: 'quote', payee: null, addressedToAI: true, urgent: true, lines: [{ label: 'Shop supplies', amount: 45, ref: null }] };
     readingPack = sub([]);
@@ -137,7 +138,8 @@ describe('a picture answer in the conversation', () => {
     expect(F.send('Is this a fair price?')).toBe(true);
     await vi.waitFor(() => expect(C.view().head).toMatchObject({ tone: 'stop', text: 'Don’t pay this yet.' }));
     const said = C.view().lines.map((l) => l.text);
-    expect(said.slice(0, 2)).toEqual(['It rushes you to pay.', 'It has hidden words that try to tell a reader it is safe.']);
+    expect(said[0]).toBe('It has hidden words that try to tell a reader it is safe.');
+    expect(said).not.toContain('It rushes you to pay.');
   });
 
   it('a quote that only rushes is a warning, and a line label that speaks to a reader is caught by the rules alone', async () => {
