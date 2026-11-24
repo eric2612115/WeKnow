@@ -8,10 +8,9 @@ import { DeviceIcon, I } from '../ui/icons';
 import { Seg, Wordmark } from '../ui/controls';
 import { openSheet, setDrawer, useUi } from '../ui/uiStore';
 import { t } from '../strings';
-import { getPrefs, setPrefs, usePrefs, type Theme } from '../store/prefs';
+import { setPrefs, usePrefs, type Theme } from '../store/prefs';
 import { notesOf, useData } from '../store/data';
 import { deviceWord, refreshModel, useDevice } from '../engine/device';
-import { quiet } from '../engine/speech';
 import { firstName, useAccount, watchAccountLater } from '../engine/accountState';
 import { Sheets } from './Sheets';
 import { startAgain } from '../ask/flows';
@@ -74,28 +73,6 @@ function AccountPill() {
       ) : (
         t('bar.signin')
       )}
-    </button>
-  );
-}
-
-/** Sound on or off. Off cuts what is being said now; the words stay on screen. */
-function SoundButton() {
-  const p = usePrefs();
-  const label = p.voice ? t('btn.sound.mute') : t('btn.sound.unmute');
-  return (
-    <button
-      type="button"
-      className="bar-btn"
-      data-off={p.voice ? undefined : ''}
-      aria-label={label}
-      title={label}
-      onClick={() => {
-        const on = !getPrefs().voice;
-        setPrefs({ voice: on });
-        if (!on) quiet();
-      }}
-    >
-      {p.voice ? <I.sound /> : <I.soundOff />}
     </button>
   );
 }
@@ -250,7 +227,6 @@ export default function Shell() {
             <AccountPill />
           </span>
           <NewButton />
-          <SoundButton />
         </div>
       </header>
       <Suspense fallback={<div className="flex-1" />}>

@@ -73,7 +73,30 @@ export function listenOnce(where: ListenWhere, lang = 'en-US', onPartial?: (t: s
   return { stop: () => rec.stop(), done };
 }
 
-/** Speak a sentence with a local voice when one exists. Resolves when speech ends. */
+// macOS lists its novelty voices (Albert, Bad News, Bubbles...) first, and its Eloquence voices (Eddy, Flo...) sound
+// robotic: neither may read an answer.
+const NOVELTY = new Set(
+  'Albert,Bad News,Bahh,Bells,Boing,Bubbles,Cellos,Good News,Jester,Organ,Superstar,Trinoids,Whisper,Wobble,Zarvox,Junior,Ralph,Fred,Kathy,Hysterical,Deranged,Pipe Organ'.split(','),
+);
+const ROBOTIC = /^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/;
+const NATURAL = /^(Samantha|Ava|Zoe|Allison|Susan|Tom|Evan|Nathan|Nicky|Joelle|Noelle|Microsoft (Aria|Jenny|Guy|Zira|David|Mark)|Google US English|Mei-Jia|Meijia|Tingting|Sinji)\b|\((Premium|Enhanced)\)|Natural/;
+
+const tag = (l: string) => l.replace('_', '-').toLowerCase();
+
+/**
+ * The voice to read in `lang` ("en-US", "zh-Hant"): a natural voice on this device when there is one. Same language
+ * and region first, then the device's own voice for it, then a voice on the device rather than one online.
+ */
+export function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | null {
+  const want = tag(lang === 'zh-Hant' ? 'zh-TW' : lang === 'zh-Hans' ? 'zh-CN' : lang);
+  const same = voices.filter((v) => tag(v.lang).slice(0, 2) === want.slice(0, 2) && !NOVELTY.has(v.name.split(' (')[0]));
+  if (!same.length) return null;
+  const score = (v: SpeechSynthesisVoice) =>
+    (tag(v.lang) === want ? 8 : 0) + (v.localService ? 16 : 0) + (NATURAL.test(v.name) ? 4 : 0) + (v.default ? 2 : 0) - (ROBOTIC.test(v.name) ? 6 : 0);
+  return same.reduce((best, v) => (score(v) > score(best) ? v : best));
+}
+
+/** Speak a sentence with a natural local voice when one exists. Resolves when speech ends. */
 export function speak(text: string, lang = 'en-US', rate = 0.92): Promise<void> {
   const synth = globalThis.speechSynthesis;
   if (!synth) return Promise.resolve();
@@ -81,8 +104,7 @@ export function speak(text: string, lang = 'en-US', rate = 0.92): Promise<void> 
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = rate; // a little slower than default: easier to follow
-  const voices = synth.getVoices().filter((v) => v.lang.startsWith(lang.slice(0, 2)));
-  u.voice = voices.find((v) => v.localService) ?? voices[0] ?? null;
+  u.voice = pickVoice(synth.getVoices(), lang);
   return new Promise((resolve) => {
     u.onend = () => resolve();
     u.onerror = () => resolve();

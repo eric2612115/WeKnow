@@ -14,6 +14,7 @@ import { deviceWord } from '../engine/device';
 import { I } from '../ui/icons';
 import { WhereTag } from '../ui/Receipt';
 import { Lamps } from '../ui/Lamps';
+import { SoundButton } from '../ui/SoundButton';
 import { useWire } from '../ask/wire';
 import { openSheet } from '../ui/uiStore';
 import { openPicture } from '../ui/PictureViewer';
@@ -24,18 +25,22 @@ import { SampleButtons, SampleCard } from '../app/Sheets';
 import type { LineItem, Receipt } from '../answer/types';
 
 /** The first sentence: the point, in bold. A tag only for a warning or a stop; never a band, never a green tick. */
-function Head({ head }: { head: AskView['head'] }) {
+function Head({ head, sound = false }: { head: AskView['head']; sound?: boolean }) {
   if (!head) return null;
   const { tone, text } = head;
   return (
-    <div className="mb-1">
-      {(tone === 'warn' || tone === 'stop') && (
-        <span className="ctag" data-tone={tone}>
-          {tone === 'stop' ? <I.stopSquare /> : <I.warn />}
-          {tone === 'stop' ? t('tag.stop') : t('tag.careful')}
-        </span>
-      )}
-      <p className="wk-head">{text}</p>
+    <div className="mb-1 flex items-start gap-2">
+      <div className="min-w-0 flex-1">
+        {(tone === 'warn' || tone === 'stop') && (
+          <span className="ctag" data-tone={tone}>
+            {tone === 'stop' ? <I.stopSquare /> : <I.warn />}
+            {tone === 'stop' ? t('tag.stop') : t('tag.careful')}
+          </span>
+        )}
+        <p className="wk-head">{text}</p>
+      </div>
+      {/* The newest answer carries the sound switch, where the person is looking when it speaks. */}
+      {sound && <SoundButton />}
     </div>
   );
 }
@@ -343,8 +348,13 @@ function LiveAnswer() {
   const explain = !!v.kept && (v.phase === 'settled' || v.phase === 'waiting');
   return (
     <article className="msg-wk" aria-live="polite">
+      {!v.head && (
+        <span className="float-right ml-2">
+          <SoundButton />
+        </span>
+      )}
       <Steps steps={v.steps} />
-      <Head head={v.head} />
+      <Head head={v.head} sound />
       <Lines lines={v.lines} now={v.done ? null : v.now} />
       {v.phase !== 'listening' && <Items items={v.items} />}
       <LinkButtons links={v.links} />

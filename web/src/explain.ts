@@ -10,6 +10,7 @@ import { maskText } from './core/pii';
 import { ai } from './firebase';
 import { FALLBACK_MODEL, type Where } from './reader';
 import { isDailyQuota } from './core/templateParse';
+import { pickVoice } from './voice';
 
 export interface Language {
   code: string; // BCP 47, also used for the voice
@@ -170,13 +171,13 @@ function toBase64(blob: Blob): Promise<string> {
 export function speakIn(text: string, code: string, rate = 0.92): boolean {
   const synth = globalThis.speechSynthesis;
   if (!synth) return false;
-  const voices = synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith(code.slice(0, 2).toLowerCase()));
-  if (!voices.length) return false;
+  const voice = pickVoice(synth.getVoices(), code);
+  if (!voice) return false;
   synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = code;
   u.rate = rate;
-  u.voice = voices.find((v) => v.localService) ?? voices[0];
+  u.voice = voice;
   synth.speak(u);
   return true;
 }
