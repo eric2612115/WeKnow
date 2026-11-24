@@ -45,3 +45,9 @@ Browser page area only. All papers are the fictional test sheets in `docs/test-s
 |---|---|
 | r4-01-paper6-run2-rushes-you-row8.jpg | Paper 6 run 2: bold line "Check this before you pay." with "It rushes you to pay.", line 8 read as "Shop repairs, hardware $6.50" |
 | r4-02-paper3-explain-spanish.jpg | Paper 3, Spanish: sentence by sentence, with 7730 and 4821, no quotation marks |
+
+## Round 5 (2026-11-24, Chrome 158.0.8127.89, live build e18847b)
+
+| File | What it shows |
+|---|---|
+| r5-01-paper6-same-every-run.jpg | Paper 6 run 3 (runs 1-3 identical): lines 1-8 from the price book, line 4 high, line 9 below usual, line 10 looked up |
