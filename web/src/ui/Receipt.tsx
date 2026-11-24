@@ -28,7 +28,7 @@ export function WhereTag({ r, device, onOpen, className = '' }: { r: Receipt; de
   );
 }
 
-const laneH = 'mb-[0.4rem] flex items-center gap-2 text-body font-bold [&_svg]:size-6 [&_svg]:flex-none';
+const laneH = 'mb-[0.4rem] flex items-center gap-2 text-[1.0625rem] font-semibold [&_svg]:size-5 [&_svg]:flex-none';
 
 export function Lanes({ r, device }: { r: Receipt; device: string }) {
   const sent = r.sent.length > 0;

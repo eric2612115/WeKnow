@@ -124,7 +124,7 @@ export default function Mail() {
               <Card key={item.id} as="div">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="grid min-w-0 flex-1 gap-1">
-                    <b className="text-body leading-tight font-bold">{item.subject}</b>
+                    <b className="text-[1.0625rem] leading-tight font-semibold">{item.subject}</b>
                     <span className="text-small text-ink-2">
                       {item.from}, {shortDate(item.date)}
                     </span>

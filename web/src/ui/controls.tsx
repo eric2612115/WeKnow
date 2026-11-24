@@ -94,7 +94,7 @@ export function Card({ children, className = '', id, as: As = 'section' }: { chi
 }
 
 export function CardTitle({ children }: { children: ReactNode }) {
-  return <h2 className="mb-2 text-title font-bold tracking-[-0.02em]">{children}</h2>;
+  return <h2 className="mb-1 text-[1.125rem] font-semibold tracking-[-0.015em]">{children}</h2>;
 }
 
 export function Soon() {
@@ -106,7 +106,7 @@ export function Soon() {
 export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mt-1 mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <h1 className="min-w-0 text-page font-bold tracking-[-0.035em] lg:text-[2.3rem]">{children}</h1>
+      <h1 className="min-w-0 text-[1.75rem] leading-[1.15] font-semibold tracking-[-0.025em] lg:text-[2rem]">{children}</h1>
       {action}
     </div>
   );

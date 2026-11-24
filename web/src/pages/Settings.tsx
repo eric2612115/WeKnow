@@ -59,7 +59,7 @@ function Account() {
           </span>
         )}
         <div className="min-w-0">
-          <b className="block text-body font-bold">{a?.signedIn ? (a.name ?? a.email) : t('set.account.out.title')}</b>
+          <b className="block text-[1.0625rem] font-semibold">{a?.signedIn ? (a.name ?? a.email) : t('set.account.out.title')}</b>
           <span className="text-small text-ink-2">{a?.signedIn ? a.email : t('set.account.out')}</span>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function Settings() {
               <CardTitle>{t('set.privacy')}</CardTitle>
               <div className="my-[0.6rem] mb-[0.4rem] grid grid-cols-[minmax(0,1fr)] gap-[0.8rem] lg:grid-cols-2">
                 <div className="rounded-btn bg-card-2 px-4 py-[0.9rem]">
-                  <h3 className="mb-[0.4rem] flex items-center gap-2 text-body font-bold [&_svg]:size-6 [&_svg]:flex-none">
+                  <h3 className="mb-[0.4rem] flex items-center gap-2 text-[1.0625rem] font-semibold [&_svg]:size-6 [&_svg]:flex-none">
                     <DeviceIcon device={device} />
                     {t('set.privacy.stays', { device })}
                   </h3>
@@ -199,7 +199,7 @@ export default function Settings() {
                   </ul>
                 </div>
                 <div className="rounded-btn bg-net-bg px-4 py-[0.9rem]">
-                  <h3 className="mb-[0.4rem] flex items-center gap-2 text-body font-bold text-net [&_svg]:size-6 [&_svg]:flex-none">
+                  <h3 className="mb-[0.4rem] flex items-center gap-2 text-[1.0625rem] font-semibold text-net [&_svg]:size-6 [&_svg]:flex-none">
                     <I.net />
                     {t('set.privacy.goes', { device })}
                   </h3>

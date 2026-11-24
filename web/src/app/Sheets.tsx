@@ -376,7 +376,7 @@ function Step({ n, ok, title, children }: { n: number; ok?: boolean; title: stri
       >
         {ok ? <I.check /> : n}
       </span>
-      <b className="self-center text-body font-bold">{title}</b>
+      <b className="self-center text-[1.0625rem] font-semibold">{title}</b>
       <div className="col-start-2 grid justify-items-start gap-[0.55rem] text-small text-ink-2">{children}</div>
     </div>
   );

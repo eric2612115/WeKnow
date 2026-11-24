@@ -44,7 +44,7 @@ function CheckItem({ c, showProject }: { c: Check; showProject: boolean }) {
     >
       <Thumb check={c} className="w-[6.6rem] flex-none lg:w-full" />
       <span className="grid min-w-0 justify-items-start gap-[0.3rem] lg:px-1">
-        <b className="text-body leading-[1.2] font-bold tracking-[-0.015em]">{c.title}</b>
+        <b className="text-[1.0625rem] leading-[1.3] font-semibold">{c.title}</b>
         <span className="text-small text-ink-2">
           {t('check.meta.short', { kind: kindText(c), date: shortDate(c.date) })}
           {showProject ? `, ${projectName(c.projectId)}` : ''}
@@ -111,7 +111,7 @@ export default function Checks() {
           );
         return (
           <button key={p.id} type="button" className="card lift block w-full px-[1.1rem] py-[1.05rem] text-left" onClick={() => setSel(p.id)}>
-            <span className="flex items-center justify-between gap-2 text-title font-bold tracking-[-0.02em]">
+            <span className="flex items-center justify-between gap-2 text-[1.125rem] font-semibold tracking-[-0.015em]">
               {p.name}
               <small className="text-small font-semibold tracking-normal text-ink-2">{its.length}</small>
             </span>
@@ -157,7 +157,7 @@ export default function Checks() {
         </button>
       )}
       <div className="mb-[0.9rem] flex flex-wrap items-center gap-[0.7rem]">
-        <h2 className="min-w-32 flex-1 text-[1.5rem] leading-[1.15] font-bold tracking-[-0.025em]">{project ? project.name : t('checks.all')}</h2>
+        <h2 className="min-w-32 flex-1 text-[1.25rem] leading-[1.2] font-semibold tracking-[-0.02em]">{project ? project.name : t('checks.all')}</h2>
         {project && (
           <button type="button" className="btn btn-sm" onClick={() => openSheet({ type: 'name', mode: 'rename', projectId: project.id })}>
             {t('checks.rename')}

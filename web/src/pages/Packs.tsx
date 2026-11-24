@@ -40,7 +40,7 @@ export default function Packs() {
                   <I.book />
                 </span>
                 <div className="grid min-w-0 gap-[0.15rem]">
-                  <b className="text-body font-semibold tracking-[-0.01em]">
+                  <b className="text-[1.0625rem] font-semibold">
                     {p.id} · {p.region}
                   </b>
                   <span className="text-small">{t('packs.counts', { prices: p.counts.prices, guides: p.counts.guides })}</span>
