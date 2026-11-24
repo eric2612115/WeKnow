@@ -19,3 +19,14 @@ test('printed pressure and a printed bank change still raise both warnings', () 
 test('without the paper’s words, the model’s flags count as they are', () => {
   expect(billVerdict(base, 'Riverbend Electric Co-op', known as never).flags).toEqual(expect.arrayContaining(['urgency', 'account-change-notice']));
 });
+
+test('a payment stub’s "Address change ... Enroll in automatic payment [account" is not an account change', () => {
+  const stub = `${normal} ☐ Address change (see back) ☐ Enroll in automatic payment [account ending 3168]`;
+  expect(billVerdict(base, stub, known as never).flags).not.toContain('account-change-notice');
+});
+
+test('the ways bill-3 says it still count', () => {
+  for (const said of ['Important: our bank has changed.', 'Please pay to our new account ending 7730.', 'New account number — replaces the account ending 4821.']) {
+    expect(billVerdict({ ...base, accountChange: true }, `${normal} ${said}`, known as never).flags).toContain('account-change-notice');
+  }
+});

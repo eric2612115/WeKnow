@@ -54,7 +54,8 @@ const ACCOUNT_CHANGE = /\b(bank (?:has |have )?changed|new (?:bank|account)(?: d
 const PRESSURE =
   /\b(urgent|immediate(?:ly)?|today|right away|asap|within \d+ (?:hours?|days?|business days?)|\d+ hours|final (?:notice|warning|reminder)|last (?:chance|notice|warning)|disconnect(?:ion|ed)?|shut ?off|suspen(?:d|ded|sion)|penalt(?:y|ies)|overdue|past due|deadline|legal action|collections?)\b/i;
 /** Words about a new or changed account or bank; the model's "account changed" counts only with one printed. */
-const CHANGE_CUE = /\b(?:new|chang\w*|updat\w*|different|replac\w*|switch\w*|moved?)\b[^.]{0,50}\b(?:account|bank|routing|payment details)|\b(?:account|bank)\b[^.]{0,30}\b(?:new|chang\w*|updat\w*)/i;
+const CHANGE_CUE =
+  /\b(?:new|changed|updated|different|replacement)\s+(?:[\w-]+\s+){0,2}(?:account|bank|routing|payment details)\b|\b(?:account|bank)\s+(?:[\w-]+\s+){0,3}(?:changed|updated|moved)\b|\breplaces?\s+(?:the|your)\s+(?:old\s+)?(?:\[?account)/i;
 const AI_INSTRUCTION =
   /\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))/i;
 
