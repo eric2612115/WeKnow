@@ -219,7 +219,8 @@ export function tagText(r: Pick<Receipt, 'w' | 'n'>, device: string): string {
 
 /** Sources named by kind and date; the addresses go inside Technical details. */
 export function priceSources(items: PriceItem[]): SourceRow[] {
-  return items.slice(0, 6).map((p) => {
+  // Every item an answer used is listed (it was cut at six, so the lines after the sixth showed no source).
+  return items.filter((p, i, all) => all.findIndex((q) => q.ref === p.ref) === i).map((p) => {
     const fetched = p.sources.map((s) => s.fetched).filter(Boolean).sort().pop();
     return {
       // A price looked up on the web for a line the book did not have is named as that, never as the price book.

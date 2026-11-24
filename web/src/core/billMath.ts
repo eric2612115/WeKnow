@@ -113,6 +113,29 @@ export function printedRow(label: string, words: string[]): { name: string; amou
   return { name: said.join(' '), amount: best.hits[best.hits.length - 1].value };
 }
 
+/**
+ * A quote's numbered lines, read by plain code alone: rows that start with a line number (1, 2, 3 ...) and end with
+ * an amount, in order. Null unless the numbers run from 1 without a gap for at least two rows. When a paper numbers
+ * its lines, which lines there are and what they cost is not left to a model at all.
+ */
+export function numberedRows(words: string[]): Array<{ label: string; amount: number }> | null {
+  const rows: Array<{ n: number; label: string; amount: number }> = [];
+  for (const w of words) {
+    const m = /^\s*#?(\d{1,2})\s*[|.):]?\s+(?=\p{L})/u.exec(w);
+    if (!m) continue;
+    const hits = amountsIn(w);
+    if (!hits.length || hits[hits.length - 1].value < 1) continue;
+    const said = w.slice(0, hits[0].index).split(/\s{2,}/)[0].replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
+    while (said.length && !/\p{L}/u.test(said[0])) said.shift();
+    while (said.length && !/\p{L}/u.test(said[said.length - 1])) said.pop();
+    if (!said.length) continue;
+    rows.push({ n: Number(m[1]), label: said.join(' '), amount: hits[hits.length - 1].value });
+  }
+  const run: typeof rows = [];
+  for (const r of rows) if (r.n === run.length + 1) run.push(r);
+  return run.length >= 2 ? run.map(({ label, amount }) => ({ label, amount })) : null;
+}
+
 /** Quote lines with the name and the total taken from their own printed rows, by plain code. */
 export function linesFromRows<T extends { label: string; amount: number | null }>(lines: T[], words: string[]): T[] {
   return lines.map((l) => {

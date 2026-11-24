@@ -1620,8 +1620,10 @@ async function quoteFlow(c: Ctx) {
   // A quote or an invoice with priced lines can carry the same traps as a bill. The rules that read a bill for them
   // (core/verdict.ts) read this paper too: what the model flagged, its line labels, and the paper's own words when
   // they are already here (a PDF's text). They can only add a warning to the price verdict, never take one away.
-  const ownWords = c.paper ? c.paper.text.split('\n') : (c.basic?.lines ?? []);
-  const signs = billVerdict(u, maskText([u.payee ?? '', ...u.lines.map((l) => l.label), ...ownWords].join(' ')), []).flags.filter(
+  const ownWords = c.paper ? c.paper.text.split('\n') : (c.printed ?? c.basic?.lines ?? []);
+  // On a quote, "it rushes you" comes from the printed words only: Gemini Nano flagged an ordinary quote as urgent in
+  // one run of three, and a quote's verdict must not change from run to run.
+  const signs = billVerdict({ ...u, urgent: false }, maskText([u.payee ?? '', ...u.lines.map((l) => l.label), ...ownWords].join(' ')), []).flags.filter(
     (f): f is 'account-change-notice' | 'urgency' | 'instruction-to-ai' => f === 'account-change-notice' || f === 'urgency' || f === 'instruction-to-ai',
   );
   const withSigns = (priced: ReturnType<typeof quoteSummary>): ReturnType<typeof quoteSummary> =>

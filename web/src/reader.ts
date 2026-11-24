@@ -14,7 +14,7 @@ import { isKnowledge, knowledgeFromPack, type Candidate, type Knowledge } from '
 import { BUDGETS, capLines, fitChoices } from './core/budget';
 import { checkUnderstanding, type Understanding } from './core/understanding';
 import { isDailyQuota, lastFour, parseChoice, parseLine, withRetry } from './core/templateParse';
-import { linesFromRows } from './core/billMath';
+import { linesFromRows, numberedRows } from './core/billMath';
 import { surePick } from './ask/words';
 
 export type Where = 'device' | 'cloud';
@@ -267,7 +267,11 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
   );
   if (read.kind === 'quote' && printed) {
     const words = await printed.catch(() => null);
-    if (words?.length) lines = linesFromRows(lines, words);
+    const numbered = words?.length ? numberedRows(words) : null;
+    // A paper that numbers its lines gives them by plain code; otherwise each line the model listed takes its name
+    // and total from its printed row.
+    if (numbered && numbered.length >= Math.ceil(lines.length * 0.8)) lines = capLines(numbered);
+    else if (words?.length) lines = linesFromRows(lines, words);
   }
   const items: Array<{ i: number; text: string; options: Candidate[] }> = [];
   if (read.kind === 'quote') {
@@ -289,7 +293,9 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
   if (where === 'device' && read.kind === 'quote' && fitted.items.length) {
     const named = await kb.resolve(fitted.items.flatMap((it) => it.options.map((o) => o.ref))).catch(() => null);
     for (const it of named ? [...fitted.items] : []) {
-      const sure = surePick(it.text, it.options.map((o) => named!.prices.find((p) => p.ref === o.ref) ?? { ref: o.ref, name: o.name }));
+      // The price book first: a price looked up earlier for a line of the same name never stands in for it.
+      const opts = it.options.map((o) => ({ ...(named!.prices.find((p) => p.ref === o.ref) ?? { ref: o.ref, name: o.name }), learned: o.learned }));
+      const sure = surePick(it.text, opts.filter((o) => !o.learned)) ?? surePick(it.text, opts);
       if (sure) chosen.set(it.i, sure.ref);
     }
   }
