@@ -132,6 +132,56 @@ export function matchStrength(question: string, phrases: string[]): number {
   return best;
 }
 
+/** Two job words are the same, or one is a small misspelling of the other ("altenr" for "altern"). */
+function sameWord(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length < 5 || b.length < 5 || Math.abs(a.length - b.length) > 2) return false;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length] <= 2;
+}
+
+/**
+ * Whether a pack item has anything to do with the question: at least one of its job words (name or another name) is
+ * in the question. A small model offered a list will pick something from it even when nothing fits ("My vacuum
+ * won't pick anything up" got "Top up windshield washer fluid", found by "up"): such a pick is not taken.
+ */
+export function sharesJobWord(question: string, phrases: string[]): boolean {
+  const asked = terms(question);
+  const named = phrases.flatMap((p) => terms(p));
+  return asked.some((a) => named.some((n) => sameWord(a, n)));
+}
+
+/** Words that say where on the car or house, not which job. */
+const SIDES = new Set(['front', 'rear', 'left', 'right', 'both', 'side', 'driver', 'passenger'].map(stem));
+
+/**
+ * The one option plain code is sure a quote line names, or null (same rule as the iPhone's Matcher.sure): one of the
+ * option's names (two job words or more, brackets left out) is wholly in the line, and every job word of the line is
+ * one the option knows or only says which side. Among such options the longest name wins ("brake pads and rotors"
+ * before "brake pads"); a tie is not sure. A sure line is not given to a model, so it comes out the same every time.
+ */
+export function surePick<T extends { ref: string; name: string; aliases?: string[] }>(line: string, options: T[]): T | null {
+  const said = new Set(terms(line));
+  let best: T | null = null;
+  let bestLen = 0;
+  let tie = false;
+  for (const o of options) {
+    const phrases = [o.name.replace(/\([^)]*\)/g, ' '), ...(o.aliases ?? [])].map((p) => terms(p)).filter((p) => p.length >= 2);
+    const known = new Set([o.name, ...(o.aliases ?? [])].flatMap((p) => terms(p)));
+    if (![...said].every((w) => known.has(w) || SIDES.has(w))) continue;
+    const named = Math.max(0, ...phrases.filter((p) => p.every((w) => said.has(w))).map((p) => p.length));
+    if (!named) continue;
+    if (named > bestLen) [best, bestLen, tie] = [o, named, false];
+    else if (named === bestLen) tie = true;
+  }
+  return tie ? null : best;
+}
+
 export interface Scored {
   kind: ItemKind;
   ref: string;

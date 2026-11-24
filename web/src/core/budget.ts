@@ -69,7 +69,8 @@ export function chooseTokens(items: ChoiceItem[]): number {
 export function capLines<T extends { label?: unknown }>(lines: T[]): Array<T & { label: string }> {
   return (Array.isArray(lines) ? lines : []).slice(0, MAX_LINES).map((l) => ({
     ...l,
-    label: (typeof l?.label === 'string' ? l.label : l?.label == null ? '' : String(l.label)).slice(0, MAX_LABEL_CHARS),
+    // The row number a shop prints before a line ("9 Hazardous waste fee") is not part of the job's name.
+    label: (typeof l?.label === 'string' ? l.label : l?.label == null ? '' : String(l.label)).replace(/^\s*#?\d{1,2}[.):]?\s+(?=\p{L})/u, '').slice(0, MAX_LABEL_CHARS),
   }));
 }
 

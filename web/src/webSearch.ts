@@ -48,13 +48,13 @@ export interface BillCheckResult {
   tries: number;
 }
 
-/** A suspicious bill from someone new: what the web knows (core/billCheck.ts). Up to three tries without sources. */
+/** A suspicious bill from someone new: what the web knows (core/billCheck.ts). Up to two tries without sources. */
 export async function checkBillOnline(question: string): Promise<BillCheckResult> {
   const { text } = buildCloudQuestion({ text: question });
   const started = performance.now();
   let tries = 0;
   let check: OnlineCheck | null = null;
-  while (!check && tries < 3) {
+  while (!check && tries < 2) {
     tries += 1;
     const res = await online({ what: 'question', words: text }, () => withRetry(() => model().generateContent(onlineCheckPrompt(text)), RETRY));
     const sources = webSources(res.response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []);

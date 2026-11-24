@@ -12,9 +12,9 @@ import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts, withBillMath } from '../core/verdict';
-import { amountsIn, billMath, keepPrinted, payToOf, type BillMath } from '../core/billMath';
+import { amountsFromRows, amountsIn, billMath, keepPrinted, payToOf, type BillMath } from '../core/billMath';
 import { guideByRef, priceByRef, proPrice } from '../core/packs';
-import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, terms, type ItemKind, type Scored } from './words';
+import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, sharesJobWord, terms, type ItemKind, type Scored } from './words';
 import { afterConsent, gate, route, type Reason } from './router';
 import { coverWords, escalate } from './escalate';
 import type { PIIKind } from '../core/pii';
@@ -25,7 +25,7 @@ import { maskText } from '../core/pii';
 import { coverPaperText, flatPayload } from '../core/paperText';
 import { openSheet } from '../ui/uiStore';
 import { withRetry } from '../core/templateParse';
-import { basicBill, basicKind } from '../core/basicRead';
+import { basicBill, basicKind, basicPayee } from '../core/basicRead';
 import { buildCloudLookup } from '../core/cloudPayload';
 import {
   billAnswer,
@@ -351,10 +351,15 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   if (d.model !== 'available') return noModelPicture(t, question, pic);
   const where: Where = 'device';
 
+  // The paper's own words, read on this device alongside the model (a PDF's text, or the text recognizer's lines):
+  // plain code takes quote lines and the kind of paper from them.
+  const printed: Promise<string[] | null> = pic.paper
+    ? Promise.resolve(pic.paper.text.split('\n'))
+    : import('../coverPicture').then(({ readLines }) => readLines(still.blob)).catch(() => null);
   // Start reading at once; what WeKnow is doing is said while it reads, never before.
   const job = (async () => {
     const [kb, settings] = await Promise.all([knowledge(), appSettings()]);
-    const reading = await readNow(kb, settings, still.blob, question, where, undefined, sideFor(pic));
+    const reading = await readNow(kb, settings, still.blob, question, where, undefined, sideFor(pic), printed);
     return { kb, settings, reading };
   })();
   job.catch(() => undefined);
@@ -377,7 +382,19 @@ async function pictureFlow(t: number, question: string, pic: PictureSrc, post: b
   patch({ reading: false });
   lastSent = null;
 
-  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic };
+  const ctx: Ctx = { t, question, where, reading, kb, settings, picture: still.blob, src: pic, printed: await printed };
+  // Plain code has the last word on what kind of paper it is: when the printed words plainly say bill and the model
+  // said quote, the words win. Seen on Gemini Nano: an "INVOICE ... Balance due" letter read
+  // as a repair quote, so its fees were priced instead of the bill being checked.
+  if (where === 'device' && reading.understanding.kind === 'quote') {
+    const printed = (await paperWords(ctx)) ?? [];
+    alive(t);
+    if (reading.understanding.kind === 'quote' && basicKind(printed) === 'bill') {
+      const u = reading.understanding;
+      reading.understanding = { ...u, kind: 'bill', lines: [], payee: u.payee ?? basicPayee(printed, knownPayees(dataStore.get().memory).map((k) => k.name), true) };
+      console.info('[WeKnow] the model read a quote; the printed words say bill');
+    }
+  }
   const kind = reading.understanding.kind;
   if (kind === 'quote') return quoteFlow(ctx);
   if (kind === 'bill') return billFlow(ctx);
@@ -513,6 +530,8 @@ interface Ctx {
    * (core/basicRead.ts). Nothing was sent to be read. `lines` are the words read from a picture on this device.
    */
   basic?: { lines?: string[] };
+  /** The paper's printed words once read on this device for the plain-code checks (kept so they are read once). */
+  printed?: string[] | null;
   /** On the cloud path: why the cloud read it (the router's reason). */
   cloudWhy?: Reason;
   /** Set when the device could not answer well and the covered words were checked online. */
@@ -546,7 +565,7 @@ interface Escalated {
  * Read a picture. On the cloud path the reader gets the covered copy only, never `blob` (the picture as taken):
  * without a covered copy nothing is read in the cloud.
  */
-async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: string, where: Where, covered?: Covered, maxSide?: number): Promise<Reading> {
+async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: string, where: Where, covered?: Covered, maxSide?: number, printed?: Promise<string[] | null>): Promise<Reading> {
   const [{ readPhoto, setCloudModel }, { shrinkPhoto }] = await Promise.all([import('../reader'), import('../image')]);
   setCloudModel(s.cloudModel);
   if (where === 'cloud') {
@@ -554,7 +573,7 @@ async function readNow(kb: LayeredKnowledge, s: Settings, blob: Blob, question: 
     return readPhoto(kb, covered.blob, question, where);
   }
   const small = await shrinkPhoto(blob, maxSide);
-  return readPhoto(kb, small, question, where);
+  return readPhoto(kb, small, question, where, printed);
 }
 
 /** The long side a picture is shrunk to before reading: two PDF pages stacked need more to keep small print. */
@@ -721,6 +740,12 @@ function needModel(t: number, what: 'quote' | 'paper' | 'thing') {
  * Null when there are none (nothing is checked then). They never leave this device.
  */
 async function paperWords(c: Ctx): Promise<string[] | null> {
+  if (c.printed !== undefined) return c.printed;
+  c.printed = await readPaperWords(c);
+  return c.printed;
+}
+
+async function readPaperWords(c: Ctx): Promise<string[] | null> {
   if (c.paper) return c.paper.text.split('\n');
   if (c.basic?.lines) return c.basic.lines;
   if (c.covered) return c.covered.text ?? null;
@@ -1081,7 +1106,7 @@ function tech(c: Ctx, extra: string[] = []): string[] {
     return [
       `Read from the PDF's own text, taken out on this ${dev()} with pdf.js (no text recognition needed); personal details covered on this ${dev()} first (${c.paper.masked.length} characters after covering).`,
       c.where === 'device'
-        ? `The covered text was read into the bill form by the built-in model on this ${dev()} (Firebase AI Logic, on-device) in ${(c.reading.ms / 1000).toFixed(1)} s. Requests to the cloud model: 0.`
+        ? `The covered text was read into the bill form by the built-in model on this ${dev()} (Firebase AI Logic, on-device) in ${(c.reading.ms / 1000).toFixed(1)} s. Requests to read it in the cloud: 0.`
         : `The covered text, and only the text, was read into the bill form in the cloud by ${c.settings.cloudModel} through Firebase AI Logic in ${(c.reading.ms / 1000).toFixed(1)} s. Requests to the cloud model: 1.`,
       `Pack ${c.kb.id}, version ${c.kb.version}.`,
       ...extra,
@@ -1093,7 +1118,7 @@ function tech(c: Ctx, extra: string[] = []): string[] {
   let requests: string;
   if (c.where === 'device') {
     who = `Read by the built-in model on this ${dev()} (Firebase AI Logic, on-device).`;
-    requests = 'Requests to the cloud model: 0.';
+    requests = 'Requests to read it in the cloud: 0.';
   } else if (r.fallback) {
     who = `Read in the cloud by ${r.fallback} through Firebase AI Logic, with the same form, because the template model (weknow-read-photo-v1) had used its daily quota.`;
     requests = `Requests answered by the cloud model: ${answered} (reading${chose ? ', choosing' : ''}), on ${r.fallback}. A request the template model turned away for its daily quota is not counted.`;
@@ -1257,9 +1282,21 @@ async function lookUpWords(t: number, asked: string, kb: LayeredKnowledge): Prom
   const order = kindOrder(l);
   const lists = await Promise.all(order.map((kind) => kb.candidates(question, { kind, k: 4 })));
   alive(t);
-  const all = lists.flat();
+  const found = lists.flat();
+  if (!found.length) return { hit: null, guides: [], offered: 0, found: 0 };
+  // Plain search also returns items that share only a small word ("up", "won't"). Only items that share a job word
+  // with the question are offered, to the model or as likely guides.
+  // (Offline without these blocks the list is not narrowed: never worse than before.)
+  const named = await kb.resolve(found.map((c) => c.ref)).catch(() => null);
+  alive(t);
+  const fits = (c: Candidate) => {
+    if (!named) return true;
+    const item = c.kind === 'price' ? priceByRef(named, c.ref) : guideByRef(named, c.ref);
+    return !item || sharesJobWord(question, [item.name, ...(item.aliases ?? [])]);
+  };
+  const all = found.filter(fits);
   // Likely guides to offer when no one item is clear (not for a question about a price).
-  const guides = l === 'price' ? [] : (lists[order.indexOf('guide')] ?? []).slice(0, 3);
+  const guides = l === 'price' ? [] : (lists[order.indexOf('guide')] ?? []).filter(fits).slice(0, 3);
   if (!all.length) return { hit: null, guides: [], offered: 0, found: 0 };
 
   if (deviceStore.get().model === 'available') {
@@ -1546,7 +1583,7 @@ async function quoteFlow(c: Ctx) {
     // A PDF's text is exact. Words recognized from a photo count only when the recognizer plainly read the page:
     // it found at least as many prices as the quote has priced lines.
     const readable = !!c.paper || printed.flatMap((w) => amountsIn(w)).length >= Math.max(1, lines.filter((l) => l.amount !== null).length);
-    if (readable) reading.understanding = { ...reading.understanding, lines: keepPrinted(lines, printed) };
+    if (readable) reading.understanding = { ...reading.understanding, lines: keepPrinted(amountsFromRows(lines, printed), printed) };
   }
   const u = reading.understanding;
   const shop = nameOf(u.payee);
@@ -1656,7 +1693,7 @@ async function quoteFlow(c: Ctx) {
       ...receiptFor({ sent: parcel, waiting: missed.length ? tr('where.requested', { names: missed.join(', ') }) : undefined }),
       sources: [...priceSources(matched as PriceItem[]), ...priceSources(found.map((f) => f.item)).map((r) => ({ ...r, label: tr('where.src.web', { name: r.label.replace(/^.*?: /, '') }) }))],
     };
-    receipt.tech = [...receipt.tech, `Looked up online for ${unknown.length} ${unknown.length === 1 ? 'line' : 'lines'} with Google Search grounding through Firebase AI Logic; ${found.length} came back with sources (${found.map((f) => `${f.ms} ms`).join(', ')}). Sent: the masked line names and the region only.`];
+    receipt.tech = [...receipt.tech, `Looked up online for ${unknown.length} ${unknown.length === 1 ? 'line' : 'lines'} with Google Search grounding through Firebase AI Logic; ${found.length} came back with sources${found.length ? ` (${found.map((f) => `${f.ms} ms`).join(', ')})` : ''}. Sent: the masked line names and the region only.`];
     patch({ items: [...items], receipt });
     // Every line has a price now: the question about unchecked lines goes.
     if (!items.some((i) => i.state === 'pending')) offerNext(quoteNext('unchecked'));
@@ -1884,7 +1921,12 @@ async function billFlow(c: Ctx) {
   // What the web answer adds in its own words is shown only when it makes the warning stronger. For "real" or
   // "unclear" WeKnow says its own fixed sentence and nothing more: text that came from the paper could otherwise
   // steer those lines into saying it is safe.
-  const onlineLines: Said[] = found ? [tr(`billcheck.${found.finding}`), ...(found.finding === 'known-scam-pattern' || found.finding === 'not-found' ? found.points : [])] : [];
+  // A check that went out but came back with no answer from web sources is said too, so the person knows it ran.
+  const onlineLines: Said[] = found
+    ? [tr(`billcheck.${found.finding}`), ...(found.finding === 'known-scam-pattern' || found.finding === 'not-found' ? found.points : [])]
+    : online
+      ? [tr('billcheck.unclear')]
+      : [];
 
   const receipt: Receipt = {
     w: whereRan({ where, online: deviceStore.get().online, sent: 0, pending: 0 }),

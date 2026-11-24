@@ -14,6 +14,8 @@ import { isKnowledge, knowledgeFromPack, type Candidate, type Knowledge } from '
 import { BUDGETS, capLines, fitChoices } from './core/budget';
 import { checkUnderstanding, type Understanding } from './core/understanding';
 import { isDailyQuota, lastFour, parseChoice, parseLine, withRetry } from './core/templateParse';
+import { linesFromRows } from './core/billMath';
+import { surePick } from './ask/words';
 
 export type Where = 'device' | 'cloud';
 
@@ -200,12 +202,17 @@ export interface Reading {
  * Read one photo. `where` is decided by the caller: device when ready, cloud only after the person agreed.
  * `knowledge` is the layered pack (core/knowledge.ts); a whole in-memory Pack still works and is ranked the same way.
  */
-export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, question: string, where: Where): Promise<Reading> {
+/**
+ * `printed`: the paper's own words read on this device (a PDF's text, or the text recognizer's lines). When given,
+ * each quote line takes its name and total from its printed row, by plain code: a model on a web page cannot be made
+ * to answer the same way twice (Chrome ignores sampling options there), so what can be read is not left to it.
+ */
+export async function readPhoto(knowledge: Knowledge | Pack, image: Blob, question: string, where: Where, printed?: Promise<string[] | null>): Promise<Reading> {
   // On a device with no model of its own the covered picture is read online: the internet lamp is lit for all of it.
-  return where === 'cloud' ? online({ what: 'picture' }, () => readPhotoAt(knowledge, image, question, where)) : readPhotoAt(knowledge, image, question, where);
+  return where === 'cloud' ? online({ what: 'picture' }, () => readPhotoAt(knowledge, image, question, where)) : readPhotoAt(knowledge, image, question, where, printed);
 }
 
-async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: string, where: Where): Promise<Reading> {
+async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: string, where: Where, printed?: Promise<string[] | null>): Promise<Reading> {
   const kb = isKnowledge(knowledge) ? knowledge : knowledgeFromPack(knowledge);
   const filesBefore = kb.stats().files.length;
   const t0 = performance.now();
@@ -255,9 +262,13 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
   // A total, a discount or a payment the model listed anyway is not a job to price, and a negative amount must not
   // cost the whole reading: such lines are left out here, by plain code (the iPhone does the same).
   const NOT_A_JOB = /^\s*(sub-?total|total|grand total|tax|sales tax|balance|amount due|payment|deposit|discount|credit)\b/i;
-  const lines = capLines(Array.isArray(read.lines) ? read.lines : []).filter(
+  let lines = capLines(Array.isArray(read.lines) ? read.lines : []).filter(
     (l) => !NOT_A_JOB.test(l.label) && !(typeof l.amount === 'number' && (!Number.isFinite(l.amount) || l.amount < 0)),
   );
+  if (read.kind === 'quote' && printed) {
+    const words = await printed.catch(() => null);
+    if (words?.length) lines = linesFromRows(lines, words);
+  }
   const items: Array<{ i: number; text: string; options: Candidate[] }> = [];
   if (read.kind === 'quote') {
     const found = await Promise.all(lines.map((l) => kb.candidates(String(l.label ?? ''), { kind: 'price', k: 5 })));
@@ -271,10 +282,18 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
     items.filter((it) => it.options.length),
     where === 'device' ? BUDGETS.nano : BUDGETS.cloud,
   );
-  const askable = fitted.items;
 
-  // C. Let the model choose among the candidates only.
+  // C. A line that names a price-book item in full is matched by plain code (surePick); the model chooses among
+  //    the candidates for the rest only.
   const chosen = new Map<number, string | null>();
+  if (where === 'device' && read.kind === 'quote' && fitted.items.length) {
+    const named = await kb.resolve(fitted.items.flatMap((it) => it.options.map((o) => o.ref))).catch(() => null);
+    for (const it of named ? [...fitted.items] : []) {
+      const sure = surePick(it.text, it.options.map((o) => named!.prices.find((p) => p.ref === o.ref) ?? { ref: o.ref, name: o.name }));
+      if (sure) chosen.set(it.i, sure.ref);
+    }
+  }
+  const askable = fitted.items.filter((it) => !chosen.has(it.i));
   if (askable.length) {
     let choices: Array<{ i: number; ref: string | null }>;
     if (where === 'cloud') {
@@ -317,7 +336,7 @@ async function readPhotoAt(knowledge: Knowledge | Pack, image: Blob, question: s
   const slice = await kb.resolve([...chosen.values()].filter((r): r is string => !!r));
   const loaded = kb.stats();
 
-  const offered = new Set(askable.flatMap((it) => it.options.map((o) => o.ref)));
+  const offered = new Set(fitted.items.flatMap((it) => it.options.map((o) => o.ref)));
   const raw = {
     kind: read.kind,
     // A label is covered again here by plain code, whatever the model copied (a customer name in a line, say).

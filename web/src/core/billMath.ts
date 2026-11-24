@@ -73,6 +73,56 @@ export function keepPrinted<T extends { amount: number | null }>(lines: T[], wor
   for (const w of words) for (const m of fixDigitsInNumbers(w).matchAll(/\d[\d,]*(?:\.\d+)?/g)) printed.add(Math.round(Number(m[0].replace(/,/g, '')) * 100));
   return lines.map((l) => (l.amount === null || printed.has(Math.round(l.amount * 100)) ? l : { ...l, amount: null }));
 }
+/**
+ * Each quote line's amount from its own printed row: the row whose words best hold the line's name, and on it the
+ * last amount (after quantity, parts and labor columns comes the line's total). A small model often copies a
+ * column's figure or the next row's; this takes the paper's. A line whose row is not found keeps its amount.
+ */
+export function amountsFromRows<T extends { label: string; amount: number | null }>(lines: T[], words: string[]): T[] {
+  return lines.map((l) => {
+    const r = printedRow(l.label, words);
+    return r && r.amount >= 1 ? { ...l, amount: r.amount } : l;
+  });
+}
+
+/**
+ * The printed row a quote line came from: its name as printed (before the first amount, without the row number or
+ * the quantity columns) and its total (the last amount on the row). Null when no row with an amount holds at least
+ * 60% of the line's words.
+ */
+export function printedRow(label: string, words: string[]): { name: string; amount: number } | null {
+  const toks = (s: string) => s.toLowerCase().match(/[a-z]{3,}/g) ?? [];
+  const want = [...new Set(toks(label))];
+  if (!want.length) return null;
+  let best: { w: string; hits: AmountHit[] } | null = null;
+  let bestShare = 0;
+  for (const w of words) {
+    const hits = amountsIn(w);
+    if (!hits.length) continue;
+    const set = new Set(toks(w));
+    const share = want.filter((x) => set.has(x)).length / want.length;
+    if (share > bestShare) [best, bestShare] = [{ w, hits }, share];
+  }
+  if (!best || bestShare < 0.6) return null;
+  const name = best.w
+    .slice(0, best.hits[0].index)
+    .replace(/^\s*#?\d{1,2}[.):]?\s+(?=\p{L})/u, '')
+    .split(/\s{2,}/)[0]
+    .replace(/(?:\s+[\d.,—–-]+)+\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { name, amount: best.hits[best.hits.length - 1].value };
+}
+
+/** Quote lines with the name and the total taken from their own printed rows, by plain code. */
+export function linesFromRows<T extends { label: string; amount: number | null }>(lines: T[], words: string[]): T[] {
+  return lines.map((l) => {
+    const r = printedRow(l.label, words);
+    if (!r) return l;
+    return { ...l, label: r.name.length >= 3 ? r.name : l.label, amount: r.amount >= 1 ? r.amount : l.amount };
+  });
+}
+
 /** "$1,2O0" read by a text recognizer: O and l between digits are digits. */
 const fixDigitsInNumbers = (s: string) => s.replace(/(?<=[\d$,.])[Oo](?=[\d,.]|\b)/g, '0').replace(/(?<=[\d$,.])[Il|](?=[\d,.]|\b)/g, '1');
 
@@ -127,6 +177,18 @@ export function findAmounts(lines: string[]): Partial<Record<AmountLabel, number
   };
   lines.forEach((line, i) => {
     const hits = amountsIn(line);
+    // A row of column headings with the amounts on the row under it, in the same order:
+    // "PREVIOUS BALANCE  PAYMENTS RECEIVED  NEW CHARGES  AMOUNT DUE" / "$84.00 − $84.00 + $89.00 = $89.00".
+    if (!hits.length) {
+      const cells = line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+      const labels = cells.map(labelOf);
+      const next = lines[i + 1] ?? '';
+      const below = amountsIn(next);
+      if (cells.length >= 2 && labels.every((l) => l) && below.length === cells.length && !/[a-z]/i.test(next)) {
+        labels.forEach((l, k) => put(l, below[k].value));
+        return;
+      }
+    }
     let from = 0;
     for (const h of hits) {
       const words = line.slice(from, h.index);
@@ -195,8 +257,10 @@ export function findAccounts(lines: string[]): string[] {
   };
   lines.forEach((line, i) => {
     for (const m of line.matchAll(ACCOUNT)) {
-      // A line that starts with it may carry on the line above ("Postal remittance" / "acct 84109804").
-      const carried = (m.index ?? 0) < 2 && /\b(?:remittance|remit|deposit|transfer|payment|pay\s+to|payable\s+to)\s*$/i.test(lines[i - 1] ?? '');
+      // A line that starts with it may carry on a line above ("Postal remittance" / "acct 84109804"; "New account
+      // number — replaces the" / "account ending 4821"). Two lines up, because a column beside it can come between.
+      const CARRY = /\b(?:remittance|remit|deposit|transfer|payment|pay\s+to|payable\s+to|replac(?:es|ed|ing)(?:\s+the)?|instead\s+of(?:\s+the)?|old|former|previous|prior)\s*$/i;
+      const carried = (m.index ?? 0) < 2 && (CARRY.test(lines[i - 1] ?? '') || CARRY.test(lines[i - 2] ?? ''));
       // A bare "acct 84109804" in running text (a remittance or lockbox account) is not labelled as the customer's.
       const bare = /^(?:acct|a\/c)\.?\s+[0-9OoIl]/i.test(m[0]);
       if (carried || bare || PAY_TO.test(line.slice(0, m.index ?? 0)) || (m[1].match(/\d/g)?.length ?? 0) < 3) continue;
@@ -239,9 +303,14 @@ export function payToOf(lines: string[], lastTime?: string | null): string | nul
 
 // ---------- both ----------
 
-/** Split a paper's words into lines (PDF text and OCR text keep one printed line per text line). */
+/**
+ * Split a paper's words into lines (PDF text and OCR text keep one printed line per text line). A wide gap stays two
+ * spaces: it is where one column ends and the next begins (column headings are read by it).
+ */
 export const toLines = (text: string | string[]): string[] =>
-  (Array.isArray(text) ? text : text.split(/\r?\n/)).map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  (Array.isArray(text) ? text : text.split(/\r?\n/))
+    .map((l) => l.replace(/[^\S\n]{2,}/g, '  ').replace(/[^\S\n ]/g, ' ').trim())
+    .filter(Boolean);
 
 export function billMath(text: string | string[]): BillMath {
   const lines = toLines(text);

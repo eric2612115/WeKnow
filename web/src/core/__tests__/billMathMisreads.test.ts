@@ -39,3 +39,20 @@ test('the sentence for a wrong total names the discount', async () => {
   const m = billMath(['Subtotal $1,886.80', 'Discount -$188.68', 'Sales tax $101.89', 'Total $1,900.01']);
   expect(sumWhy(m.misses[0])).toBe('$1,886.80 minus a $188.68 discount, plus $101.89 tax, is $1,800.01, but the total says $1,900.01.');
 });
+
+test('a row of column headings takes the amounts on the row under it, in order', () => {
+  const m = billMath(['PREVIOUS BALANCE  PAYMENTS RECEIVED  NEW CHARGES  AMOUNT DUE', '$84.00  −  $84.00  +  $89.00  =  $89.00']);
+  expect(m.amounts).toMatchObject({ previous: 84, paid: 84, charges: 89, due: 89 });
+  expect(m.checked).toBe(1);
+  expect(m.misses).toEqual([]);
+});
+
+test('the same headings over a balance that is off are caught', () => {
+  const m = billMath(['PREVIOUS BALANCE  PAYMENTS RECEIVED  NEW CHARGES  AMOUNT DUE', '$84.00  −  $84.00  +  $89.00  =  $189.00']);
+  expect(m.misses.map((x) => x.rule)).toEqual(['balance']);
+});
+
+test('an old account named across lines ("replaces the" / "account ending 4821") is not the customer’s', () => {
+  const m = billMath(['Member account  40-2271-0583', 'New account number — replaces the', 'Service address  512 Bramble Ct', 'account ending 4821. Pay within 24 hours.']);
+  expect(m.accounts).toEqual(['0583']);
+});

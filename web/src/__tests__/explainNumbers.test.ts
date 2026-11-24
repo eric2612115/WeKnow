@@ -17,3 +17,8 @@ test('an explanation with only the answer’s numbers is kept; one with a new nu
 test('the answer is covered again before it may go', () => {
   expect(explainFacts({ verdict: 'Check first', sentences: ['Call 555-0134 or write to pat.k@example.com'] })).not.toMatch(/555-0134|pat\.k/);
 });
+
+test('every account ending in a list is covered, not only the first', () => {
+  const f = explainFacts({ verdict: 'Don’t pay this bill yet.', sentences: ['This bill shows two different account numbers (ending 0583 and 4821).'] });
+  expect(f).not.toMatch(/0583|4821/);
+});
