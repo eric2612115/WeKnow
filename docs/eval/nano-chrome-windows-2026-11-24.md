@@ -32,6 +32,19 @@ Chrome does not let a web page fix Gemini Nano's sampling, so WeKnow does not le
 quote that numbers its lines gives them, with their names and totals, from its printed words; a line that names a
 price-book item in full is matched by plain code; the printed sums and the account to pay are plain-code checks.
 
+## From a clean start (rounds 6 and 7, build `95f2419`)
+
+After Delete my data, with nothing remembered and the internet question not yet answered:
+
+- Paper 6 asks the one-time internet question for the line the price book lacks, right after the answer, and looks it
+  up only after Yes.
+- Paper 1 three times: the same answer each time (no note of this company), nothing sent.
+- Papers 3 and 4 twice each: the same warnings each time. A warning Gemini Nano raises counts only when the paper prints
+  words for it (pressure such as "within 24 hours", a new account or bank, words aimed at an AI); with every model flag
+  forced on, each test bill still gets exactly its own warnings.
+- With the internet setting on Never, and with the connection cut inside the page, papers 3 and 6 are answered on the
+  computer; a question that needs the web says so and asks to be asked again when the connection is back.
+
 ## Typed questions
 
 | Question | Answer | Requests |
