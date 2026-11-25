@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct Composer: View {
+  /// The questions people ask most about a paper.
+  static let usual = ["Should I pay this?", "Is this a fair price?", "What is this?"]
   @Bindable var model: AskModel
   /// The camera (full screen, only when pressed) and the photo library; the picture goes into the bar.
   let takePhoto: () -> Void
@@ -27,6 +29,24 @@ struct Composer: View {
       if case let .unavailable(why) = ear.state {
         Label(why, systemImage: "mic.slash").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.ink2)
           .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 8)
+      }
+      // With a picture in the bar and no words yet: the usual questions. A press puts the words in the box; Send
+      // stays the person's press.
+      if model.draft != nil, model.draftText.trimmingCharacters(in: .whitespaces).isEmpty, !busy, !ear.listening {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(Self.usual, id: \.self) { q in
+              Button { model.draftText = q } label: {
+                Text(q).font(.system(size: 16, weight: .medium)).foregroundStyle(Color.ink)
+                  .padding(.horizontal, 14).frame(minHeight: 40)
+                  .overlay(Capsule().stroke(Color.hair, lineWidth: 1))
+              }
+              .buttonStyle(.plain)
+            }
+          }
+          .padding(.horizontal, 4)
+        }
+        .accessibilityLabel("Questions to ask")
       }
       VStack(alignment: .leading, spacing: 6) {
         if let img = model.draft {
