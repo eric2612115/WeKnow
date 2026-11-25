@@ -24,7 +24,7 @@ enum WordsAnswer {
   static func needsPicture(_ q: String) -> Bool {
     let s = q.lowercased()
     let patterns = [
-      #"\b(this|that|these|those|the|my)\s+(quote|bill|paper|letter|estimate|invoice|statement|notice|receipt|picture|photo|email|message)\b"#,
+      #"\b(this|that|these|those|the|my)\s+(quote|bill|price|paper|letter|estimate|invoice|statement|notice|receipt|picture|photo|email|message)\b"#,
       #"\b(pay|sign|trust|check|read|look at|see)\s+(this|that|it|these)\b"#,
       #"\bis\s+(this|that)\s+(fair|right|ok|okay|real|a scam|too much|too high|correct)\b"#,
     ]

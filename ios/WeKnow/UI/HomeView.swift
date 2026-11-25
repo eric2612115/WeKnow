@@ -119,15 +119,10 @@ struct HomeView: View {
     model.draftText = s.question
   }
 
-  /// A suggestion: asked at once, or, when it is about a paper, put in the box until the picture is added.
+  /// A suggestion goes into the box; Send stays the person's press. One about a paper asks for its picture.
   private func suggest(_ q: String) {
-    if WordsAnswer.needsPicture(q) {
-      model.draftText = q
-      if model.draft == nil { model.draftHint = "Add a picture of it with the camera button, then press Send." }
-    } else {
-      model.draftText = q
-      model.send()
-    }
+    model.draftText = q
+    if WordsAnswer.needsPicture(q), model.draft == nil { model.draftHint = "Add a picture of it with the camera button, then press Send." }
   }
 
   /// The picture goes into the input bar; the words already typed stay.
@@ -177,7 +172,7 @@ struct StartView: View {
   let trySample: (Sample) -> Void
   let suggest: (String) -> Void
 
-  static let suggestions = ["My kitchen sink is clogged", "How much are brake pads?", "My toilet keeps running", "What does a new water heater cost?"]
+  static let suggestions = ["Should I pay this?", "Is this price fair?", "How much are brake pads?", "My kitchen sink is clogged"]
 
   var body: some View {
     ScrollView {

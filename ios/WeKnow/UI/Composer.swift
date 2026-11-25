@@ -7,7 +7,7 @@ import SwiftUI
 
 struct Composer: View {
   /// The questions people ask most about a paper.
-  static let usual = ["Should I pay this?", "Is this a fair price?", "What is this?"]
+  static let usual = ["Should I pay this?", "Is this price fair?", "What is this?"]
   @Bindable var model: AskModel
   /// The camera (full screen, only when pressed) and the photo library; the picture goes into the bar.
   let takePhoto: () -> Void
