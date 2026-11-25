@@ -76,7 +76,7 @@ export function listenOnce(where: ListenWhere, lang = 'en-US', onPartial?: (t: s
 // macOS lists its novelty voices (Albert, Bad News, Bubbles...) first, and its Eloquence voices (Eddy, Flo...) sound
 // robotic: neither may read an answer.
 const NOVELTY = new Set(
-  'Albert,Bad News,Bahh,Bells,Boing,Bubbles,Cellos,Good News,Jester,Organ,Superstar,Trinoids,Whisper,Wobble,Zarvox,Junior,Ralph,Fred,Kathy,Hysterical,Deranged,Pipe Organ'.split(','),
+  'Albert,Bad News,Bahh,Bells,Boing,Bubbles,Cellos,Good News,Jester,Organ,Superstar,Trinoids,Whisper,Wobble,Zarvox,Junior,Ralph,Fred,Kathy,Princess,Agnes,Bruce,Vicki,Victoria,Hysterical,Deranged,Pipe Organ'.split(','),
 );
 const ROBOTIC = /^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/;
 const NATURAL = /^(Samantha|Ava|Zoe|Allison|Susan|Tom|Evan|Nathan|Nicky|Joelle|Noelle|Microsoft (Aria|Jenny|Guy|Zira|David|Mark)|Google US English|Mei-Jia|Meijia|Tingting|Sinji)\b|\((Premium|Enhanced)\)|Natural/;
@@ -96,15 +96,34 @@ export function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechS
   return same.reduce((best, v) => (score(v) > score(best) ? v : best));
 }
 
-/** Speak a sentence with a natural local voice when one exists. Resolves when speech ends. */
-export function speak(text: string, lang = 'en-US', rate = 0.92): Promise<void> {
+/** The device's voices. Chrome fills the list a moment after the page loads, so an empty list waits up to 1.2 s. */
+export function deviceVoices(): Promise<SpeechSynthesisVoice[]> {
   const synth = globalThis.speechSynthesis;
-  if (!synth) return Promise.resolve();
-  synth.cancel();
+  if (!synth) return Promise.resolve([]);
+  const now = synth.getVoices();
+  if (now.length) return Promise.resolve(now);
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      synth.removeEventListener?.('voiceschanged', done);
+      resolve(synth.getVoices());
+    };
+    const timer = setTimeout(done, 1200);
+    synth.addEventListener?.('voiceschanged', done);
+  });
+}
+// Ask for the list once now, so it is ready by the first answer.
+void deviceVoices();
+
+/** Speak a sentence with a natural local voice when one exists. Resolves when speech ends. */
+export async function speak(text: string, lang = 'en-US', rate = 0.92): Promise<void> {
+  const synth = globalThis.speechSynthesis;
+  if (!synth) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = rate; // a little slower than default: easier to follow
-  u.voice = pickVoice(synth.getVoices(), lang);
+  u.voice = pickVoice(await deviceVoices(), lang);
+  synth.cancel();
   return new Promise((resolve) => {
     u.onend = () => resolve();
     u.onerror = () => resolve();

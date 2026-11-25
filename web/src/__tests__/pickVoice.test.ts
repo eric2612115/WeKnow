@@ -6,7 +6,7 @@ const v = (name: string, lang: string, localService = true, isDefault = false) =
 
 describe('pickVoice', () => {
   it('skips the novelty and robotic voices macOS lists first', () => {
-    const mac = [v('Albert', 'en-US'), v('Bad News', 'en-US'), v('Bubbles', 'en-US'), v('Daniel', 'en-GB'), v('Eddy (English (US))', 'en-US'), v('Samantha', 'en-US')];
+    const mac = [v('Agnes', 'en-US'), v('Albert', 'en-US'), v('Princess', 'en-US'), v('Bad News', 'en-US'), v('Bubbles', 'en-US'), v('Daniel', 'en-GB'), v('Eddy (English (US))', 'en-US'), v('Samantha', 'en-US')];
     expect(pickVoice(mac, 'en-US')?.name).toBe('Samantha');
   });
 
