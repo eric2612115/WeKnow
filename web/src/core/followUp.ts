@@ -124,6 +124,9 @@ export function reasonsIn(answer: string): string[] {
 }
 
 // "It rushes you" → "it rushes you"; "I have no note" and names keep their capital.
+const NONE_FOUND =
+  'I found none of the warning signs I look for: a new or changed account, words that rush you, words written for a computer, or numbers that don’t add up.';
+
 const lower1 = (s: string) => (/^(I\b|[A-Z][a-z]*[A-Z])/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
 
 /**
@@ -148,6 +151,14 @@ export function planAnswer(question: string, kind: 'bill' | 'quote', answer: str
   }
   const reasons = reasonsIn(answer);
   const scamOnline = /known scam/i.test(answer);
+  // A bill with no warning signs: say so, without calling it safe.
+  if (!reasons.length && !scamOnline) {
+    if (/\bscam\b|\bfake\b|\bfraud\b|\blegit|\bis (it|this|that|the company) real\b/.test(q)) {
+      return [NONE_FOUND, 'I can’t promise anything about the company itself. If you are unsure, ask them.'];
+    }
+    if (/\bwhy\b|\bhow come\b|\breason/.test(q)) return [`Because ${NONE_FOUND}`];
+    return null;
+  }
   if (/\bscam\b|\bfake\b|\bfraud\b|\blegit|\bis (it|this|that|the company) real\b/.test(q)) {
     if (scamOnline) return ['I checked it online: charges like these are a known scam. Don’t pay it, and don’t call the numbers on this paper.'];
     if (!reasons.length) return null;

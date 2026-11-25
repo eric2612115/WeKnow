@@ -289,6 +289,8 @@ export const EN = {
   'letter.sign.rush': 'It rushes you to pay.', // added: the general form of "It rushes you: 48 hours."
   'letter.sign.ai': 'It has hidden words that try to tell a reader it is safe.', // added: instruction-to-ai flag
   'letter.fine': 'Same company and same account as last time.', // added
+  'letter.fine.new': 'Nothing on it asks you to send money to an account, and I found no warning signs.', // added: a safe paper from a company with no note
+  'thread.ask.company': 'If you are unsure, ask the company.', // added
   // added: two plain-code checks on the bill's own words, on the device (core/billMath.ts)
   'letter.sign.sum': 'The numbers on this bill don’t add up: {why}',
   'letter.sign.sum.plain': 'The numbers on this bill don’t add up.',

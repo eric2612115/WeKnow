@@ -516,10 +516,11 @@ async function threadAnswer(t: number, question: string): Promise<boolean> {
   }
   // A yes-or-no question WeKnow's answer does not settle: the model would guess, so WeKnow says it can't tell.
   if ((tp.kind === 'bill' || tp.kind === 'quote') && yesNo(question)) {
+    const warned = view().history.some((m) => m.who === 'wk' && (m.head?.tone === 'warn' || m.head?.tone === 'stop'));
     clearLines();
     setHead('plain', tr('thread.cant'));
     settle();
-    void narrate(t, [tr(tp.kind === 'bill' ? 'thread.bill.do' : 'thread.quote.do')]);
+    void narrate(t, [tr(tp.kind === 'quote' ? 'thread.quote.do' : warned ? 'thread.bill.do' : 'thread.ask.company')]);
     offerNext(tp.next());
     return true;
   }

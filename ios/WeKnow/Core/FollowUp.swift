@@ -201,6 +201,15 @@ enum FollowUp {
     }
     let rs = reasons(in: answer)
     let scamOnline = has(answer, "known scam")
+    // A bill with no warning signs: say so, without calling it safe.
+    let none = "I found none of the warning signs I look for: a new or changed account, words that rush you, words written for a computer, or numbers that don’t add up."
+    if rs.isEmpty && !scamOnline {
+      if has(q, #"\bscam\b|\bfake\b|\bfraud\b|\blegit|\bis (it|this|that|the company) real\b"#) {
+        return [none, "I can’t promise anything about the company itself. If you are unsure, ask them."]
+      }
+      if has(q, #"\bwhy\b|\bhow come\b|\breason"#) { return ["Because " + none] }
+      return nil
+    }
     if has(q, #"\bscam\b|\bfake\b|\bfraud\b|\blegit|\bis (it|this|that|the company) real\b"#) {
       if scamOnline { return ["I checked it online: charges like these are a known scam. Don’t pay it, and don’t call the numbers on this paper."] }
       guard !rs.isEmpty else { return nil }

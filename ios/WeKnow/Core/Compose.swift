@@ -159,8 +159,12 @@ enum Compose {
   }
 
   static func bill(_ v: Verdicts.Bill, payee: String?, known: [Verdicts.KnownPayee]) -> (verdict: Verdict, reasons: [Sentence], doLine: String?) {
-    if v.safe { return (Verdict(tone: .ok, text: "This bill looks like the usual one"), [Sentence(text: "Same company and same account as last time.", fromNote: true)], nil) }
     let match = Verdicts.knownPayee(payee, in: known)
+    // Safe: the usual company and account, or a paper that asks for no transfer at all (a check paid at the counter).
+    if v.safe {
+      if match != nil { return (Verdict(tone: .ok, text: "This bill looks like the usual one"), [Sentence(text: "Same company and same account as last time.", fromNote: true)], nil) }
+      return (Verdict(tone: .ok, text: "This bill looks normal"), [Sentence(text: "Nothing on it asks you to send money to an account, and I found no warning signs.")], nil)
+    }
     var raw: [Sentence] = []
     for f in order where said(f, in: v.flags) {
       switch f {

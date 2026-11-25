@@ -168,7 +168,8 @@ export function billAnswer(v: BillVerdict, payee: string | null, known: KnownPay
     if (f === 'new-payee') raw.push({ text: payee ? t('letter.sign.newpayee', { payee: keepTogether(payee) }) : t('letter.sign.nopayee') });
     if (f === 'urgency') raw.push({ text: t('letter.sign.rush') });
   }
-  if (v.safe) return { verdict: { tone: 'ok', text: t('letter.fine.title') }, reasons: [{ text: t('letter.fine') }] };
+  // Safe: the usual company and account, or a paper that asks for no transfer at all (a check paid at the counter).
+  if (v.safe) return { verdict: { tone: 'ok', text: t('letter.fine.title') }, reasons: [match ? { text: t('letter.fine'), fromNote: true } : { text: t('letter.fine.new') }] };
   const stop = STOP.some(has);
   const reasons = raw.map((r, i) => ({ ...r, text: `${words(i + 1, true)}. ${r.text}` }));
   return {

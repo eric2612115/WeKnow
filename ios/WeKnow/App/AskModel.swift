@@ -455,7 +455,8 @@ final class AskModel {
     // A yes-or-no question WeKnow's answer does not settle: the model would guess, so WeKnow says it can't tell.
     if paperTopic, FollowUp.yesNo(q) {
       let bill: Bool = { if case .bill = tp { return true }; return false }()
-      await answer("I can’t tell that from this check.", [bill ? "Don’t pay until you call the company on a number you already trust." : "Ask the shop; they can tell you."], next: next, tag: .local)
+      let warned = thread.contains { $0.tone == .stop || $0.tone == .warn }
+      await answer("I can’t tell that from this check.", [!bill ? "Ask the shop; they can tell you." : warned ? "Don’t pay until you call the company on a number you already trust." : "If you are unsure, ask the company."], next: next, tag: .local)
       return true
     }
     guard Device.canRead else { return false }

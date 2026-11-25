@@ -76,3 +76,13 @@ describe('the common follow-ups, answered by plain code', () => {
     expect(planAnswer('Can I bring my own parts?', 'quote', '', items)).toBeNull();
   });
 });
+
+describe('follow-ups about a bill with no warning signs', () => {
+  const fine = 'This bill looks normal. Nothing on it asks you to send money to an account, and I found no warning signs.';
+  it('says what was looked for, and never calls it safe', () => {
+    expect(planAnswer('Why?', 'bill', fine)![0]).toMatch(/^Because I found none of the warning signs/);
+    const scam = planAnswer('Is it a scam?', 'bill', fine)!;
+    expect(scam[0]).toMatch(/^I found none of the warning signs/);
+    expect(scam.join(' ')).not.toMatch(/\bsafe\b/);
+  });
+});

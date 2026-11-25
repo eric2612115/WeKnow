@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { billVerdict } from '../verdict';
+import { billAnswer } from '../../answer/compose';
 import type { Understanding } from '../understanding';
 
 const u = (over: Partial<Understanding>): Understanding => ({ kind: 'bill', lines: [], problemRef: null, payee: null, payTo: null, urgent: false, addressedToAI: false, accountChange: false, ...over });
@@ -18,6 +19,10 @@ describe('a restaurant check', () => {
     expect(v.flags).not.toContain('urgency');
     expect(v.flags).not.toContain('new-payee');
     expect(v.safe).toBe(true);
+    // A company with no note: not "the same company as last time".
+    const a = billAnswer(v, 'Golden Bowl', []);
+    expect(a.reasons.map((r) => r.text).join(' ')).toBe('Nothing on it asks you to send money to an account, and I found no warning signs.');
+    expect(billAnswer(v, 'Golden Bowl', [{ name: 'Golden Bowl', payTo: '1234' }]).reasons[0].text).toBe('Same company and same account as last time.');
   });
 
   it('still warns when the paper asks for a transfer to a company never paid, or prints the pressure itself', () => {
