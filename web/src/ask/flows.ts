@@ -1839,7 +1839,8 @@ async function quoteFlow(c: Ctx) {
   alive(t);
   // The first time WeKnow would use the internet, it asks once, as it does for a bill (before, a quote only asked
   // when "Which lines did you not check?" was pressed, so on a fresh start the line was simply left unchecked).
-  if (!looked && unknown.length && online && getPrefs().internet === 'ask-once') {
+  // "Ask me every time" asks here too: its own sheet, yes or no for this paper.
+  if (!looked && unknown.length && online && (getPrefs().internet === 'ask-once' || getPrefs().internet === 'every')) {
     await lookUpWithConsent(t);
     alive(t);
     offerNext(quoteNext());

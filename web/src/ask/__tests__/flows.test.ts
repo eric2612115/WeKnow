@@ -130,6 +130,19 @@ describe('a picture answer in the conversation', () => {
     await vi.waitFor(() => expect(C.view().head?.text).toBe('Line 1 is $146 more than usual.'));
   });
 
+  it('a quote line the book does not know: with “Ask me every time” the sheet asks after the answer, listing only that line', async () => {
+    setPrefs({ internet: 'every' });
+    understanding = { ...base, kind: 'quote', payee: null, lines: [{ label: 'Rear brake pads', amount: 540, ref: 'brake-pads' }, { label: 'Fuel induction cleaning service', amount: 114.5, ref: null }] };
+    readingPack = sub(['brake-pads']);
+    C.attach(new Blob(['q'], { type: 'image/png' }), 'quote');
+    expect(F.send('Is this a fair price?')).toBe(true);
+    await vi.waitFor(() => expect(C.view().sheet).toBeTruthy());
+    expect(C.view().sheet!.parcel.join(' ')).toContain('Fuel induction cleaning service');
+    expect(C.view().sheet!.parcel.join(' ')).not.toContain('brake');
+    C.answerSheet(false);
+    await vi.waitFor(() => expect(C.view().sheet).toBeFalsy());
+  });
+
   // On a quote, "it rushes you" comes from the printed words only, not from the model's flag (it varied run to run).
   it('an invoice with priced lines still gets a bill’s warning signs: words aimed at a reader stop it, fair prices or not', async () => {
     understanding = { ...base, kind: 'quote', payee: null, addressedToAI: true, urgent: true, lines: [{ label: 'Shop supplies', amount: 45, ref: null }] };
