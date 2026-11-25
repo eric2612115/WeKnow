@@ -50,7 +50,8 @@ knowledge in the cloud: they send the whole page, cite no source, and give no ve
 4. **Decide (plain code).** `checkUnderstanding` rejects any ref that was not offered; prices come from the pack's
    sourced range; bill flags (`account-change-notice`, `new-payee`, `changed-account`, `urgency`, `instruction-to-ai`,
    `numbers-dont-add-up`, `two-accounts`) are rules over the form, the paper's own words and on-device household memory.
-   Missing or malformed warning fields count as warnings.
+   Missing or malformed warning fields count as warnings; with the paper's own words at hand, the model's `urgency` and
+   `instruction-to-ai` need a cue printed on the paper, and `new-payee` needs a request to send money to an account.
 5. **Route (plain code).** Firebase AI Logic hybrid inference runs the model on the device when it is ready. The router
    (`web/src/ask/router.ts`) decides from what the device produced whether a question should go online, and why: no pack
    item fits the words, no guide fits the problem, or the price book lacks a line. `gate` then applies the person's
@@ -95,6 +96,16 @@ knowledge in the cloud: they send the whole page, cite no source, and give no ve
     comes back in it, with the fixed words around it from a built-in table (Traditional and Simplified Chinese,
     Japanese, Korean, Spanish, French, German). A verdict on a bill or a quote stays exactly as composed.
 
+**Follow-ups: context on a small budget.** An on-device model has a small window (Apple: 4,096 tokens per session,
+input and output together; Chrome: the `inputQuota` the session reports) and a long chat degrades it: models do best
+with what is at the start or end of a prompt (Liu et al., 2023) and lose about 39% when a task arrives over several
+turns (Laban et al., 2025). So WeKnow does not keep one growing chat. The paper stays the conversation's subject until
+the next picture; the common follow-ups are answered by plain code from WeKnow's own answer
+(`web/src/core/followUp.ts`, `ios/WeKnow/Core/FollowUp.swift`); anything else opens a fresh session with a compact,
+fully stated context: the paper's facts first (each quote line spelled out: what the shop charges, the usual range, how
+far above it), the turns since the paper, the question last, about 2,000 characters in all. Each sentence of the reply
+is checked by plain code before it is shown.
+
 Firebase pieces: AI Logic (hybrid inference, structured output, Google Search grounding, and server prompt templates in
 the evaluation harness), App Check (reCAPTCHA Enterprise on the web, App Attest on iPhone), Authentication (anonymous,
 upgraded in place by Google sign-in), Firestore (offline cache, deny-by-default rules), Remote Config (cloud model, pack
@@ -109,10 +120,11 @@ Every way hostile text can travel, and where it stops:
 | A line label or amount | The words and the number printed | The verdict uses the printed number against the pack range; the model cannot set a price (wall test 2) |
 | A ref the model returns | Which candidate it picks | Only offered candidates are accepted; anything else is rejected, not repaired (wall test 2, `router.test.ts`) |
 | The payee or account | What the bill says | Compared with payees the person confirmed on this device; a change raises `changed-account` (wall test 3) |
-| The warning flags | The model's reading of "urgent" and "addressed to AI" | Flags can only be added; omitting them counts as a warning (wall test 3) |
+| The warning flags | The model's reading of "urgent" and "addressed to AI" | Flags can only be added; omitting them counts as a warning, and with the paper's words at hand a model's flag needs a printed cue, while the printed cue alone always raises it (wall test 3, `verdictReceipt.test.ts`) |
 | The paper itself | Everything printed on it | Never sent to be read; with no model, a bill gets the basic check by plain code and a quote says what the full check needs (`noModel.test.ts`, `basicRead.test.ts`) |
 | A cloud lookup | A masked line item | Personal patterns refused on the client and by Firestore rules (wall test 1, rules tests) |
 | A question online | The words around it | Covered on the device; the payload guard and the on-device review hold back anything personal left (`escalate.test.ts`); on iPhone, `CloudPick.cleared` |
+| A follow-up reply | The model's words about the paper | Each sentence shown only if its numbers are in the conversation and it neither clears a warning nor names a scam on its own; yes-or-no questions the answer does not settle are not guessed (`followUp.test.ts`, `flows.test.ts`) |
 | A bill check online | The company name and charge names printed | Built by plain code with numbers and covered names removed; the finding can only raise a warning, and only with web sources (`billCheck.test.ts`, `noModel.test.ts`) |
 
 What a fooled reader can still do: misread a line (the person sees the line and the verdict), or miss a warning that
@@ -127,6 +139,7 @@ the rules also miss. It cannot clear a warning, invent a price, or move money; W
 | On-device, Apple model, iOS Simulator, 2026-11-16 | 2 fixtures (brake quote x4, changed-account bill), plus the brake quote on an iPhone 17 Pro in airplane mode | all | 0 | 25–50 s in the simulator | `design/screens/ios/` |
 | On-device, Apple model, iOS Simulator, questions in words, 2026-11-16 | 5 questions (brake pads, new water heater, running toilet, cracked phone screen, an unknown job) | 5 | 0 | 4–10 s in the simulator | `docs/claims.md` C17 |
 | On-device, Apple model, iPhone 17 Pro, photos of printed test sheets, 2026-11-17 | 10 photos (4 bills, 1 quote, two angles each) | 10 | 0 | 6–15 s per bill with the part-by-part read | `docs/claims.md` C19–C21 |
+| Follow-ups, Chrome + Gemini Nano, 2026-11-25 | 12 follow-ups after bill-4 and quote-1, and a restaurant check | all as expected; the quote kept as the subject after a price question in between; no false warning on the check | 0 | 0.3 s by plain code; 2–3 s by Gemini Nano | `docs/eval/follow-ups-and-receipts-2026-11-25.md` |
 | Basic check, plain code only, no model, the five printed test sheets | 5 (4 bills, 1 quote) | 5: the usual bill safe, the buried new account, the words to an AI and the sums that do not add up caught, the quote sent to the full check | 0 | plain code, no model call | `web/src/core/__tests__/basicRead.test.ts`, `web/src/ask/__tests__/noModel.test.ts` |
 
 The 50-case set is synthetic: fictional quotes built from pack items at fair, high and low prices plus unknown lines,
@@ -147,6 +160,11 @@ templates' model is used, the harness reads the same form once on a second model
 - Google Lens, Gemini Live, Apple Visual Intelligence: camera questions with general answers; no sourced verdicts.
 - Trail (Chrome Built-in AI Challenge 2025): builds knowledge online and answers offline; WeKnow's packs are sourced,
   versioned and shared through Firestore.
+
+- Lost in the Middle (Liu et al., TACL 2024) and LLMs Get Lost in Multi-Turn Conversation (Laban et al., 2025): why
+  each follow-up gets a fresh, fully stated context instead of a growing chat.
+- Managing the on-device model's context window (Apple TN3193) and session management for the Prompt API (Chrome):
+  the budgets the follow-up context is built for.
 
 ## 8. Reproduction
 

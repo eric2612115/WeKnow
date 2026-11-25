@@ -56,7 +56,10 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
    account in a box of tips is found, and WeKnow says where on the page.
 5. **Plain code decides.** Price verdicts and bill warnings are rules, not model output. Text hidden in a document can
    raise a warning but can never clear one. An amount counts only when the paper prints one value beside its label, and
-   a company or account number the model gives that is printed nowhere on the paper is dropped.
+   a company or account number the model gives that is printed nowhere on the paper is dropped. A warning the model
+   raises needs a reason printed on the paper ("it rushes you" needs words like "within 24 hours"), and a company you
+   never paid is a warning only when the paper asks you to send money to an account, so a restaurant check is just a
+   check.
 6. **Only the question goes online.** A line the price book lacks goes as a masked line item and region. A suspicious
    bill from a company you never paid goes as the company and the names of its charges, and Gemini checks them with
    Google Search grounding through Firebase AI Logic; answers count only with web sources and can make a warning
@@ -67,7 +70,14 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
 7. **Two lights.** While WeKnow works, one of two lights is on: this device, or the internet. The internet light is
    lit only while a request is out, with the exact covered words under it. Every answer says where it ran and lists
    everything that was sent.
-8. **In your language (iPhone).** Plain code tells your language from your own words; Apple's on-device model puts
+8. **A conversation keeps its paper.** After a bill or a quote, ask "Why?", "Is it a scam?", "What does the new
+   account mean?" or "Why is line 4 so high?": plain code answers from WeKnow's own answer. Anything else goes to the
+   model on the device (Gemini Nano in Chrome, Apple's model on iPhone) with the conversation since the paper, in a
+   fresh session each time, and nothing leaves the device. A sentence of its reply is shown only if every number in it
+   is in the conversation and it neither clears a warning nor calls something a scam that WeKnow did not; a yes-or-no
+   question the answer does not settle gets "I can't tell that from this check" instead of a guess
+   ([recorded runs](docs/eval/follow-ups-and-receipts-2026-11-25.md)).
+9. **In your language (iPhone).** Plain code tells your language from your own words; Apple's on-device model puts
    the answer in it on the phone, and a how-to from the web comes back in it. A verdict on a bill or a quote stays exactly as WeKnow composed it.
 
 Firebase products used: AI Logic (hybrid inference, structured output, Grounding with Google Search, and server
