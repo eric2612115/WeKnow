@@ -11,6 +11,8 @@ export function isStaleChunk(e: unknown): boolean {
 
 /** Reloads once per 15 s. Returns true when a reload was started. */
 export function reloadForNewBuild(): boolean {
+  // With no connection a reload only shows the browser's offline page: never reload then.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
   try {
     const last = Number(sessionStorage.getItem(KEY) ?? 0);
     if (Date.now() - last < WINDOW_MS) return false;

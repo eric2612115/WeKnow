@@ -62,7 +62,24 @@ export default function Home() {
   // The reader (Firebase, App Check) is warmed up once Ask has painted, so the first read does not wait for it.
   useEffect(() => {
     const later = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 600));
-    later(() => void import('../reader').catch(() => undefined));
+    // Every part a check may need is loaded now, while there is a connection, so a check still runs after the Wi-Fi
+    // goes off (a part fetched only on Send would fail then).
+    later(() => {
+      for (const load of [
+        () => import('../reader'),
+        () => import('../image'),
+        () => import('../textReader'),
+        () => import('../coverPicture'),
+        () => import('../config'),
+        () => import('../lookup'),
+        () => import('../webSearch'),
+        () => import('../requests'),
+        () => import('../explain'),
+        () => import('../maps'),
+        () => import('../knowledgeBrowser'),
+      ])
+        void load().catch(() => undefined);
+    });
   }, []);
 
   // The camera is on only while its view is open; closing it (or taking the picture) turns it off.
