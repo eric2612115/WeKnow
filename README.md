@@ -4,6 +4,8 @@
 
 **The paper never leaves the device. The cloud only gets the question.**
 
+[Watch the 3-minute demo](https://youtu.be/DyqlkuLOLyg) · [Try it](https://weknow-6092f.web.app) · [Devpost](https://devpost.com/software/weknow)
+
 WeKnow helps people who find apps hard to use. Hold up a repair quote, a bill, or a household problem and ask a
 question. Your own phone or computer reads the paper, covers your name, phone, address and account numbers, and plain
 code decides. When the device cannot know something by itself (is this company a known scam? what does this job
