@@ -47,6 +47,9 @@ describe('the common follow-ups, answered by plain code', () => {
     expect(a[0]).toContain('the account is new');
     expect(a[0]).toContain('it has hidden words');
     expect(a[0]).toContain('it rushes you to pay');
+    expect(planAnswer('Why?', 'bill', 'Careful. One. I have no note of paying Millbrook before. Two. It rushes you to pay.')![0]).toBe(
+      'Because I have no note of paying Millbrook before; and it rushes you to pay.',
+    );
   });
 
   it('a scam? only the online check says so; otherwise the warning signs', () => {

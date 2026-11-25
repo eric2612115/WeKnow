@@ -939,6 +939,10 @@ final class AskModel {
       let printedRows = paper.rows.map(\.masked)
       // A company the model named that is printed nowhere on the paper was made up: it is not used, so no note can
       // match it (same rule as the web app).
+      if let name = u.payee, !BillMath.plausibleName(name) {
+        tech.append("The model named “\(name)”, which is not a company name, so it was not used.")
+        u.payee = nil
+      }
       if let name = u.payee, !BillMath.namePrinted(name, in: paper.masked, covered: paper.coveredNames) {
         tech.append("The model named “\(name)”, which is printed nowhere on the paper, so it was not used.")
         u.payee = nil

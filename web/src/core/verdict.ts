@@ -52,7 +52,11 @@ const URGENCY = /\b(urgent|immediately|today only|within 24 hours|final notice|a
 const ACCOUNT_CHANGE = /\b(bank (?:has |have )?changed|new (?:bank|account)(?: details| number)?|changed (?:our )?(?:bank|account)|updated (?:bank|payment) (?:details|information))\b/i;
 /** Words that put time pressure on the reader; the model's "urgent" counts only with one of them printed. */
 const PRESSURE =
-  /\b(urgent|immediate(?:ly)?|today|right away|asap|within \d+ (?:hours?|days?|business days?)|\d+ hours|final (?:notice|warning|reminder)|last (?:chance|notice|warning)|disconnect(?:ion|ed)?|shut ?off|suspen(?:d|ded|sion)|penalt(?:y|ies)|overdue|past due|deadline|legal action|collections?)\b/i;
+  /\b(urgent|immediate(?:ly)?|today|right away|asap|within \d+ (?:hours?|days?|business days?)|\d+ hours|final (?:notice|warning|reminder)|last (?:chance|notice|warning)|disconnect(?:ion|ed)?|shut ?off|suspen(?:d|ded|sion)|penalt(?:y|ies)|overdue|past due|deadline|legal action|collections?)\b|立即|立刻|馬上|今日內|當日|\d+\s*小時內|最後通知|停話|停電|斷電|斷水|逾期|催繳/i;
+/** Words that ask for money to be sent to an account; a company never paid before is a warning only on such a paper
+ * (a restaurant check or a shop receipt paid at the counter names a new company every time). */
+const TRANSFER =
+  /\b(bank|account|routing|wire|transfer|remit(?:tance)?|ach|iban|swift|payee|pay to|send (?:a )?(?:payment|money)|zelle|venmo|paypal|cash app|gift cards?|checks? payable|money order)\b|匯款|轉帳|帳號|帳戶|銀行|戶名|代碼/i;
 /** Words about a new or changed account or bank; the model's "account changed" counts only with one printed. */
 const CHANGE_CUE =
   /\b(?:new|changed|updated|different|replacement)\s+(?:[\w-]+\s+){0,2}(?:account|bank|routing|payment details)\b|\b(?:account|bank)\s+(?:[\w-]+\s+){0,3}(?:changed|updated|moved)\b|\breplaces?\s+(?:the|your)\s+(?:old\s+)?(?:\[?account)/i;
@@ -76,8 +80,10 @@ export function billVerdict(u: Understanding, maskedText: string, known: KnownPa
   const model = (flag: boolean, cue: RegExp) => flag && (!printed || cue.test(maskedText));
   if (model(u.accountChange, CHANGE_CUE) || ACCOUNT_CHANGE.test(maskedText)) flags.push('account-change-notice');
   const match = known.find((k) => u.payee && k.name.toLowerCase() === u.payee.toLowerCase());
-  if (!match) flags.push('new-payee');
-  else if (!u.payTo || u.payTo !== match.payTo) flags.push('changed-account');
+  const asksTransfer = !printed || !!u.payTo || TRANSFER.test(maskedText);
+  if (!match) {
+    if (asksTransfer) flags.push('new-payee');
+  } else if (!u.payTo || u.payTo !== match.payTo) flags.push('changed-account');
   if (model(u.urgent, PRESSURE) || URGENCY.test(maskedText)) flags.push('urgency');
   if (model(u.addressedToAI, TO_A_READER) || AI_INSTRUCTION.test(maskedText)) flags.push('instruction-to-ai');
   return { safe: flags.length === 0, flags };

@@ -183,3 +183,13 @@ describe('what a model gave, held to the paper', () => {
     expect(endingPrinted('7719', paper)).toBe(false);
   });
 });
+
+describe('plausibleName', () => {
+  it('takes a company name and drops a scrap of the page', async () => {
+    const { plausibleName } = await import('../billMath');
+    expect(plausibleName('Riverbend Electric Co-op')).toBe(true);
+    expect(plausibleName('鼎泰豐')).toBe(true);
+    expect(plausibleName('BR3 :   807')).toBe(false);
+    expect(plausibleName('A1')).toBe(false);
+  });
+});

@@ -51,6 +51,20 @@ enum Verdicts {
   static let accountChange = try! NSRegularExpression(
     pattern: #"\b(bank (?:has |have )?changed|new (?:bank|account)(?: details| number)?|new \[account|changed (?:our )?(?:bank|account)|updated (?:bank|payment) (?:details|information))\b"#,
     options: [.caseInsensitive])
+  /// Words that put time pressure on the reader; the model's "urgent" counts only with one of them printed (it flagged
+  /// "it rushes you" on restaurant checks and ordinary bills). Same as web/src/core/verdict.ts PRESSURE.
+  static let pressure = try! NSRegularExpression(
+    pattern: #"\b(urgent|immediate(?:ly)?|today|right away|asap|within \d+ (?:hours?|days?|business days?)|\d+ hours|final (?:notice|warning|reminder)|last (?:chance|notice|warning)|disconnect(?:ion|ed)?|shut ?off|suspen(?:d|ded|sion)|penalt(?:y|ies)|overdue|past due|deadline|legal action|collections?)\b|立即|立刻|馬上|今日內|當日|\d+\s*小時內|最後通知|停話|停電|斷電|斷水|逾期|催繳"#,
+    options: [.caseInsensitive])
+  /// Words that speak to an AI or an automated reader; the model's "addressed to AI" counts only with one printed.
+  static let toAReader = try! NSRegularExpression(
+    pattern: #"\b(?:a\.?i\.?|al)\s+(?:assistants?|models?|readers?|systems?|tools?|agents?)\b|\b(?:artificial intelligence|chatbots?|language models?|llms?|automated (?:readers?|review|checks?|systems?)|assistants? reading|reading this (?:page|bill|letter|document)|(?:this|the) (?:bill|invoice|page) is (?:verified|safe|legitimate))\b|\bignore (?:all|any|previous|prior)\b"#,
+    options: [.caseInsensitive])
+  /// Words that ask for money to be sent to an account; a company never paid before is a warning only on such a paper
+  /// (a restaurant check or a shop receipt paid at the counter names a new company every time).
+  static let transfer = try! NSRegularExpression(
+    pattern: #"\b(bank|account|routing|wire|transfer|remit(?:tance)?|ach|iban|swift|payee|pay to|send (?:a )?(?:payment|money)|zelle|venmo|paypal|cash app|gift cards?|checks? payable|money order)\b|匯款|轉帳|帳號|帳戶|銀行|戶名|代碼"#,
+    options: [.caseInsensitive])
   static let aiInstruction = try! NSRegularExpression(
     pattern: #"\b(ignore (?:all|any|previous|prior)|disregard|you are (?:an? )?(?:ai|assistant|model)|as an ai|system prompt|mark (?:this|it) as (?:safe|paid|verified)|say (?:this|it) is (?:safe|fine|legit))"#,
     options: [.caseInsensitive])
@@ -74,14 +88,16 @@ enum Verdicts {
     var flags: [BillFlag] = []
     // A letter announcing a new bank or account is always a warning, whoever sent it.
     if matches(accountChange, maskedText) { flags.append(.accountChangeNotice) }
+    // With the paper's own words at hand, a warning the model raises needs a cue printed on the paper (same as the web).
+    let printed = maskedText.count >= 200
     let match = knownPayee(u.payee, in: known)
     if let match {
       if u.payTo == nil || u.payTo != match.payTo { flags.append(.changedAccount) }
-    } else {
+    } else if !printed || u.payTo != nil || matches(transfer, maskedText) {
       flags.append(.newPayee)
     }
-    if u.urgent || matches(urgency, maskedText) { flags.append(.urgency) }
-    if u.addressedToAI || matches(aiInstruction, maskedText) { flags.append(.instructionToAI) }
+    if (u.urgent && (!printed || matches(pressure, maskedText))) || matches(urgency, maskedText) { flags.append(.urgency) }
+    if (u.addressedToAI && (!printed || matches(toAReader, maskedText))) || matches(aiInstruction, maskedText) { flags.append(.instructionToAI) }
     return Bill(safe: flags.isEmpty, flags: flags)
   }
 }

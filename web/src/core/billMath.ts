@@ -406,3 +406,13 @@ export function endingPrinted(ending: string, words: string[]): boolean {
     return new RegExp(`${four}(?!\\d|[ \\t-]\\d)`).test(t);
   });
 }
+
+/**
+ * A company name, not a scrap of the page: at least three letters, and mostly letters ("BR3 : 807", read off a
+ * restaurant check, is not a name).
+ */
+export function plausibleName(name: string): boolean {
+  const chars = [...name.replace(/\s+/g, '')];
+  const letters = chars.filter((c) => /\p{L}/u.test(c)).length;
+  return letters >= 3 && letters / Math.max(1, chars.length) >= 0.6;
+}

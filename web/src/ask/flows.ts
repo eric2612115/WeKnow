@@ -12,7 +12,7 @@ import type { JobMemory, PayeeMemory } from '../core/memory';
 import { compareToLastTime, earlierJobs, knownPayees } from '../core/memory';
 import { isBusy } from './errors';
 import { billVerdict, quoteVerdicts, withBillMath } from '../core/verdict';
-import { amountsFromRows, amountsIn, billMath, endingPrinted, keepPrinted, namePrinted, payToOf, type BillMath } from '../core/billMath';
+import { amountsFromRows, amountsIn, billMath, endingPrinted, keepPrinted, namePrinted, payToOf, plausibleName, type BillMath } from '../core/billMath';
 import { guideByRef, priceByRef, proPrice } from '../core/packs';
 import { aboutPicture, followUp, jobWords, kindOrder, lean, matchStrength, pickConfident, priceAnswer, sharesJobWord, terms, type ItemKind, type Scored } from './words';
 import { afterConsent, gate, route, type Reason } from './router';
@@ -2001,7 +2001,7 @@ async function billFlow(c: Ctx) {
   // no note can match it and no account check rests on it (the letterhead below may still name the company).
   if (words?.length) {
     const r = reading.understanding;
-    const payee = r.payee && namePrinted(r.payee, words) ? r.payee : null;
+    const payee = r.payee && plausibleName(r.payee) && namePrinted(r.payee, words) ? r.payee : null;
     const payTo = r.payTo && endingPrinted(r.payTo, words) ? r.payTo : null;
     if (payee !== r.payee || payTo !== r.payTo) reading.understanding = { ...r, payee, payTo };
   }

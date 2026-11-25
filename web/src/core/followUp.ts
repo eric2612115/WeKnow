@@ -123,7 +123,8 @@ export function reasonsIn(answer: string): string[] {
     .filter(Boolean);
 }
 
-const lower1 = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+// "It rushes you" → "it rushes you"; "I have no note" and names keep their capital.
+const lower1 = (s: string) => (/^(I\b|[A-Z][a-z]*[A-Z])/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
 
 /**
  * A plain-code answer to a common follow-up about the last bill or quote, or null when the model should try.

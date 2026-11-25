@@ -212,6 +212,8 @@ enum FollowUp {
     if has(q, #"\bwhy\b|\bhow come\b|\breason"#), !rs.isEmpty {
       let joined = rs.map { r -> String in
         let t = r.hasSuffix(".") ? String(r.dropLast()) : r
+        // "It rushes you" → "it rushes you"; "I have no note" keeps its capital.
+        if t.hasPrefix("I ") { return t }
         return t.prefix(1).lowercased() + t.dropFirst()
       }.joined(separator: "; and ")
       return ["Because \(joined).", "Any one of these is a reason to check with the company before you pay."]

@@ -182,4 +182,12 @@ enum BillMath {
     }
     return found
   }
+
+  /// A company name, not a scrap of the page: at least three letters, and mostly letters ("BR3 : 807", read off a
+  /// restaurant check, is not a name). Same as web/src/core/billMath.ts plausibleName.
+  static func plausibleName(_ name: String) -> Bool {
+    let chars = name.filter { !$0.isWhitespace }
+    let letters = chars.filter(\.isLetter).count
+    return letters >= 3 && Double(letters) / Double(max(1, chars.count)) >= 0.6
+  }
 }
