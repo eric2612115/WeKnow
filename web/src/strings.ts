@@ -138,7 +138,10 @@ export const EN = {
   'next.none': 'None of these',
   'next.step': 'Next step',
   'next.again': 'Say it again',
-  'next.askagain': 'Ask it again', // added: a question that needed the internet while there was none
+  'next.askagain': 'Ask it again',
+  'thread.cant': 'I can’t tell that from this check.', // added: a follow-up the conversation cannot answer
+  'thread.bill.do': 'Don’t pay until you call the company on a number you already trust.',
+  'thread.quote.do': 'Ask the shop; they can tell you.', // added: a question that needed the internet while there was none
   'next.stop': 'Stop',
   'next.fixed': 'It’s fixed',
   'next.broken': 'Still broken',

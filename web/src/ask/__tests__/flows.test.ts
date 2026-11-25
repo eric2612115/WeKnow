@@ -32,6 +32,15 @@ vi.mock('../../image', () => ({ shrinkPhoto: async (b: Blob) => b }));
 vi.mock('../../config', () => ({ matchesPhrase: () => false }));
 vi.mock('../../firebase', () => ({ ensureUser: async () => undefined }));
 vi.mock('../../requests', () => ({ requestPrice: async () => false }));
+// The model on this device answering a follow-up from the conversation (thread.ts).
+const threadCalls: Array<{ conversation: string; question: string }> = [];
+let threadReply = '';
+vi.mock('../../thread', () => ({
+  askAboutThread: async (conversation: string, question: string) => {
+    threadCalls.push({ conversation, question });
+    return { text: threadReply, ms: 3 };
+  },
+}));
 
 const pads: PriceItem = { ref: 'brake-pads', name: 'Replace brake pads (one axle)', aliases: [], unit: 'axle', low: 148, typical: 271, high: 394, sources: [{ url: 'https://example.org/a' }] };
 const sink: Guide = {
@@ -143,6 +152,46 @@ describe('a picture answer in the conversation', () => {
     await vi.waitFor(() => expect(C.view().sheet).toBeFalsy());
   });
 
+  it('a follow-up after a quote is answered from the conversation, on this device; a reply with a new number is not shown', async () => {
+    understanding = { ...base, kind: 'quote', payee: null, lines: [{ label: 'Rear brake pads', amount: 540, ref: 'brake-pads' }, { label: 'Shop supplies', amount: 45, ref: null }] };
+    readingPack = sub(['brake-pads']);
+    C.attach(new Blob(['q'], { type: 'image/png' }), 'quote');
+    expect(F.send('Is this a fair price?')).toBe(true);
+    await vi.waitFor(() => expect(nextLabels()).toContain('What should I say to the shop?'));
+
+    // The common question is answered by plain code from the quote's lines.
+    threadCalls.length = 0;
+    F.send('Why is line 1 so high?');
+    await vi.waitFor(() => expect(C.view().head?.text).toContain('Line 1, Rear brake pads: the shop charges $540.'));
+    expect(threadCalls).toHaveLength(0);
+    expect(nextLabels()).toContain('What should I say to the shop?');
+
+    // A question about something else in between does not lose the quote.
+    F.send('My kitchen sink is clogged');
+    await vi.waitFor(() => expect(C.view().head?.text).not.toContain('Line 1, Rear brake pads'));
+    await vi.waitFor(() => expect(C.view().phase === 'settled' || C.view().phase === 'ready' || C.view().next.length > 0).toBe(true));
+    F.send('Why is line 1 so high?');
+    await vi.waitFor(() => expect(C.view().head?.text).toContain('Line 1, Rear brake pads: the shop charges $540.'));
+
+    // A yes-or-no question the answer does not settle is not guessed.
+    F.send('Can I bring my own pads?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('I can’t tell that from this check.'));
+    expect(threadCalls).toHaveLength(0);
+
+    // An open question goes to the model on this device, with the conversation so far.
+    threadReply = 'Ask the shop what the extra covers, and get the price in writing.';
+    F.send('What should I look out for next time?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('Ask the shop what the extra covers, and get the price in writing.'));
+    expect(threadCalls).toHaveLength(1);
+    expect(threadCalls[0].conversation).toContain('Line 1, Rear brake pads: the shop charges $540.');
+
+    // A reply that brings a number the conversation does not have is not shown.
+    threadReply = 'Most shops charge $999 for this.';
+    F.send('What do most people do then?');
+    await vi.waitFor(() => expect(threadCalls).toHaveLength(2));
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('I can’t tell that from this check.'));
+  });
+
   // On a quote, "it rushes you" comes from the printed words only, not from the model's flag (it varied run to run).
   it('an invoice with priced lines still gets a bill’s warning signs: words aimed at a reader stop it, fair prices or not', async () => {
     understanding = { ...base, kind: 'quote', payee: null, addressedToAI: true, urgent: true, lines: [{ label: 'Shop supplies', amount: 45, ref: null }] };
@@ -170,6 +219,34 @@ describe('a picture answer in the conversation', () => {
     F.send('Should I pay this?');
     await vi.waitFor(() => expect(nextLabels()).toEqual(['What should I do now?', 'Remember this company', 'Remind me to pay it']));
     expect(C.view().head?.tone).toBe('warn');
+  });
+
+  it('follow-ups about a bill: why, a scam, and anything else, each from the conversation', async () => {
+    understanding = { ...base, kind: 'bill', payee: 'Riverbend Electric Co-op', payTo: '9917', urgent: true, addressedToAI: true };
+    readingPack = sub([]);
+    C.attach(new Blob(['b'], { type: 'image/png' }), 'bill');
+    F.send('Should I pay this?');
+    await vi.waitFor(() => expect(nextLabels()).toContain('What should I do now?'));
+    expect(C.view().head?.tone).toBe('stop');
+
+    threadCalls.length = 0;
+    F.send('Why shouldn’t I pay it?');
+    await vi.waitFor(() => expect(C.view().head?.text).toMatch(/^Because /));
+    expect(C.view().head?.text).toContain('hidden words');
+    expect(threadCalls).toHaveLength(0);
+
+    F.send('Is it a scam?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('I can’t say for sure from the paper alone. These are the warning signs I found:'));
+
+    F.send('Can I pay half now?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('I can’t tell that from this check.'));
+
+    threadReply = 'If you wait, call the company first on a number you already trust.';
+    F.send('What happens if I wait?');
+    await vi.waitFor(() => expect(C.view().head?.text).toBe('If you wait, call the company first on a number you already trust.'));
+    expect(threadCalls).toHaveLength(1);
+    expect(threadCalls[0].conversation).toContain('Person: Should I pay this? (with a picture of a paper)');
+    expect(threadCalls[0].conversation).toContain('Person: Is it a scam?');
   });
 
   it('a bill whose printed numbers do not add up: Stop, the numbers said, and "Which numbers?"', async () => {

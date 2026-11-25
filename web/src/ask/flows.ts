@@ -43,6 +43,7 @@ import {
   whereRan,
 } from '../answer/compose';
 import type { LineItem, Receipt, Tone } from '../answer/types';
+import { aboutTheAnswer, aboutThePaper, conversationText, keptSentences, lineText, planAnswer, yesNo, type Turn } from '../core/followUp';
 import { t as tr, money, monthYear, longDate, shortDate } from '../strings';
 import { appSettings, knowledge } from '../engine/knowledge';
 import { deviceStore, deviceWord, getReady, refreshModel } from '../engine/device';
@@ -86,6 +87,7 @@ import {
   type Said,
   type SheetRequest,
 } from './conversation';
+import type { WkMsg } from './conversation';
 
 // ---------- what the page provides ----------
 
@@ -293,10 +295,24 @@ function needPicture(t: number) {
 async function wordsOnly(t: number, question: string) {
   postMine(question);
   patch({ asked: tr('asked', { words: question }) });
+  // "Why?", "What does line 4 mean?" right after a bill or a quote: answered from the conversation, on this device.
+  // A question WeKnow already has its own answer for ("Should I pay it?", "What should I say to the shop?") keeps it.
+  const ownAnswer = !!followUp(question) && !aboutTheAnswer(question);
+  const askedThread = !!lastPaper && aboutThePaper(question) && !ownAnswer;
+  if (askedThread) {
+    if (await threadAnswer(t, question)) return;
+    alive(t);
+  }
   const r = await wordsFlow(t, question);
   alive(t);
   if (r === true) return;
   if (await followTopic(t, question)) return;
+  alive(t);
+  // Words that name nothing new, in a conversation about something: answered from the conversation before anything
+  // goes online.
+  // After a paper, words that name no job of their own ("What happens if I wait?") are about it too.
+  const aboutIt = !lastPaper || lean(question) === 'both';
+  if ((topic || lastPaper) && aboutIt && !askedThread && (await threadAnswer(t, question))) return;
   alive(t);
   // The device could not answer: the router says whether the cloud should try, and why.
   let never = false;
@@ -325,6 +341,7 @@ interface PictureSrc {
 
 /** Read a picture. `post`: the person's message (their words and picture) is put in the conversation first. */
 async function pictureFlow(t: number, question: string, pic: PictureSrc, post: boolean) {
+  lastPaper = null;
   const url = URL.createObjectURL(pic.blob);
   if (post) postMine(question, url);
   patch({ asked: tr('asked', { words: question }) });
@@ -450,17 +467,95 @@ type Topic =
   | { kind: 'bill'; c: Ctx; again: () => void; next: () => Next[]; whatNow: (t: number) => void }
   | { kind: 'unknown'; c: Ctx };
 let topic: Topic | null = null;
+/** The bill or quote this conversation is about, until the next picture: follow-ups stay on it even after a price or a
+ * guide was asked about in between. */
+let lastPaper: Extract<Topic, { kind: 'bill' | 'quote' }> | null = null;
 
 /** Start again: the conversation is cleared and nothing is remembered as its topic. */
 export function startAgain() {
   topic = null;
+  lastPaper = null;
   resetView();
+}
+
+/** The conversation before the newest question, as the person saw it. */
+function turnsSoFar(): Turn[] {
+  const h = view().history;
+  return h.slice(0, -1).map((m) =>
+    m.who === 'me'
+      ? { who: 'me' as const, text: m.text, picture: !!m.picture }
+      : {
+          who: 'wk' as const,
+          text: [m.head?.text, ...m.lines.map((l) => l.text), ...(m.items ?? []).map(lineText)].filter(Boolean).join(' '),
+          tone: m.head?.tone ?? null,
+        },
+  );
+}
+
+/**
+ * A follow-up answered by the model on this device from the conversation so far (thread.ts). Nothing leaves the
+ * device. False when there is no model here, nothing to go on, or the reply is not kept (core/followUp.ts).
+ */
+async function threadAnswer(t: number, question: string): Promise<boolean> {
+  const tp = lastPaper ?? topic;
+  if (!tp) return false;
+  // The common questions are answered by plain code from WeKnow's last answer about the paper.
+  if (tp.kind === 'bill' || tp.kind === 'quote') {
+    const wk = view().history.filter((m): m is WkMsg => m.who === 'wk');
+    const last = (tp.kind === 'quote' ? wk.filter((m) => m.items?.length) : wk.filter((m) => m.head?.tone === 'stop' || m.head?.tone === 'warn')).at(-1) ?? wk.at(-1);
+    const said = last ? [last.head?.text, ...last.lines.map((l) => l.text)].filter(Boolean).join(' ') : '';
+    const plan = last ? planAnswer(question, tp.kind, said, last.items ?? []) : null;
+    if (plan) {
+      clearLines();
+      setHead('plain', plan[0]);
+      settle();
+      void narrate(t, plan.slice(1));
+      offerNext(tp.next());
+      return true;
+    }
+  }
+  // A yes-or-no question WeKnow's answer does not settle: the model would guess, so WeKnow says it can't tell.
+  if ((tp.kind === 'bill' || tp.kind === 'quote') && yesNo(question)) {
+    clearLines();
+    setHead('plain', tr('thread.cant'));
+    settle();
+    void narrate(t, [tr(tp.kind === 'bill' ? 'thread.bill.do' : 'thread.quote.do')]);
+    offerNext(tp.next());
+    return true;
+  }
+  if (deviceStore.get().model !== 'available') return false;
+  const turns = turnsSoFar();
+  const conversation = conversationText(turns);
+  if (!conversation.includes('WeKnow:')) return false;
+  const warned = turns.some((m) => m.who === 'wk' && (m.tone === 'warn' || m.tone === 'stop'));
+  let reply: { text: string; ms: number };
+  try {
+    reply = await (await import('../thread')).askAboutThread(conversation, question);
+  } catch (e) {
+    console.warn('[WeKnow] follow-up on this device failed', e);
+    return false;
+  }
+  alive(t);
+  let sentences = keptSentences(conversation, question, reply.text, warned);
+  if (!sentences.length) {
+    console.info('[WeKnow] follow-up reply not kept:', reply.text);
+    // About the paper, but nothing the model said can be shown: say so, and what WeKnow already said to do.
+    if (tp.kind !== 'bill' && tp.kind !== 'quote') return false;
+    sentences = [tr('thread.cant'), tr(tp.kind === 'bill' ? 'thread.bill.do' : 'thread.quote.do')];
+  }
+  clearLines();
+  setHead('plain', sentences[0]);
+  settle();
+  void narrate(t, sentences.slice(1));
+  if (tp.kind === 'quote' || tp.kind === 'bill') offerNext(tp.next());
+  return true;
 }
 
 /** Answer follow-up words from the topic. False when the words do not fit it. */
 async function followTopic(t: number, question: string): Promise<boolean> {
   const f = followUp(question);
-  const tp = topic;
+  // "Should I pay it?", "What should I say to the shop?" are about the paper, even after a price was asked about.
+  const tp = (f === 'pay' || f === 'say') && lastPaper ? lastPaper : topic;
   if (!tp || !f) return false;
   const c = { ...tp.c, t, question };
   if (tp.kind === 'price') {
@@ -725,6 +820,7 @@ function toldBasic(t: number) {
 function needModel(t: number, what: 'quote' | 'paper' | 'thing') {
   lastSent = null;
   topic = null;
+  lastPaper = null;
   patch({ looking: false, reading: false, chip: null });
   clearLines();
   setHead('plain', tr(`need.${what}.title`, { device: dev() }));
@@ -1834,6 +1930,7 @@ async function quoteFlow(c: Ctx) {
     ...rememberQ(),
   ];
   topic = { kind: 'quote', c, again, next: () => quoteNext(), say, myself };
+  lastPaper = topic;
 
   void narrate(t, lines);
   setPhase('settled');
@@ -2146,6 +2243,7 @@ async function billFlow(c: Ctx) {
       : []),
   ];
   topic = { kind: 'bill', c, again, next: () => billNext(), whatNow };
+  lastPaper = topic;
   settle();
   void narrate(t, lines);
   offerNext(billNext());
@@ -2334,6 +2432,7 @@ export function replay(check: Check) {
     const sameDay = new Date(check.date).toDateString() === new Date().toDateString();
     // The kept question and picture come back as the person's message, the kept answer under it.
     topic = null;
+    lastPaper = null;
     postMine(check.question || (sameDay ? tr('asked.earlier') : tr('asked.date', { date: shortDate(check.date) })), url);
     patch({
       still: url ?? null,

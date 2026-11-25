@@ -100,6 +100,9 @@ final class AskModel {
   var choices: [NextQ] = []
   /// What the conversation is about now, so a follow-up such as "How much to fix it?" needs no name.
   var topic: Topic?
+  /// The bill or quote this conversation is about, until the next picture: follow-ups stay on it even after a price
+  /// or a guide was asked about in between.
+  var lastPaper: Topic?
   /// Google's search-suggestion chip for an answer grounded in Google Search (it must be shown with it).
   var searchChips: String?
   /// "This bill says" / the quote's lines: what the phone read, listed so nobody has to read the paper.
@@ -164,6 +167,7 @@ final class AskModel {
   func start(_ image: UIImage, question: String) {
     stop()
     archive()
+    lastPaper = nil
     picture = image
     self.question = question
     answerLang = Lang.of(question)
@@ -195,7 +199,8 @@ final class AskModel {
       return
     }
     guard !q.isEmpty else { return }
-    if WordsAnswer.needsPicture(q) {
+    // "Should I pay it?" in a conversation about a bill or a quote is about that paper: no new picture is needed.
+    if WordsAnswer.needsPicture(q) && !paperTopic {
       draftHint = "Add a picture of it with the camera button, then press Send."
       return
     }
@@ -208,7 +213,7 @@ final class AskModel {
   /// Returns false when the question needs a picture, so the caller can ask for one.
   @discardableResult
   func ask(words: String) -> Bool {
-    if WordsAnswer.needsPicture(words) { return false }
+    if WordsAnswer.needsPicture(words) && !paperTopic { return false }
     stop()
     archive()
     question = words
@@ -229,14 +234,32 @@ final class AskModel {
     default: break
     }
 
+    // "Should I pay it?", "What should I do?" right after a bill: WeKnow's own fixed answer, not the model's.
+    if case .bill? = lastPaper, !FollowUp.aboutTheAnswer(q), q.range(of: #"\bshould i pay\b|\bpay (it|this|that)\b|\bwhat (should|do|can) i do\b"#, options: [.regularExpression, .caseInsensitive]) != nil {
+      return await perform(.doNow)
+    }
+    // "What should I say to the shop?" after a quote: WeKnow's own words for the counter.
+    if case let .quote(items)? = lastPaper, items.contains(where: { $0.state == .high }),
+       q.range(of: #"\b(say|tell|ask)\b.*\b(shop|mechanic|garage|them|him|her)\b"#, options: [.regularExpression, .caseInsensitive]) != nil {
+      return await perform(.sayShop)
+    }
+    // "Why?", "What does line 4 mean?" right after a bill or a quote: answered from the conversation, on this phone.
+    let askedThread = paperTopic && FollowUp.aboutThePaper(q)
+    if askedThread, await threadAnswer(q) { return }
+
     let t0 = Date()
     var found = await WordsAnswer.find(q, matcher: matcher, pack: pack, useModel: Device.canRead)
-    if found.hit == nil, let name = topicName {
+    if found.hit == nil, !paperTopic, let name = topicName {
       // The words name no job by themselves: try them with the topic of the conversation.
       found = await WordsAnswer.find("\(name) \(q)", matcher: matcher, pack: pack, useModel: Device.canRead)
       found.tech.insert("Follow-up: searched again with the topic “\(name)”.", at: 0)
     }
     if Task.isCancelled { return }
+    // Words that name nothing new, in a conversation about something: answered from the conversation before anything
+    // goes online.
+    // After a paper, words that name no job of their own ("What happens if I wait?") are about it too.
+    let aboutIt = lastPaper == nil || WordsAnswer.lean(q) == .either
+    if found.hit == nil, topic != nil || lastPaper != nil, aboutIt, !askedThread, await threadAnswer(q) { return }
     // The phone found nothing: step up to the cloud by itself (after the one-time yes), covered words only.
     var cloud: (ms: Int, sent: String)?
     var cloudNote: String?
@@ -397,6 +420,73 @@ final class AskModel {
     return lines
   }
 
+  private var paperTopic: Bool {
+    switch lastPaper {
+    case .bill?, .quote?: true
+    default: false
+    }
+  }
+
+  /// A follow-up answered by Apple's model on this phone from the conversation so far (Core/FollowUp.swift). Nothing
+  /// leaves the phone. False when the phone cannot read by itself, there is nothing to go on, or the reply is not kept.
+  private func threadAnswer(_ q: String) async -> Bool {
+    guard let tp = lastPaper ?? topic else { return false }
+    // The common questions are answered by plain code from WeKnow's last answer about the paper.
+    var next: [NextQ] = []
+    switch tp {
+    case let .quote(items):
+      if items.contains(where: { $0.state == .high }) { next.append(NextQ(label: "What should I say to the shop?", action: .sayShop)) }
+      if items.contains(where: { $0.state == .pending }) { next.append(NextQ(label: "Which lines did you not check?", action: .unchecked)) }
+    case .bill: next.append(NextQ(label: "What should I do now?", action: .doNow))
+    default: break
+    }
+    if paperTopic {
+      let warnedOnes = thread.filter { $0.tone == .stop || $0.tone == .warn }
+      let last = (warnedOnes.last ?? thread.last)
+      let said = last.map { ([$0.head].compactMap { $0 } + $0.sentences).joined(separator: " ") } ?? ""
+      var items: [LineItem] = []
+      if case let .quote(i) = tp { items = i }
+      if let plan = FollowUp.plan(q, bill: { if case .bill = tp { return true }; return false }(), answer: said, items: items) {
+        print("[WeKnow] follow-up answered by plain code from the last answer")
+        await answer(plan.first, Array(plan.dropFirst()), next: next, tag: .local)
+        return true
+      }
+    }
+    // A yes-or-no question WeKnow's answer does not settle: the model would guess, so WeKnow says it can't tell.
+    if paperTopic, FollowUp.yesNo(q) {
+      let bill: Bool = { if case .bill = tp { return true }; return false }()
+      await answer("I can’t tell that from this check.", [bill ? "Don’t pay until you call the company on a number you already trust." : "Ask the shop; they can tell you."], next: next, tag: .local)
+      return true
+    }
+    guard Device.canRead else { return false }
+    var turns: [FollowUp.Turn] = []
+    for e in thread {
+      if let asked = e.question { turns.append(FollowUp.Turn(me: true, text: asked, picture: e.picture != nil)) }
+      let said = ([e.head].compactMap { $0 } + e.sentences + e.facts).joined(separator: " ")
+      if !said.isEmpty { turns.append(FollowUp.Turn(me: false, text: said, warned: e.tone == .stop || e.tone == .warn)) }
+    }
+    // A quote's lines, spelled out, with the answer they belong to.
+    if case let .quote(items) = tp, let last = turns.lastIndex(where: { !$0.me }) {
+      turns[last].text += " " + items.map(FollowUp.lineFact).joined(separator: " ")
+    }
+    let conversation = FollowUp.conversation(turns)
+    guard conversation.contains("WeKnow:") else { return false }
+    let t0 = Date()
+    guard let reply = await FollowUp.ask(conversation, q), !Task.isCancelled else { return false }
+    var parts = FollowUp.keptSentences(conversation: conversation, question: q, reply: reply, warned: turns.contains(where: \.warned))
+    if parts.isEmpty {
+      print("[WeKnow] follow-up reply not kept: \(reply)")
+      // About the paper, but nothing the model said can be shown: say so, and what WeKnow already said to do.
+      guard paperTopic else { return false }
+      parts = ["I can’t tell that from this check."]
+      if case .bill = tp { parts.append("Don’t pay until you call the company on a number you already trust.") } else { parts.append("Ask the shop; they can tell you.") }
+    } else {
+      print("[WeKnow] follow-up answered on this phone from the conversation in \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
+    }
+    await answer(parts.first, Array(parts.dropFirst()), next: next, tag: .local)
+    return true
+  }
+
   private var topicName: String? {
     switch topic {
     case let .price(p)?: p.name
@@ -499,7 +589,7 @@ final class AskModel {
       ])
 
     case .sayShop:
-      guard case let .quote(items)? = topic, let worst = items.filter({ $0.state == .high }).max(by: { ($0.over ?? 0) < ($1.over ?? 0) }) else {
+      guard case let .quote(items)? = lastPaper ?? topic, let worst = items.filter({ $0.state == .high }).max(by: { ($0.over ?? 0) < ($1.over ?? 0) }) else {
         return await answer("Every line looked normal.", ["You can pay it as it is."])
       }
       let usualTop = worst.item.map { S.money($0.high) } ?? ""
@@ -508,7 +598,7 @@ final class AskModel {
       ])
 
     case .unchecked:
-      guard case let .quote(items)? = topic else { return }
+      guard case let .quote(items)? = lastPaper ?? topic else { return }
       let pending = items.filter { $0.state == .pending }.map(\.label)
       await answer(pending.count == 1 ? "I could not check one line." : "I could not check \(S.words(pending.count)) lines.", [
         "\(S.list(pending)) \(pending.count == 1 ? "is" : "are") not in my price book yet.",
@@ -516,7 +606,7 @@ final class AskModel {
       ])
 
     case .doNow:
-      guard case let .bill(stop, warn)? = topic else { return }
+      guard case let .bill(stop, warn)? = lastPaper ?? topic else { return }
       if stop {
         await answer("Don’t pay it yet.", [
           "Call the company with the number on an older bill or on their website, not the number on this paper.",
@@ -603,6 +693,7 @@ final class AskModel {
     reset()
     thread = []
     topic = nil
+    lastPaper = nil
   }
 
   /// Whether the internet may be used for this step (design/HYBRID-ROUTING.md): asked once, then by itself.
@@ -835,6 +926,7 @@ final class AskModel {
         return "\(i.label) — \(amount) — \(state)"
       }
       topic = .quote(items)
+      lastPaper = topic
       if items.contains(where: { $0.state == .high }) { next.append(NextQ(label: "What should I say to the shop?", action: .sayShop)) }
       if items.contains(where: { $0.state == .pending }) { next.append(NextQ(label: "Which lines did you not check?", action: .unchecked)) }
       if let g = items.compactMap({ $0.item.flatMap { diyGuide(for: $0.ref) } }).first {
@@ -991,6 +1083,7 @@ final class AskModel {
         u.payTo.map { to in "Pay to: account ending \(to)" + (Verdicts.knownPayee(u.payee, in: known).map { $0.payTo != to ? " (last time: \($0.payTo))" : " (same as last time)" } ?? "") },
       ].compactMap { $0 }
       topic = .bill(stop: verdict?.tone == .stop, warn: verdict?.tone == .warn)
+      lastPaper = topic
       if v.flags == [.newPayee] && math.isEmpty && unread.isEmpty, let name = u.payee, let to = u.payTo {
         next.append(NextQ(label: "Remember this company", action: .rememberPayee(name, to)))
       } else if v.flags.contains(.newPayee), !scamOnline, let name = u.payee, let to = u.payTo {

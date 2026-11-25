@@ -47,6 +47,18 @@ struct WeKnowApp: App {
             try? await Task.sleep(for: .milliseconds(600))
             model.ask(words: q)
           }
+          // `-WeKnowThen "Why is line 1 so high?|What should I do?"` asks those follow-ups once each answer is done.
+          if let then = UserDefaults.standard.string(forKey: "WeKnowThen") {
+            for q in then.split(separator: "|").map(String.init) {
+              try? await Task.sleep(for: .milliseconds(800))
+              while model.phase != .done { try? await Task.sleep(for: .milliseconds(300)) }
+              print("[WeKnow] asking: \(q)")
+              model.ask(words: q)
+              try? await Task.sleep(for: .milliseconds(800))
+              while model.phase != .done { try? await Task.sleep(for: .milliseconds(300)) }
+              print("[WeKnow] follow-up answer: \(model.verdict?.text ?? "-") | \(model.sentences.map(\.text).joined(separator: " "))")
+            }
+          }
           // `-WeKnowPick "0,0,1"` presses those next-question buttons one after another (simulator tests).
           if let picks = UserDefaults.standard.string(forKey: "WeKnowPick") {
             // Each pick is an index or the start of a button's label ("I know").
