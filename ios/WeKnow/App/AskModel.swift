@@ -682,7 +682,12 @@ final class AskModel {
       try? await Task.sleep(for: .milliseconds(120))
       withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.22)) { barsShown = i + 1 }
     }
-    if !paper.bars.isEmpty { await say(Sentence(text: coveredSentence(paper.coveredKinds))) }
+    // Said while the paper is being read: reading does not wait for the voice.
+    if !paper.bars.isEmpty {
+      let covered = Sentence(text: coveredSentence(paper.coveredKinds))
+      sentences.append(covered)
+      Task { await Voice.shared.say(covered.text) }
+    }
     if Task.isCancelled { return }
 
     // 2. Read it on this phone. With Apple Intelligence, Apple's model reads the covered words; without it, plain code
@@ -1102,12 +1107,16 @@ final class AskModel {
     }
     answerFrom = sentences.count
     phase = .speaking
-    // The point is said first (it is shown in bold above the sentences).
+    // The whole answer is on screen at once; the voice then reads it, the point first, marking the sentence it is on.
+    let first = sentences.count
+    sentences.append(contentsOf: answer)
     if let v = verdict { await Voice.shared.say(v.text) }
-    for s in answer {
+    for (i, s) in answer.enumerated() {
       if Task.isCancelled { return }
-      await say(s)
+      speaking = first + i
+      await Voice.shared.say(s.text)
     }
+    speaking = nil
     if reading.where_ == .device && escalated == nil && !toldLocal {
       toldLocal = true
       UserDefaults.standard.set(true, forKey: "toldLocal")
