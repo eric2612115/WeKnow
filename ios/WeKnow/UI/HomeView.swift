@@ -38,6 +38,9 @@ struct HomeView: View {
           }
         }
         .frame(maxWidth: Self.readableWidth, maxHeight: .infinity)
+        // A tap or a scroll anywhere above the bar puts the keyboard away; buttons there still work.
+        .scrollDismissesKeyboard(.immediately)
+        .simultaneousGesture(TapGesture().onEnded { Self.hideKeyboard() })
         Composer(model: model, takePhoto: takePhoto, choosePhoto: { choosingPhoto = true }, chooseFile: { choosingFile = true })
           .frame(maxWidth: Self.readableWidth)
           .padding(.bottom, 4)
@@ -105,6 +108,10 @@ struct HomeView: View {
       case .settings: SettingsPage(theme: $theme, model: model)
       }
     }
+  }
+
+  static func hideKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
   }
 
   /// The camera button: the camera opens full screen; the picture goes into the input bar, next to the words, and
