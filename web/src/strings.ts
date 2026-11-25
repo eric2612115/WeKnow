@@ -39,10 +39,10 @@ export const EN = {
 
   // Ask
   'home.greeting': 'What can I check for you?', // added: the start screen, before the first message
-  'home.try1': 'My kitchen sink is clogged',
-  'home.try2': 'How much are brake pads?',
-  'home.try3': 'My toilet keeps running',
-  'home.try4': 'What does a new water heater cost?',
+  'home.try1': 'Should I pay this?',
+  'home.try2': 'Is this price fair?',
+  'home.try3': 'How much are brake pads?',
+  'home.try4': 'My kitchen sink is clogged',
   'home.try.label': 'Or ask',
   'home.samples.short': 'Try a sample',
   'pic.open': 'Open the picture large', // added: the full-screen picture viewer

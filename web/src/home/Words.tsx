@@ -7,8 +7,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { pick, pressGuide, useAsk, type AskView, type Line, type MineMsg, type WkMsg } from '../ask/conversation';
-import { setBox } from '../ask/box';
-import { send } from '../ask/flows';
+import { focusBox, setBox } from '../ask/box';
+
 import { attachSample, SAMPLES } from '../samples';
 import { deviceWord } from '../engine/device';
 import { I } from '../ui/icons';
@@ -313,22 +313,20 @@ function SampleCards() {
 
 const TRY = ['home.try1', 'home.try2', 'home.try3', 'home.try4'] as const;
 
-/** Things to ask, on the start screen. A press asks it, the same as typing it and pressing Send: words that need a
- * picture stay in the box until one is added. */
-function Suggestions() {
+/** Things to ask, on the start screen. A press puts the words in the box; Send stays the person's press. With a
+ * picture already in the box, only the questions about a paper are offered. */
+function Suggestions({ picture = false }: { picture?: boolean }) {
+  const ids = picture ? TRY.slice(0, 2) : TRY;
   return (
     <section aria-label={t('home.try.label')}>
       <p className="mb-2 text-center text-[0.9375rem] font-medium text-ink-2">{t('home.try.label')}</p>
       <div className="sugg-row justify-center">
-        {TRY.map((id) => (
+        {ids.map((id) => (
           <button
             key={id}
             type="button"
             className="sugg"
-            onClick={() => {
-              const q = t(id);
-              if (!send(q)) setBox(q);
-            }}
+            onClick={() => { setBox(t(id)); focusBox(); }}
           >
             {t(id)}
           </button>
@@ -447,7 +445,7 @@ export function Opening() {
           </div>
         )}
         {!v.offerSamples && <SampleCards />}
-        {!v.chosen && !words && <Suggestions />}
+        {!words && <Suggestions picture={!!v.chosen} />}
         {!v.chosen && !words && (
           <Link to="/" className="mx-auto inline-flex min-h-11 items-center text-[0.9375rem] font-medium text-ink-2 underline-offset-4 hover:underline">
             {t('menu.how')}
