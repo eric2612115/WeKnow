@@ -360,11 +360,16 @@ final class AskModel {
     tag = where_
     answerFrom = sentences.count
     phase = .speaking
+    // The whole answer is on screen at once; the voice then reads it, marking the sentence it is on.
+    let first = sentences.count
+    sentences.append(contentsOf: lines.map { Sentence(text: $0) })
     if let head { await Voice.shared.say(head) }
-    for s in lines {
+    for (i, s) in lines.enumerated() {
       if Task.isCancelled { return }
-      await say(Sentence(text: s))
+      speaking = first + i
+      await Voice.shared.say(s)
     }
+    speaking = nil
     if Task.isCancelled { return }
     choices = next
     phase = .done
