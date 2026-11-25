@@ -25,8 +25,9 @@ Built for the Firebase #BuildHybridAI 2026 hackathon with **Firebase AI Logic hy
 
 ## Try it in a minute
 
-1. Open https://weknow-6092f.web.app and press **Start** (or **Open WeKnow**).
-2. Tap the sample **A bill**. WeKnow reads it on your computer and says "Don't pay this bill yet": the bill asks you to
+1. Open https://weknow-6092f.web.app and, under the question box, tap **A bill** (or press **Open WeKnow** and tap
+   the sample card), then press Send.
+2. With the sample **A bill**, WeKnow reads it on your computer and says "Don't pay this bill yet": the bill asks you to
    pay a new account, not the one you paid last time. In a browser without Chrome's built-in model it first asks
    "Check this online?", showing the one line that would go (the company's name); either answer gives the verdict.
 3. Tap **Where this answer came from**: what stayed on your computer, what went online (for this bill, nothing), and
@@ -113,6 +114,12 @@ System Settings > Apple Intelligence & Siri. The simulator has no camera, so tap
 picture from `docs/test-sheets/` onto the simulator window and choose it in WeKnow from Photos or Files. Reading on
 the device needs no Firebase config. For the online steps, copy `ios/WeKnow/GoogleService-Info.example.plist` to
 `GoogleService-Info.plist` with your iOS app's config and register the App Check debug token a debug build prints.
+
+On your own iPhone (iOS 27; Apple Intelligence on for the full check, otherwise the basic check): connect it to the
+Mac, open the WeKnow target's **Signing & Capabilities**, pick your team (a free Apple ID works), change the bundle
+identifier to one of your own if Xcode asks, choose the iPhone as the run destination and press Run. The first time,
+trust the developer on the iPhone in Settings > General > VPN & Device Management. Then try it in airplane mode on a
+printed test sheet.
 
 **See what reaches the cloud.** In your own Firebase project, turn on AI monitoring (AI Logic > Settings). Give
 WeKnow `bill-7` or a typed question the packs do not cover, then open that request in AI monitoring: it holds only
