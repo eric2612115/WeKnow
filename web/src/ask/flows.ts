@@ -1541,7 +1541,10 @@ async function lookUpLines(
     try {
       // A busy minute at the cloud is waited out once or twice, not answered with "not found".
       const r = await withRetry(() => lookupPrice(x.payload.item, x.payload.region), [3000, 12000]);
-      return r.item ? { i: x.i, item: r.item, ms: r.ms } : null;
+      if (r.item) return { i: x.i, item: r.item, ms: r.ms };
+      // Search results vary from call to call: one more try with the same words before "no sourced price".
+      const again = await withRetry(() => lookupPrice(x.payload.item, x.payload.region), [3000]);
+      return again.item ? { i: x.i, item: again.item, ms: r.ms + again.ms } : null;
     } catch (e) {
       console.warn('[WeKnow] price lookup failed', e);
       return null;
@@ -1835,7 +1838,9 @@ async function quoteFlow(c: Ctx) {
   void narrate(t, lines);
   setPhase('settled');
   offerNext(quoteNext());
-  await narrated();
+  // "Ask me every time": the sheet comes a few seconds after the answer is on screen, not after all of it is read out.
+  const askSoon = !looked && unknown.length > 0 && online && getPrefs().internet === 'every';
+  await (askSoon ? Promise.race([narrated(), wait(4000)]) : narrated());
   alive(t);
   // The first time WeKnow would use the internet, it asks once, as it does for a bill (before, a quote only asked
   // when "Which lines did you not check?" was pressed, so on a fresh start the line was simply left unchecked).
